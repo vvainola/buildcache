@@ -19,6 +19,7 @@
 
 #include "arg_list.hpp"
 #include "cache.hpp"
+#include "sys_utils.hpp"
 
 #include <iostream>
 #include <string>
@@ -50,9 +51,9 @@ namespace bcache {
 
 [[noreturn]] void wrap_compiler_and_exit(int argc, const char** argv) {
   // TODO(m): Implement me!
-  std::cout << "*** Compilation has not yet implemented\n";
-  auto args = make_arg_list(argc, argv);
-  std::exit(1);
+  auto args = arg_list_t(argc, argv);
+  auto result = sys::run(args);
+  std::exit(result.return_code);
 }
 }  // namespace bcache
 

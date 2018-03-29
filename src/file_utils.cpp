@@ -19,12 +19,13 @@
 
 #include "file_utils.hpp"
 
+#include "sys_utils.hpp"
+
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 #include <shlobj.h>
-#include <codecvt>
 #endif
 
 #include <sys/types.h>
@@ -32,28 +33,6 @@
 
 namespace bcache {
 namespace file {
-namespace {
-#if defined(_WIN32)
-std::string ucs2_to_utf8(const std::wstring& str16) {
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-  try {
-    return conv.to_bytes(str16);
-  } catch (...) {
-    return std::string();
-  }
-}
-
-std::wstring utf8_to_ucs2(const std::string& str8) {
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-  try {
-    return conv.from_bytes(str16);
-  } catch (...) {
-    return std::wstring();
-  }
-}
-#endif  // _WIN32
-}  // namespace
-
 std::string append_path(const std::string& path, const std::string& append) {
 #if defined(_WIN32)
   return path + std::string("\\") + append;
@@ -73,7 +52,7 @@ std::string get_user_home_dir() {
   try {
     // Using SHGetKnownFolderPath() for Vista and later.
     if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, NULL, &path))) {
-      local_app_data = ucs2_to_utf8(std::wstring(path));
+      local_app_data = sys::ucs2_to_utf8(std::wstring(path));
     }
   } finally {
     if (path != nullptr) {
@@ -89,7 +68,7 @@ std::string get_user_home_dir() {
 
 bool create_dir(const std::string& path) {
 #ifdef _WIN32
-  return (_wmkdir(utf8_to_ucs2(path).c_str()) == 0);
+  return (_wmkdir(sys::utf8_to_ucs2(path).c_str()) == 0);
 #else
   return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0);
 #endif
@@ -104,7 +83,7 @@ bool dir_exists(const std::string& path) {
 // TODO(m): Check that it's acutally a dir!
 #ifdef _WIN32
   struct __stat64 buffer;
-  return (_wstat64(utf8_to_ucs2(path).c_str(), &buffer) == 0);
+  return (_wstat64(sys::utf8_to_ucs2(path).c_str(), &buffer) == 0);
 #else
   struct stat buffer;
   return (stat(path.c_str(), &buffer) == 0);
@@ -115,7 +94,7 @@ bool file_exists(const std::string& path) {
 // TODO(m): Check that it's acutally a file!
 #ifdef _WIN32
   struct __stat64 buffer;
-  return (_wstat64(utf8_to_ucs2(path).c_str(), &buffer) == 0);
+  return (_wstat64(sys::utf8_to_ucs2(path).c_str(), &buffer) == 0);
 #else
   struct stat buffer;
   return (stat(path.c_str(), &buffer) == 0);

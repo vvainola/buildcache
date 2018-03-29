@@ -17,44 +17,30 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_ARG_LIST_HPP_
-#define BUILDCACHE_ARG_LIST_HPP_
+#ifndef BUILDCACHE_SYS_UTILS_HPP_
+#define BUILDCACHE_SYS_UTILS_HPP_
+
+#include "arg_list.hpp"
 
 #include <string>
-#include <vector>
 
 namespace bcache {
-class arg_list_t {
-public:
-  arg_list_t(const int argc, const char** argv) {
-    for (int i = 0; i < argc; ++i) {
-      m_args.emplace_back(std::string(argv[i]));
-    }
-  }
+namespace sys {
+std::string ucs2_to_utf8(const std::wstring& str16);
+std::wstring utf8_to_ucs2(const std::string& str8);
 
-  std::string join(const std::string& separator) const {
-    std::string result;
-    for (auto arg : m_args) {
-      if (result.empty()) {
-        result = result + arg;
-      } else {
-        result = result + separator + arg;
-      }
-    }
-    return result;
-  }
-
-  std::string& operator[](const size_t idx) {
-    return m_args[idx];
-  }
-
-  const std::string& operator[](const size_t idx) const {
-    return m_args[idx];
-  }
-
-private:
-  std::vector<std::string> m_args;
+/// @brief Run results from an external command.
+struct run_result_t {
+  int return_code;    ///< The program return code (zero for success).
+  std::string stdout; ///< The contents of stdout.
+  std::string stderr; ///< The contents of stderr.
 };
+
+/// @brief Run the given command.
+/// @param args The command and its arguments (the first item is the command).
+/// @returns The result from the command.
+run_result_t run(const arg_list_t& args);
+}  // namespace sys
 }  // namespace bcache
 
-#endif  // BUILDCACHE_ARG_LIST_HPP_
+#endif  // BUILDCACHE_SYS_UTILS_HPP_

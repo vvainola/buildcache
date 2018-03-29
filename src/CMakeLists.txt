@@ -34,5 +34,7 @@ add_executable(buildcache
   file_utils.hpp
   hasher.hpp
   main.cpp
+  sys_utils.cpp
+  sys_utils.hpp
   )
 target_link_libraries(buildcache md4)
