@@ -18,30 +18,49 @@
 //--------------------------------------------------------------------------------------------------
 
 #include "arg_list.hpp"
+#include "cache.hpp"
 
 #include <iostream>
 #include <string>
 
 namespace bcache {
-void clear_cache() {
-  // TODO(m): Implement me!
-  std::cout << "*** Not yet implemented ***\n";
+[[noreturn]] void clear_cache_and_exit() {
+  cache_t cache;
+  cache.clear();
+  std::exit(0);
 }
 
-void show_stats() {
-  // TODO(m): Implement me!
-  std::cout << "*** Not yet implemented ***\n";
+[[noreturn]] void show_stats_and_exit() {
+  cache_t cache;
+  cache.show_stats();
+  std::exit(0);
 }
 
-void print_version() {
-  // TODO(m): Implement me!
-  std::cout << "*** Not yet implemented ***\n";
+[[noreturn]] void print_version_and_exit() {
+  std::cout << "BuildCache version 0.0-dev\n";
+  std::exit(0);
 }
 
-void set_max_size(const char* size_arg) {
+[[noreturn]] void set_max_size_and_exit(const char* size_arg) {
   // TODO(m): Implement me!
   (void)size_arg;
-  std::cout << "*** Not yet implemented ***\n";
+  std::cout << "*** Setting the max size has not yet implemented\n";
+  std::exit(0);
+}
+
+[[noreturn]] void wrap_compiler_and_exit(int argc, const char** argv) {
+  // TODO(m): Implement me!
+  std::cout << "*** Compilation has not yet implemented\n";
+  auto args = make_arg_list(argc, argv);
+  std::exit(1);
+}
+}  // namespace bcache
+
+namespace {
+bool compare_arg(const std::string& arg,
+                 const std::string& short_form,
+                 const std::string& long_form = "") {
+  return (arg == short_form) || (arg == long_form);
 }
 
 void print_help(const char* program_name) {
@@ -59,57 +78,38 @@ void print_help(const char* program_name) {
   std::cout << "    -h, --help            print this help text\n";
   std::cout << "    -V, --version         print version and copyright information\n";
 }
-
-[[noreturn]] void wrap_compiler(int argc, const char** argv) {
-  // TODO(m): Implement me!
-  std::cout << "*** Not yet implemented ***\n";
-  auto args = make_arg_list(argc, argv);
-  std::exit(1);
-}
-}  // namespace bcache
-
-namespace {
-bool compare_arg(const std::string& arg,
-                 const std::string& short_form,
-                 const std::string& long_form = "") {
-  return (arg == short_form) || (arg == long_form);
-}
 }  // namespace
 
 int main(int argc, const char** argv) {
   if (argc < 2) {
-    bcache::print_help(argv[0]);
+    print_help(argv[0]);
     std::exit(1);
   }
 
   // Check if we are running any gcache commands.
   const std::string arg_str(argv[1]);
   if (compare_arg(arg_str, "-C", "--clear")) {
-    bcache::clear_cache();
-    std::exit(0);
+    bcache::clear_cache_and_exit();
   } else if (compare_arg(arg_str, "-s", "--show-stats")) {
-    bcache::show_stats();
-    std::exit(0);
+    bcache::show_stats_and_exit();
   } else if (compare_arg(arg_str, "-V", "--version")) {
-    bcache::print_version();
-    std::exit(0);
+    bcache::print_version_and_exit();
   } else if (compare_arg(arg_str, "-M", "--max-size")) {
     if (argc < 3) {
       std::cerr << argv[0] << ": option requires an argument -- " << arg_str << "\n";
-      bcache::print_help(argv[0]);
+      print_help(argv[0]);
       std::exit(1);
     }
-    bcache::set_max_size(argv[2]);
-    std::exit(0);
+    bcache::set_max_size_and_exit(argv[2]);
   } else if (compare_arg(arg_str, "-h", "--help")) {
-    bcache::print_help(argv[0]);
+    print_help(argv[0]);
     std::exit(0);
   } else if (arg_str[0] == '-') {
     std::cerr << argv[0] << ": invalid option -- " << arg_str << "\n";
-    bcache::print_help(argv[0]);
+    print_help(argv[0]);
     std::exit(1);
   }
 
   // We got this far, so we're running as a compiler wrapper.
-  bcache::wrap_compiler(argc - 1, &argv[1]);
+  bcache::wrap_compiler_and_exit(argc - 1, &argv[1]);
 }

@@ -28,6 +28,10 @@ add_subdirectory(third_party)
 
 add_executable(buildcache
   arg_list.hpp
+  cache.cpp
+  cache.hpp
+  file_utils.cpp
+  file_utils.hpp
   hasher.hpp
   main.cpp
   )
