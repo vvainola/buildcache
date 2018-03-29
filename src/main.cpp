@@ -69,8 +69,9 @@ void print_help(const char* program_name) {
 }  // namespace bcache
 
 namespace {
-bool compare_arg(
-    const std::string& arg, const std::string& short_form, const std::string& long_form = "") {
+bool compare_arg(const std::string& arg,
+                 const std::string& short_form,
+                 const std::string& long_form = "") {
   return (arg == short_form) || (arg == long_form);
 }
 }  // namespace

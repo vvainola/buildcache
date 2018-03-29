@@ -83,4 +83,3 @@ private:
 }  // namespace bcache
 
 #endif  // BUILDCACHE_HASHER_HPP_
-
