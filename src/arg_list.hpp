@@ -35,10 +35,11 @@ public:
   std::string join(const std::string& separator) const {
     std::string result;
     for (auto arg : m_args) {
+      const auto escaped_arg = escape_arg(arg);
       if (result.empty()) {
-        result = result + arg;
+        result = result + escaped_arg;
       } else {
-        result = result + separator + arg;
+        result = result + separator + escaped_arg;
       }
     }
     return result;
@@ -53,6 +54,30 @@ public:
   }
 
 private:
+  static std::string escape_arg(const std::string& arg) {
+    std::string escaped_arg;
+
+    // Replace all occurances of " with \".
+    auto has_space = false;
+    for (auto c : arg) {
+      if (c == '"') {
+        escaped_arg += "\\\"";
+      } else {
+        if (c == ' ') {
+          has_space = true;
+        }
+        escaped_arg += c;
+      }
+    }
+
+    // Do we need to surround with quotes?
+    if (has_space) {
+      escaped_arg = std::string("\"") + escaped_arg + std::string("\"");
+    }
+
+    return escaped_arg;
+  }
+
   std::vector<std::string> m_args;
 };
 }  // namespace bcache
