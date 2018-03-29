@@ -24,15 +24,15 @@
 #include <iostream>
 #include <string>
 
-namespace bcache {
+namespace {
 [[noreturn]] void clear_cache_and_exit() {
-  cache_t cache;
+  bcache::cache_t cache;
   cache.clear();
   std::exit(0);
 }
 
 [[noreturn]] void show_stats_and_exit() {
-  cache_t cache;
+  bcache::cache_t cache;
   cache.show_stats();
   std::exit(0);
 }
@@ -51,13 +51,11 @@ namespace bcache {
 
 [[noreturn]] void wrap_compiler_and_exit(int argc, const char** argv) {
   // TODO(m): Implement me!
-  auto args = arg_list_t(argc, argv);
-  auto result = sys::run(args);
+  auto args = bcache::arg_list_t(argc, argv);
+  auto result = bcache::sys::run(args);
   std::exit(result.return_code);
 }
-}  // namespace bcache
 
-namespace {
 bool compare_arg(const std::string& arg,
                  const std::string& short_form,
                  const std::string& long_form = "") {
@@ -90,18 +88,18 @@ int main(int argc, const char** argv) {
   // Check if we are running any gcache commands.
   const std::string arg_str(argv[1]);
   if (compare_arg(arg_str, "-C", "--clear")) {
-    bcache::clear_cache_and_exit();
+    clear_cache_and_exit();
   } else if (compare_arg(arg_str, "-s", "--show-stats")) {
-    bcache::show_stats_and_exit();
+    show_stats_and_exit();
   } else if (compare_arg(arg_str, "-V", "--version")) {
-    bcache::print_version_and_exit();
+    print_version_and_exit();
   } else if (compare_arg(arg_str, "-M", "--max-size")) {
     if (argc < 3) {
       std::cerr << argv[0] << ": option requires an argument -- " << arg_str << "\n";
       print_help(argv[0]);
       std::exit(1);
     }
-    bcache::set_max_size_and_exit(argv[2]);
+    set_max_size_and_exit(argv[2]);
   } else if (compare_arg(arg_str, "-h", "--help")) {
     print_help(argv[0]);
     std::exit(0);
@@ -112,5 +110,5 @@ int main(int argc, const char** argv) {
   }
 
   // We got this far, so we're running as a compiler wrapper.
-  bcache::wrap_compiler_and_exit(argc - 1, &argv[1]);
+  wrap_compiler_and_exit(argc - 1, &argv[1]);
 }
