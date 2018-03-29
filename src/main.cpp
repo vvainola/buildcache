@@ -49,11 +49,55 @@ namespace {
   std::exit(0);
 }
 
+class gcc_wrapper {
+public:
+  /// @brief Try to wrap a compiler command.
+  /// @param args Command and arguments.
+  /// @param[out] return_code The command return code (if handled).
+  /// @returns true if the command was recognized and handled.
+  static bool handle_command(const bcache::arg_list_t& args, int& return_code) {
+    // Is this the right compiler?
+    if ((args[0].find("gcc") == std::string::npos) && (args[0].find("g++") == std::string::npos)) {
+      return false;
+    }
+
+    // Are we compiling an object file?
+    auto is_object_compilation = false;
+    for (auto arg : args) {
+      if (arg == std::string("-c")) {
+        is_object_compilation = true;
+        break;
+      }
+    }
+    if (!is_object_compilation) {
+      return false;
+    }
+
+    // Run the preprocessor step.
+    // TODO(m): Implement me!
+    (void)return_code;
+
+    return false;
+  }
+};
+
 [[noreturn]] void wrap_compiler_and_exit(int argc, const char** argv) {
-  // TODO(m): Implement me!
   auto args = bcache::arg_list_t(argc, argv);
-  auto result = bcache::sys::run(args);
-  std::exit(result.return_code);
+
+  // Try different compilers.
+  auto handled = false;
+  int return_code = 1;
+  if (!handled) {
+    handled = gcc_wrapper::handle_command(args, return_code);
+  }
+
+  // Fall back to running the command as is.
+  if (!handled) {
+    auto result = bcache::sys::run(args);
+    return_code = result.return_code;
+  }
+
+  std::exit(return_code);
 }
 
 bool compare_arg(const std::string& arg,
