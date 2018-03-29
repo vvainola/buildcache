@@ -26,6 +26,9 @@
 namespace bcache {
 class arg_list_t {
 public:
+  typedef typename std::vector<std::string>::iterator iterator;
+  typedef typename std::vector<std::string>::const_iterator const_iterator;
+
   arg_list_t(const int argc, const char** argv) {
     for (int i = 0; i < argc; ++i) {
       m_args.emplace_back(std::string(argv[i]));
@@ -51,6 +54,34 @@ public:
 
   const std::string& operator[](const size_t idx) const {
     return m_args[idx];
+  }
+
+  size_t size() const {
+    return m_args.size();
+  }
+
+  iterator begin() {
+    return m_args.begin();
+  }
+
+  const_iterator begin() const {
+    return m_args.begin();
+  }
+
+  const_iterator cbegin() const {
+    return m_args.cbegin();
+  }
+
+  iterator end() {
+    return m_args.end();
+  }
+
+  const_iterator end() const {
+    return m_args.end();
+  }
+
+  const_iterator cend() const {
+    return m_args.cend();
   }
 
 private:
