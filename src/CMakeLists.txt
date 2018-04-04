@@ -30,8 +30,12 @@ add_executable(buildcache
   arg_list.hpp
   cache.cpp
   cache.hpp
+  compiler_wrapper.cpp
+  compiler_wrapper.hpp
   file_utils.cpp
   file_utils.hpp
+  gcc_wrapper.cpp
+  gcc_wrapper.hpp
   hasher.hpp
   main.cpp
   sys_utils.cpp
