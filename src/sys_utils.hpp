@@ -38,8 +38,9 @@ struct run_result_t {
 
 /// @brief Run the given command.
 /// @param args The command and its arguments (the first item is the command).
+/// @param quiet Supress output to stdout/stderr during execution.
 /// @returns The result from the command.
-run_result_t run(const arg_list_t& args);
+run_result_t run(const arg_list_t& args, const bool quiet = true);
 }  // namespace sys
 }  // namespace bcache
 

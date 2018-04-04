@@ -24,8 +24,33 @@
 
 namespace bcache {
 namespace file {
+/// @brief A helper class for handling temporary files.
+///
+/// When the temp file object is created, a temporary file name is generated. Once the object goes
+/// out of scope, it removes the file from disk.
+class tmp_file_t {
+public:
+  /// @brief Construct a temporary file name.
+  /// @param dir The base directory in which the temporary file will be located.
+  /// @param extension The file name extension (including the leading dot).
+  tmp_file_t(const std::string& dir, const std::string& extension);
+
+  /// @brief Remove the temporary file (if any).
+  ~tmp_file_t();
+
+  const std::string& path() const {
+    return m_path;
+  }
+
+private:
+  std::string m_path;
+};
+
 std::string append_path(const std::string& path, const std::string& append);
 std::string append_path(const std::string& path, const char* append);
+
+std::string get_extension(const std::string& path);
+std::string get_file_part(const std::string& path);
 
 std::string get_user_home_dir();
 
@@ -36,6 +61,8 @@ void remove(const std::string& path);
 bool dir_exists(const std::string& path);
 
 bool file_exists(const std::string& path);
+
+std::string read(const std::string& path);
 }  // namespace file
 }  // namespace bcache
 

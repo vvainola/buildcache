@@ -54,7 +54,7 @@ std::wstring utf8_to_ucs2(const std::string& str8) {
   }
 }
 
-run_result_t run(const arg_list_t& args) {
+run_result_t run(const arg_list_t& args, const bool quiet) {
   // Initialize the run result.
   auto result = make_run_result();
 
@@ -70,7 +70,9 @@ run_result_t run(const arg_list_t& args) {
     // Collect stdout until the pipe is closed.
     char buf[1000];
     while (fgets(buf, sizeof(buf), fp)) {
-      std::cout << buf;
+      if (!quiet) {
+        std::cout << buf;
+      }
       result.stdout += std::string(buf);
     }
 

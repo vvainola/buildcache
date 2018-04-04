@@ -19,10 +19,169 @@
 
 #include "arg_list.hpp"
 #include "cache.hpp"
+#include "file_utils.hpp"
+#include "hasher.hpp"
 #include "sys_utils.hpp"
 
 #include <iostream>
 #include <string>
+
+namespace bcache {
+class compiler_wrapper {
+protected:
+  static file::tmp_file_t get_temp_file(const cache_t& cache, const std::string& extension) {
+    // Use a suitable folder for temporary files.
+    const auto tmp_path = file::append_path(cache.root_folder(), "tmp");
+    if (!file::dir_exists(tmp_path)) {
+      file::create_dir(tmp_path);
+    }
+
+    // Generate a fairly unique file name.
+    return file::tmp_file_t(tmp_path, extension);
+  }
+};
+
+class gcc_wrapper : public compiler_wrapper {
+public:
+  static bool can_handle_command(const arg_list_t& args) {
+    // Is this the right compiler?
+    return (args.size() >= 1) && ((args[0].find("gcc") != std::string::npos) ||
+                                  (args[0].find("g++") != std::string::npos));
+  }
+
+  /// @brief Try to wrap a compiler command.
+  /// @param args Command and arguments.
+  /// @param[out] return_code The command return code (if handled).
+  /// @returns true if the command was recognized and handled.
+  static bool handle_command(const arg_list_t& args, cache_t& cache, int& return_code) {
+    // Start a hash.
+    hasher_t hasher;
+
+    // Hash the preprocessed file contents.
+    hasher.update(preprocess_source(args, cache));
+
+    // Hash the (filtered) command line flags.
+    hasher.update(filter_arguments(args).join(" "));
+
+    // Hash the compiler version string.
+    hasher.update(get_version_info(args));
+
+    // DEBUG
+    std::cout << " == HASH: " << hasher.final().as_string() << "\n";
+
+    // Look up the entry in the cache or create a new entry.
+    // TODO(m): Implement me!
+    (void)return_code;
+    return false;
+  }
+
+private:
+  static arg_list_t make_preprocessor_cmd(const arg_list_t& args,
+                                          const std::string& preprocessed_file) {
+    arg_list_t preprocess_args;
+
+    // Drop arguments that we do not want/need.
+    bool drop_next_arg = false;
+    for (auto it = args.begin(); it != args.end(); ++it) {
+      auto arg = *it;
+      bool drop_this_arg = drop_next_arg;
+      drop_next_arg = false;
+      if (arg == std::string("-c")) {
+        drop_this_arg = true;
+      } else if (arg == std::string("-o")) {
+        drop_this_arg = true;
+        drop_next_arg = true;
+      }
+      if (!drop_this_arg) {
+        preprocess_args += arg;
+      }
+    }
+
+    // Append the required arguments for producing preprocessed output.
+    preprocess_args += std::string("-E");
+    preprocess_args += std::string("-P");
+    preprocess_args += std::string("-o");
+    preprocess_args += preprocessed_file;
+
+    return preprocess_args;
+  }
+
+  static std::string preprocess_source(const arg_list_t& args, cache_t& cache) {
+    // Are we compiling an object file?
+    auto is_object_compilation = false;
+    for (auto arg : args) {
+      if (arg == std::string("-c")) {
+        is_object_compilation = true;
+        break;
+      }
+    }
+    if (!is_object_compilation) {
+      return std::string();
+    }
+
+    // Run the preprocessor step.
+    const auto preprocessed_file = compiler_wrapper::get_temp_file(cache, ".pp");
+    const auto preprocessor_args = make_preprocessor_cmd(args, preprocessed_file.path());
+    auto result = sys::run(preprocessor_args);
+    if (result.return_code != 0) {
+      return std::string();
+    }
+
+    // Read and return the preprocessed file.
+    return file::read(preprocessed_file.path());
+  }
+
+  static arg_list_t filter_arguments(const arg_list_t& args) {
+    arg_list_t filtered_args;
+
+    // The first argument is the compiler binary without the path.
+    filtered_args += file::get_file_part(args[0]);
+
+    // Note: We always skip the first arg since we have handled it already.
+    bool skip_next_arg = true;
+    for (auto arg : args) {
+      if (!skip_next_arg) {
+        // Does this argument specify a file (we don't want to hash those).
+        const bool is_arg_plus_file_name =
+            ((arg == "-I") || (arg == "-MF") || (arg == "-MT") || (arg == "-o"));
+
+        // Is this a source file (we don't want to hash it)?
+        const auto ext = file::get_extension(arg);
+        const bool is_source_file = ((ext == ".cpp") || (ext == ".c"));
+
+        // Generally unwanted argument (things that will not change how we go from preprocessed code
+        // to binary object files)?
+        const auto first_two_chars = arg.substr(0, 2);
+        const bool is_unwanted_arg =
+            ((first_two_chars == "-I") || (first_two_chars == "-D") || is_source_file);
+
+        if (is_arg_plus_file_name) {
+          skip_next_arg = true;
+        } else if (!is_unwanted_arg) {
+          filtered_args += arg;
+        }
+      } else {
+        skip_next_arg = false;
+      }
+    }
+
+    // DEBUG
+    std::cout << " == Filtered arguments: " << filtered_args.join(" ") << "\n";
+
+    return filtered_args;
+  }
+
+  static std::string get_version_info(const arg_list_t& args) {
+    // Get the version string for the compiler.
+    arg_list_t version_args;
+    version_args += args[0];
+    version_args += "--version";
+    const auto result = sys::run(version_args);
+    return (result.return_code == 0) ? result.stdout : std::string();
+  }
+
+};
+}  // namespace bcache
 
 namespace {
 [[noreturn]] void clear_cache_and_exit() {
@@ -49,51 +208,26 @@ namespace {
   std::exit(0);
 }
 
-class gcc_wrapper {
-public:
-  /// @brief Try to wrap a compiler command.
-  /// @param args Command and arguments.
-  /// @param[out] return_code The command return code (if handled).
-  /// @returns true if the command was recognized and handled.
-  static bool handle_command(const bcache::arg_list_t& args, int& return_code) {
-    // Is this the right compiler?
-    if ((args[0].find("gcc") == std::string::npos) && (args[0].find("g++") == std::string::npos)) {
-      return false;
-    }
-
-    // Are we compiling an object file?
-    auto is_object_compilation = false;
-    for (auto arg : args) {
-      if (arg == std::string("-c")) {
-        is_object_compilation = true;
-        break;
-      }
-    }
-    if (!is_object_compilation) {
-      return false;
-    }
-
-    // Run the preprocessor step.
-    // TODO(m): Implement me!
-    (void)return_code;
-
-    return false;
-  }
-};
-
 [[noreturn]] void wrap_compiler_and_exit(int argc, const char** argv) {
   auto args = bcache::arg_list_t(argc, argv);
+
+  // TODO(m): Follow symlinks to find the true compiler command! It affects things like if we can
+  // match the compiler name or not, and what version string we get. We also want to avoid
+  // incorrectly identifying other compiler accelerators (e.g. ccache) as actual compilers.
+
+  // Initialize a cache object.
+  bcache::cache_t cache;
 
   // Try different compilers.
   auto handled = false;
   int return_code = 1;
-  if (!handled) {
-    handled = gcc_wrapper::handle_command(args, return_code);
+  if (bcache::gcc_wrapper::can_handle_command(args)) {
+    handled = bcache::gcc_wrapper::handle_command(args, cache, return_code);
   }
 
   // Fall back to running the command as is.
   if (!handled) {
-    auto result = bcache::sys::run(args);
+    auto result = bcache::sys::run(args, false);
     return_code = result.return_code;
   }
 

@@ -37,6 +37,12 @@ public:
     return m_is_valid;
   }
 
+  /// @brief Get the root folder of the cache.
+  /// @returns the path to the root folder.
+  const std::string& root_folder() const {
+    return m_root_folder;
+  }
+
   /// @brief Clear all entries in the cache.
   void clear();
 

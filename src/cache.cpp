@@ -39,6 +39,7 @@ std::string find_root_folder() {
   {
     auto home = file::get_user_home_dir();
     if (!home.empty()) {
+      // TODO(m): Should use ".cache/buildcache".
       return file::append_path(home, ".buildcache");
     }
   }

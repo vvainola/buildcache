@@ -21,11 +21,17 @@
 
 #include "sys_utils.hpp"
 
+#include <atomic>
+#include <cstdio>
+#include <sstream>
+
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 #include <shlobj.h>
+#else
+#include <unistd.h>
 #endif
 
 #include <sys/types.h>
@@ -33,6 +39,37 @@
 
 namespace bcache {
 namespace file {
+namespace {
+// This is a static variable that holds a strictly incrementing number used for generating unique
+// temporary file names.
+std::atomic_uint_fast32_t s_tmp_name_number;
+}  // namespace
+
+tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension)
+{
+  // Get unique identifiers for this file.
+#ifdef _WIN32
+  const auto pid = static_cast<int>(GetCurrentProcessId());
+#else
+  const auto pid = static_cast<int>(getpid());
+#endif
+  const auto number = ++s_tmp_name_number;
+
+  // Generate a file name from the unique identifiers.
+  std::ostringstream ss;
+  ss << "bcache" << pid << "_" << number;
+  std::string file_name = ss.str();
+
+  // Concatenate base dir, file name and extension into the full path.
+  m_path = file::append_path(dir, file_name + extension);
+}
+
+tmp_file_t::~tmp_file_t(){
+  if (file_exists(m_path)) {
+    file::remove(m_path);
+  }
+}
+
 std::string append_path(const std::string& path, const std::string& append) {
 #if defined(_WIN32)
   return path + std::string("\\") + append;
@@ -43,6 +80,29 @@ std::string append_path(const std::string& path, const std::string& append) {
 
 std::string append_path(const std::string& path, const char* append) {
   return append_path(path, std::string(append));
+}
+
+std::string get_extension(const std::string& path) {
+  const auto pos = path.rfind(".");
+  return (pos != std::string::npos) ? path.substr(pos) : std::string();
+}
+
+std::string get_file_part(const std::string& path) {
+#if defined(_WIN32)
+  const auto pos1 = path.rfind("/");
+  const auto pos2 = path.rfind("\\");
+  std::string::size_type pos;
+  if (pos1 == std::string::npos) {
+    pos = pos2;
+  } else if (pos2 == std::string::npos) {
+    pos = pos1;
+  } else {
+    pos = std::max(pos1, pos2);
+  }
+#else
+  const auto pos = path.rfind("/");
+#endif
+  return (pos != std::string::npos) ? path.substr(pos + 1) : std::string();
 }
 
 std::string get_user_home_dir() {
@@ -75,8 +135,11 @@ bool create_dir(const std::string& path) {
 }
 
 void remove(const std::string& path) {
-  // TODO(m): Implement me!
-  (void)path;
+#ifdef _WIN32
+  _wremove(sys::utf8_to_ucs2(path).c_str());
+#else
+  std::remove(path.c_str());
+#endif
 }
 
 bool dir_exists(const std::string& path) {
@@ -99,6 +162,43 @@ bool file_exists(const std::string& path) {
   struct stat buffer;
   return (stat(path.c_str(), &buffer) == 0);
 #endif
+}
+
+std::string read(const std::string& path) {
+  FILE* f;
+
+  // Open the file.
+#ifdef _WIN32
+  const auto err = _wfopen_s(&f, sys::utf8_to_ucs2(path).c_str(), L"rb");
+  if (err != 0) {
+    return std::string();
+  }
+#else
+  f = std::fopen(path.c_str(), "rb");
+  if (f == nullptr) {
+    return std::string();
+  }
+#endif
+
+  // Get file size.
+  std::fseek(f, 0, SEEK_END);
+  const auto file_size = static_cast<size_t>(std::ftell(f));
+  std::fseek(f, 0, SEEK_SET);
+
+  // Read the data into a string.
+  std::string str;
+  str.reserve(static_cast<std::string::size_type>(file_size));
+  auto bytes_left = file_size;
+  while ((bytes_left != 0u) && !std::feof(f)) {
+    auto* ptr = &str[file_size - bytes_left];
+    const auto bytes_read = std::fread(ptr, 1, bytes_left, f);
+    bytes_left -= bytes_read;
+  }
+
+  // Close the file.
+  std::fclose(f);
+
+  return str;
 }
 }  // namespace file
 }  // namespace bcache

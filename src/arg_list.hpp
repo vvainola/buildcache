@@ -29,6 +29,8 @@ public:
   typedef typename std::vector<std::string>::iterator iterator;
   typedef typename std::vector<std::string>::const_iterator const_iterator;
 
+  arg_list_t() {}
+
   arg_list_t(const int argc, const char** argv) {
     for (int i = 0; i < argc; ++i) {
       m_args.emplace_back(std::string(argv[i]));
@@ -54,6 +56,11 @@ public:
 
   const std::string& operator[](const size_t idx) const {
     return m_args[idx];
+  }
+
+  arg_list_t& operator+=(const std::string& str) {
+    m_args.emplace_back(str);
+    return *this;
   }
 
   size_t size() const {
