@@ -20,6 +20,7 @@
 #include "compiler_wrapper.hpp"
 
 #include "hasher.hpp"
+#include "sys_utils.hpp"
 
 #include <iostream>
 
@@ -31,6 +32,8 @@ compiler_wrapper_t::~compiler_wrapper_t() {
 }
 
 bool compiler_wrapper_t::handle_command(const arg_list_t& args, int& return_code) {
+  return_code = 1;
+
   try {
     // Start a hash.
     hasher_t hasher;
@@ -44,13 +47,29 @@ bool compiler_wrapper_t::handle_command(const arg_list_t& args, int& return_code
     // Hash the compiler version string.
     hasher.update(get_compiler_id(args));
 
-    // DEBUG
-    std::cout << " == HASH: " << hasher.final().as_string() << "\n";
+    // Finalize the hash.
+    const auto hash = hasher.final();
 
-    // Look up the entry in the cache or create a new entry.
-    // TODO(m): Implement me!
-    (void)return_code;
-    return false;
+    // Get the object (target) file for this compilation command.
+    const auto object_file = get_object_file(args);
+
+    // DEBUG
+    std::cout << " == HASH: " << hash.as_string() << ", object file: " << object_file << "\n";
+
+    // Look up the entry in the cache.
+    const auto cached_file = m_cache.lookup(hash);
+    if (!cached_file.empty()) {
+      // TODO(m): Implement me!
+      return false;
+    }
+
+    // Run the actual compiler command to produce the object file.
+    const auto result = sys::run(args, false);
+    return_code = result.return_code;
+
+    // Create a new entry in the cache.
+    m_cache.add(hash, object_file);
+    return true;
   } catch (...) {
     return false;
   }

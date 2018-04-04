@@ -48,6 +48,7 @@ private:
   virtual std::string preprocess_source(const arg_list_t& args) = 0;
   virtual arg_list_t filter_arguments(const arg_list_t& args) = 0;
   virtual std::string get_compiler_id(const arg_list_t& args) = 0;
+  virtual std::string get_object_file(const arg_list_t& args) = 0;
 };
 }  // namespace bcache
 

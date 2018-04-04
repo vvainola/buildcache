@@ -35,6 +35,7 @@ private:
   std::string preprocess_source(const arg_list_t& args) override;
   arg_list_t filter_arguments(const arg_list_t& args) override;
   std::string get_compiler_id(const arg_list_t& args) override;
+  std::string get_object_file(const arg_list_t& args) override;
 };
 }  // namespace bcache
 #endif  // BUILDCACHE_GCC_WRAPPER_HPP_

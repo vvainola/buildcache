@@ -37,9 +37,13 @@ public:
       return &m_data[0];
     }
 
+    const uint8_t* data() const {
+      return &m_data[0];
+    }
+
     /// @brief Convert a hash to a hexadecimal string.
     /// @returns A hexadecimal string representation of the given hash.
-    std::string as_string() {
+    const std::string as_string() const {
       static const char digits[17] = "0123456789abcdef";
       std::string result(SIZE * 2, '0');
       for (size_t i = 0; i < SIZE; ++i) {

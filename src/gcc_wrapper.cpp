@@ -21,8 +21,8 @@
 
 #include "sys_utils.hpp"
 
-#include <exception>
 #include <iostream>
+#include <stdexcept>
 
 namespace bcache {
 namespace {
@@ -143,5 +143,15 @@ std::string gcc_wrapper_t::get_compiler_id(const arg_list_t& args) {
   }
 
   return result.stdout;
+}
+
+std::string gcc_wrapper_t::get_object_file(const arg_list_t& args) {
+  for (size_t i = 0u; i < args.size(); ++i) {
+    const auto next_idx = i + 1u;
+    if ((args[i] == "-o") && (next_idx < args.size())) {
+      return args[next_idx];
+    }
+  }
+  throw std::runtime_error("Unable to get the target object file.");
 }
 }  // namespace bcache

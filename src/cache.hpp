@@ -51,8 +51,8 @@ public:
 
   /// @brief Adds a file to the cache
   /// @param hash The cache entry identifier.
-  /// @param source_file The file to copy into the cache.
-  void add(const hasher_t::hash_t& hash, const std::string& source_file);
+  /// @param object_file The file to copy into the cache.
+  void add(const hasher_t::hash_t& hash, const std::string& object_file);
 
   /// @brief Check if an entry exists in the cache.
   /// @returns The file name base (without extension) to the cache entry, or en empty string if the

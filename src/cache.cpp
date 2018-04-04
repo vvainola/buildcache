@@ -86,14 +86,14 @@ void cache_t::show_stats() {
   std::cout << "*** Stats have not yet been implemented\n";
 }
 
-void cache_t::add(const hasher_t::hash_t& hash, const std::string& source_file) {
+void cache_t::add(const hasher_t::hash_t& hash, const std::string& object_file) {
   if (!m_is_valid) {
     return;
   }
 
   // TODO(m): Implement me!
   (void)hash;
-  (void)source_file;
+  (void)object_file;
 }
 
 std::string cache_t::lookup(const hasher_t::hash_t& hash) {
