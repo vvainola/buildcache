@@ -17,7 +17,7 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "arg_list.hpp"
+#include "string_list.hpp"
 #include "cache.hpp"
 #include "compiler_wrapper.hpp"
 #include "gcc_wrapper.hpp"
@@ -53,7 +53,7 @@ namespace {
 }
 
 [[noreturn]] void wrap_compiler_and_exit(int argc, const char** argv) {
-  auto args = bcache::arg_list_t(argc, argv);
+  auto args = bcache::string_list_t(argc, argv);
   if (args.size() < 1) {
     // Should never happen.
     std::exit(1);

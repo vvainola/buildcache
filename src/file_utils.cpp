@@ -175,7 +175,7 @@ std::string find_executable(const std::string& path) {
   if (!path_env) {
     return std::string();
   }
-  const auto search_path = arg_list_t(std::string(path_env), PATH_DELIMITER);
+  const auto search_path = string_list_t(std::string(path_env), PATH_DELIMITER);
 
   // Iterate the path from start to end and see if we can find the executable file.
   for (const auto& base_path : search_path) {

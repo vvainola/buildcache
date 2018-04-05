@@ -31,8 +31,9 @@ bool is_source_file(const std::string& arg) {
   return ((ext == ".cpp") || (ext == ".cc") || (ext == ".cxx") || (ext == ".c"));
 }
 
-arg_list_t make_preprocessor_cmd(const arg_list_t& args, const std::string& preprocessed_file) {
-  arg_list_t preprocess_args;
+string_list_t make_preprocessor_cmd(const string_list_t& args,
+                                    const std::string& preprocessed_file) {
+  string_list_t preprocess_args;
 
   // Drop arguments that we do not want/need.
   bool drop_next_arg = false;
@@ -64,7 +65,7 @@ arg_list_t make_preprocessor_cmd(const arg_list_t& args, const std::string& prep
 gcc_wrapper_t::gcc_wrapper_t(cache_t& cache) : compiler_wrapper_t(cache) {
 }
 
-bool gcc_wrapper_t::can_handle_command(const arg_list_t& args) {
+bool gcc_wrapper_t::can_handle_command(const string_list_t& args) {
   // Is this the right compiler?
   return (args.size() >= 1) &&
          ((args[0].find("gcc") != std::string::npos) ||
@@ -73,7 +74,7 @@ bool gcc_wrapper_t::can_handle_command(const arg_list_t& args) {
           (args[0].find("clang++") != std::string::npos));
 }
 
-std::string gcc_wrapper_t::preprocess_source(const arg_list_t& args) {
+std::string gcc_wrapper_t::preprocess_source(const string_list_t& args) {
   // Are we compiling an object file?
   auto is_object_compilation = false;
   for (auto arg : args) {
@@ -102,8 +103,8 @@ std::string gcc_wrapper_t::preprocess_source(const arg_list_t& args) {
   return preprocessed_source;
 }
 
-arg_list_t gcc_wrapper_t::filter_arguments(const arg_list_t& args) {
-  arg_list_t filtered_args;
+string_list_t gcc_wrapper_t::filter_arguments(const string_list_t& args) {
+  string_list_t filtered_args;
 
   // The first argument is the compiler binary without the path.
   filtered_args += file::get_file_part(args[0]);
@@ -138,11 +139,11 @@ arg_list_t gcc_wrapper_t::filter_arguments(const arg_list_t& args) {
   return filtered_args;
 }
 
-std::string gcc_wrapper_t::get_compiler_id(const arg_list_t& args) {
+std::string gcc_wrapper_t::get_compiler_id(const string_list_t& args) {
   // TODO(m): Add things like executable file size too.
 
   // Get the version string for the compiler.
-  arg_list_t version_args;
+  string_list_t version_args;
   version_args += args[0];
   version_args += "--version";
   const auto result = sys::run(version_args);
@@ -153,7 +154,7 @@ std::string gcc_wrapper_t::get_compiler_id(const arg_list_t& args) {
   return result.stdout;
 }
 
-std::string gcc_wrapper_t::get_object_file(const arg_list_t& args) {
+std::string gcc_wrapper_t::get_object_file(const string_list_t& args) {
   for (size_t i = 0u; i < args.size(); ++i) {
     const auto next_idx = i + 1u;
     if ((args[i] == "-o") && (next_idx < args.size())) {

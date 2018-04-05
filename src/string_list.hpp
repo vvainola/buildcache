@@ -17,27 +17,28 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_ARG_LIST_HPP_
-#define BUILDCACHE_ARG_LIST_HPP_
+#ifndef BUILDCACHE_STRING_LIST_HPP_
+#define BUILDCACHE_STRING_LIST_HPP_
 
 #include <string>
 #include <vector>
 
 namespace bcache {
-class arg_list_t {
+class string_list_t {
 public:
   typedef typename std::vector<std::string>::iterator iterator;
   typedef typename std::vector<std::string>::const_iterator const_iterator;
 
-  arg_list_t() {}
+  string_list_t() {
+  }
 
-  arg_list_t(const int argc, const char** argv) {
+  string_list_t(const int argc, const char** argv) {
     for (int i = 0; i < argc; ++i) {
       m_args.emplace_back(std::string(argv[i]));
     }
   }
 
-  arg_list_t(const std::string& str, const std::string& delimiter) {
+  string_list_t(const std::string& str, const std::string& delimiter) {
     std::string::size_type current_str_start = 0u;
     while (current_str_start < str.size()) {
       const auto pos = str.find(delimiter, current_str_start);
@@ -72,7 +73,7 @@ public:
     return m_args[idx];
   }
 
-  arg_list_t& operator+=(const std::string& str) {
+  string_list_t& operator+=(const std::string& str) {
     m_args.emplace_back(str);
     return *this;
   }
@@ -134,4 +135,4 @@ private:
 };
 }  // namespace bcache
 
-#endif  // BUILDCACHE_ARG_LIST_HPP_
+#endif  // BUILDCACHE_STRING_LIST_HPP_

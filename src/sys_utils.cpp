@@ -54,7 +54,7 @@ std::wstring utf8_to_ucs2(const std::string& str8) {
   }
 }
 
-run_result_t run(const arg_list_t& args, const bool quiet) {
+run_result_t run(const string_list_t& args, const bool quiet) {
   // Initialize the run result.
   auto result = make_run_result();
 

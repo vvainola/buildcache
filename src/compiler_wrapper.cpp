@@ -31,7 +31,7 @@ compiler_wrapper_t::compiler_wrapper_t(cache_t& cache) : m_cache(cache) {
 compiler_wrapper_t::~compiler_wrapper_t() {
 }
 
-bool compiler_wrapper_t::handle_command(const arg_list_t& args, int& return_code) {
+bool compiler_wrapper_t::handle_command(const string_list_t& args, int& return_code) {
   return_code = 1;
 
   try {
@@ -57,8 +57,8 @@ bool compiler_wrapper_t::handle_command(const arg_list_t& args, int& return_code
     const auto cached_file = m_cache.lookup(hash);
     if (!cached_file.empty()) {
       // DEBUG
-      std::cout << " == HIT == " << hash.as_string() << ": " << cached_file << " => "
-                << object_file << "\n";
+      std::cout << " == HIT == " << hash.as_string() << ": " << cached_file << " => " << object_file
+                << "\n";
 
       return_code = 0;
       return file::link_or_copy(cached_file, object_file);

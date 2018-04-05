@@ -20,7 +20,7 @@
 #ifndef BUILDCACHE_SYS_UTILS_HPP_
 #define BUILDCACHE_SYS_UTILS_HPP_
 
-#include "arg_list.hpp"
+#include "string_list.hpp"
 
 #include <string>
 
@@ -28,9 +28,9 @@ namespace bcache {
 namespace sys {
 /// @brief Run results from an external command.
 struct run_result_t {
-  int return_code;    ///< The program return code (zero for success).
-  std::string stdout; ///< The contents of stdout.
-  std::string stderr; ///< The contents of stderr.
+  int return_code;     ///< The program return code (zero for success).
+  std::string stdout;  ///< The contents of stdout.
+  std::string stderr;  ///< The contents of stderr.
 };
 
 /// @brief Convert a UCS-2 string to a UTF-8 string.
@@ -47,7 +47,7 @@ std::wstring utf8_to_ucs2(const std::string& str8);
 /// @param args The command and its arguments (the first item is the command).
 /// @param quiet Supress output to stdout/stderr during execution.
 /// @returns The result from the command.
-run_result_t run(const arg_list_t& args, const bool quiet = true);
+run_result_t run(const string_list_t& args, const bool quiet = true);
 }  // namespace sys
 }  // namespace bcache
 

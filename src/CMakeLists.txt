@@ -27,7 +27,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_subdirectory(third_party)
 
 add_executable(buildcache
-  arg_list.hpp
   cache.cpp
   cache.hpp
   compiler_wrapper.cpp
@@ -38,6 +37,7 @@ add_executable(buildcache
   gcc_wrapper.hpp
   hasher.hpp
   main.cpp
+  string_list.hpp
   sys_utils.cpp
   sys_utils.hpp
   )

@@ -20,7 +20,7 @@
 #ifndef BUILDCACHE_COMPILER_WRAPPER_HPP_
 #define BUILDCACHE_COMPILER_WRAPPER_HPP_
 
-#include "arg_list.hpp"
+#include "string_list.hpp"
 #include "cache.hpp"
 #include "file_utils.hpp"
 
@@ -35,7 +35,7 @@ public:
   /// @param args Command and arguments.
   /// @param[out] return_code The command return code (if handled).
   /// @returns true if the command was recognized and handled.
-  bool handle_command(const arg_list_t& args, int& return_code);
+  bool handle_command(const string_list_t& args, int& return_code);
 
 protected:
   compiler_wrapper_t(cache_t& cache);
@@ -43,10 +43,10 @@ protected:
   file::tmp_file_t get_temp_file(const std::string& extension) const;
 
 private:
-  virtual std::string preprocess_source(const arg_list_t& args) = 0;
-  virtual arg_list_t filter_arguments(const arg_list_t& args) = 0;
-  virtual std::string get_compiler_id(const arg_list_t& args) = 0;
-  virtual std::string get_object_file(const arg_list_t& args) = 0;
+  virtual std::string preprocess_source(const string_list_t& args) = 0;
+  virtual string_list_t filter_arguments(const string_list_t& args) = 0;
+  virtual std::string get_compiler_id(const string_list_t& args) = 0;
+  virtual std::string get_object_file(const string_list_t& args) = 0;
 
   cache_t& m_cache;
 };

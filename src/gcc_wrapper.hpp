@@ -29,13 +29,13 @@ class gcc_wrapper_t : public compiler_wrapper_t {
 public:
   gcc_wrapper_t(cache_t& cache);
 
-  static bool can_handle_command(const arg_list_t& args);
+  static bool can_handle_command(const string_list_t& args);
 
 private:
-  std::string preprocess_source(const arg_list_t& args) override;
-  arg_list_t filter_arguments(const arg_list_t& args) override;
-  std::string get_compiler_id(const arg_list_t& args) override;
-  std::string get_object_file(const arg_list_t& args) override;
+  std::string preprocess_source(const string_list_t& args) override;
+  string_list_t filter_arguments(const string_list_t& args) override;
+  std::string get_compiler_id(const string_list_t& args) override;
+  std::string get_object_file(const string_list_t& args) override;
 };
 }  // namespace bcache
 #endif  // BUILDCACHE_GCC_WRAPPER_HPP_
