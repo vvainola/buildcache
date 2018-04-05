@@ -5,6 +5,17 @@ avoid unnecessary re-compilations, and thereby speeding up the build process.
 
 It is similar in spirit to [ccache](https://ccache.samba.org/).
 
+## Building
+
+Use [CMake](https://cmake.org/) and your favorite C++ compiler to build the BuildCache program:
+
+```bash
+$ mkdir build
+$ cd build
+$ cmake -DCMAKE_BUILD_TYPE=Release ../src
+$ cmake --build .
+```
+
 ## Usage
 
 To use BuildCache for your builds, simply prefix the build command with

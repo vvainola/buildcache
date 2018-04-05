@@ -51,3 +51,7 @@ target_link_libraries(buildcache md4)
 if(WIN32 OR MINGW)
   target_link_libraries(buildcache userenv)
 endif()
+
+install(
+  TARGETS buildcache
+  RUNTIME DESTINATION bin)
