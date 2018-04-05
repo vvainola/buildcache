@@ -33,9 +33,12 @@ public:
 
   /// @brief Try to wrap a compiler command.
   /// @param args Command and arguments.
+  /// @param true_exe_path The true path to the compiler executable.
   /// @param[out] return_code The command return code (if handled).
   /// @returns true if the command was recognized and handled.
-  bool handle_command(const string_list_t& args, int& return_code);
+  bool handle_command(const string_list_t& args,
+                      const std::string& true_exe_path,
+                      int& return_code);
 
 protected:
   compiler_wrapper_t(cache_t& cache);

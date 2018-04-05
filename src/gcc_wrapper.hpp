@@ -29,7 +29,7 @@ class gcc_wrapper_t : public compiler_wrapper_t {
 public:
   gcc_wrapper_t(cache_t& cache);
 
-  static bool can_handle_command(const string_list_t& args);
+  static bool can_handle_command(const std::string& compiler_exe);
 
 private:
   std::string preprocess_source(const string_list_t& args) override;

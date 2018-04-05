@@ -21,6 +21,7 @@
 
 #include <codecvt>
 #include <cstdio>
+#include <cstdlib>
 #include <locale>
 #include <iostream>
 
@@ -86,6 +87,19 @@ run_result_t run(const string_list_t& args, const bool quiet) {
   }
 
   return result;
+}
+
+run_result_t run_with_prefix(const string_list_t& args, const bool quiet) {
+  // Prepend the argument list with a prefix, if any.
+  string_list_t prefixed_args;
+  const auto* prefix_env = std::getenv("BUILDCACHE_PREFIX");
+  if (prefix_env != nullptr) {
+    prefixed_args += std::string(prefix_env);
+  }
+  prefixed_args += args;
+
+  // Run the command.
+  return run(prefixed_args, quiet);
 }
 }  // namespace sys
 }  // namespace bcache

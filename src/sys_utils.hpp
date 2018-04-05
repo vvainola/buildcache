@@ -48,6 +48,16 @@ std::wstring utf8_to_ucs2(const std::string& str8);
 /// @param quiet Supress output to stdout/stderr during execution.
 /// @returns The result from the command.
 run_result_t run(const string_list_t& args, const bool quiet = true);
+
+/// @brief Run the given command with an optional prefix.
+///
+/// Unlike the run() function, this function will optinally use a prefix (wrapper) as specified by
+/// the environment variable BUILDCACHE_PREFIX.
+///
+/// @param args The command and its arguments (the first item is the command).
+/// @param quiet Supress output to stdout/stderr during execution.
+/// @returns The result from the command.
+run_result_t run_with_prefix(const string_list_t& args, const bool quiet = true);
 }  // namespace sys
 }  // namespace bcache
 

@@ -68,13 +68,9 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 gcc_wrapper_t::gcc_wrapper_t(cache_t& cache) : compiler_wrapper_t(cache) {
 }
 
-bool gcc_wrapper_t::can_handle_command(const string_list_t& args) {
-  if (args.size() < 1) {
-    return false;
-  }
-
+bool gcc_wrapper_t::can_handle_command(const std::string& compiler_exe) {
   // Is this the right compiler?
-  const auto cmd = file::get_file_part(args[0]);
+  const auto cmd = file::get_file_part(compiler_exe);
   return (cmd.find("gcc") != std::string::npos) || (cmd.find("g++") != std::string::npos) ||
          (cmd.find("clang++") != std::string::npos) || (cmd == "clang");
 }

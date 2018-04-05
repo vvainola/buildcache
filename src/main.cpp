@@ -67,26 +67,24 @@ namespace {
   bool was_wrapped = false;
   int return_code = 1;
   if (!true_exe_path.empty()) {
-    args[0] = true_exe_path;
-
     // Initialize a cache object.
     bcache::cache_t cache;
 
     // Select a matching compiler wrapper.
     std::unique_ptr<bcache::compiler_wrapper_t> wrapper;
-    if (bcache::gcc_wrapper_t::can_handle_command(args)) {
+    if (bcache::gcc_wrapper_t::can_handle_command(true_exe_path)) {
       wrapper.reset(new bcache::gcc_wrapper_t(cache));
     }
 
     // Run the wrapper, if any.
     if (wrapper) {
-      was_wrapped = wrapper->handle_command(args, return_code);
+      was_wrapped = wrapper->handle_command(args, true_exe_path, return_code);
     }
   }
 
   // Fall back to running the command as is.
   if (!was_wrapped) {
-    auto result = bcache::sys::run(args, false);
+    auto result = bcache::sys::run_with_prefix(args, false);
     return_code = result.return_code;
   }
 

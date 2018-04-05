@@ -94,6 +94,13 @@ public:
     return *this;
   }
 
+  string_list_t& operator+=(const string_list_t& list) {
+    for (const auto& str : list) {
+      m_args.emplace_back(str);
+    }
+    return *this;
+  }
+
   size_t size() const {
     return m_args.size();
   }
