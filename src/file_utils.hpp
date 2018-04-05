@@ -78,7 +78,7 @@ bool create_dir(const std::string& path);
 
 /// @brief Remove an existing file.
 /// @param path The path to the file.
-void remove(const std::string& path);
+void remove_file(const std::string& path);
 
 /// @brief Check if a directory exists.
 /// @param path The path to the directory.

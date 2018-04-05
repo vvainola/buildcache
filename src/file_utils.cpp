@@ -60,12 +60,12 @@ tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension) {
   std::string file_name = ss.str();
 
   // Concatenate base dir, file name and extension into the full path.
-  m_path = file::append_path(dir, file_name + extension);
+  m_path = append_path(dir, file_name + extension);
 }
 
 tmp_file_t::~tmp_file_t() {
   if (file_exists(m_path)) {
-    file::remove(m_path);
+    remove_file(m_path);
   }
 }
 
@@ -133,7 +133,7 @@ bool create_dir(const std::string& path) {
 #endif
 }
 
-void remove(const std::string& path) {
+void remove_file(const std::string& path) {
 #ifdef _WIN32
   _wremove(sys::utf8_to_ucs2(path).c_str());
 #else
