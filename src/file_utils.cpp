@@ -23,7 +23,9 @@
 
 #include <atomic>
 #include <cstdio>
+#include <cstdint>
 #include <sstream>
+#include <vector>
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -248,8 +250,48 @@ bool file_exists(const std::string& path) {
 #endif
 }
 
+bool copy(const std::string& from_path, const std::string& to_path) {
+// TODO(m): We should make this safer by copying to a temporary file and do a rename to the target
+// file name once the copy has finished. This should prevent half-finished copies if the process
+// is terminated prematurely (e.g. CTRL+C).
+#ifdef _WIN32
+  // TODO(m): We could handle paths longer than MAX_PATH, e.g. by prepending strings with "\\?\"?
+  const bool success =
+      (CopyFileW(sys::utf8_to_ucs2(from_path).c_str(), sys::utf8_to_ucs2(to_path).c_str(), FALSE) !=
+       0);
+#else
+  // For non-Windows systems we use a classic buffered read-write loop.
+  bool success = false;
+  auto* from_file = std::fopen(from_path.c_str(), "rb");
+  if (from_file != nullptr) {
+    auto* to_file = std::fopen(to_path.c_str(), "wb");
+    if (to_file != nullptr) {
+      // We use a buffer size that typically fits in an L1 cache.
+      static const int BUFFER_SIZE = 8192;
+      std::vector<std::uint8_t> buf(BUFFER_SIZE);
+      success = true;
+      while (!std::feof(from_file)) {
+        const auto bytes_read = std::fread(buf.data(), 1, buf.size(), from_file);
+        if (bytes_read == 0u) {
+          break;
+        }
+        const auto bytes_written = std::fwrite(buf.data(), 1, buf.size(), to_file);
+        if (bytes_written != bytes_read) {
+          success = false;
+          break;
+        }
+      }
+      std::fclose(to_file);
+    }
+    std::fclose(from_file);
+  }
+#endif
+
+  return success;
+}
+
 bool link_or_copy(const std::string& from_path, const std::string& to_path) {
-  // First try to make a hard link. This may fail if the file paths are on different volumes for
+  // First try to make a hard link. However this may fail if the files are on different volumes for
   // instance.
   bool success;
 #ifdef _WIN32
@@ -260,9 +302,9 @@ bool link_or_copy(const std::string& from_path, const std::string& to_path) {
   success = (link(from_path.c_str(), to_path.c_str()) == 0);
 #endif
 
-  // If the hard link failed, make a copy instead.
+  // If the hard link failed, make a full copy instead.
   if (!success) {
-    // TODO(m): Implement me!
+    success = copy(from_path, to_path);
   }
 
   return success;

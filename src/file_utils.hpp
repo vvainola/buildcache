@@ -104,7 +104,15 @@ bool dir_exists(const std::string& path);
 /// @returns true if the file exists.
 bool file_exists(const std::string& path);
 
+/// @brief Make a full copy of a file.
+/// @param from_path The source file.
+/// @param to_path The destination file.
+/// @returns true if the operation was successful.
+bool copy(const std::string& from_path, const std::string& to_path);
+
 /// @brief Make a hard link or a full copy of a file.
+///
+/// A hard link will be performed if possible. Otherwise a full copy will be made.
 /// @param from_path The source file.
 /// @param to_path The destination file.
 /// @returns true if the operation was successful.
