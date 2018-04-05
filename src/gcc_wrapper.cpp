@@ -39,11 +39,11 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
   bool drop_next_arg = false;
   for (auto it = args.begin(); it != args.end(); ++it) {
     auto arg = *it;
-    bool drop_this_arg = drop_next_arg;
+    auto drop_this_arg = drop_next_arg;
     drop_next_arg = false;
-    if (arg == std::string("-c")) {
+    if (arg == "-c") {
       drop_this_arg = true;
-    } else if (arg == std::string("-o")) {
+    } else if (arg == "-o") {
       drop_this_arg = true;
       drop_next_arg = true;
     }
@@ -66,12 +66,14 @@ gcc_wrapper_t::gcc_wrapper_t(cache_t& cache) : compiler_wrapper_t(cache) {
 }
 
 bool gcc_wrapper_t::can_handle_command(const string_list_t& args) {
+  if (args.size() < 1) {
+    return false;
+  }
+
   // Is this the right compiler?
-  return (args.size() >= 1) &&
-         ((args[0].find("gcc") != std::string::npos) ||
-          (args[0].find("g++") != std::string::npos) ||
-          (args[0].find("c++") != std::string::npos) || (args[0].find("cc") != std::string::npos) ||
-          (args[0].find("clang++") != std::string::npos));
+  const auto cmd = file::get_file_part(args[0]);
+  return (cmd.find("gcc") != std::string::npos) || (cmd.find("g++") != std::string::npos) ||
+         (cmd.find("clang++") != std::string::npos) || (cmd == "clang");
 }
 
 std::string gcc_wrapper_t::preprocess_source(const string_list_t& args) {
