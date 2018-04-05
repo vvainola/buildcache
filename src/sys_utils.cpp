@@ -31,8 +31,8 @@ namespace {
 run_result_t make_run_result() {
   run_result_t result;
   result.return_code = 1;
-  result.stdout = std::string();
-  result.stderr = std::string();
+  result.std_out = std::string();
+  result.std_err = std::string();
   return result;
 }
 }  // namespace
@@ -74,7 +74,7 @@ run_result_t run(const string_list_t& args, const bool quiet) {
       if (!quiet) {
         std::cout << buf;
       }
-      result.stdout += std::string(buf);
+      result.std_out += std::string(buf);
     }
 
 #if defined(_WIN32)

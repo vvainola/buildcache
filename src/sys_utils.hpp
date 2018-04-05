@@ -29,8 +29,8 @@ namespace sys {
 /// @brief Run results from an external command.
 struct run_result_t {
   int return_code;     ///< The program return code (zero for success).
-  std::string stdout;  ///< The contents of stdout.
-  std::string stderr;  ///< The contents of stderr.
+  std::string std_out;  ///< The contents of stdout.
+  std::string std_err;  ///< The contents of stderr.
 };
 
 /// @brief Convert a UCS-2 string to a UTF-8 string.

@@ -153,7 +153,7 @@ std::string gcc_wrapper_t::get_compiler_id(const string_list_t& args) {
     throw std::runtime_error("Unable to get the compiler version information string.");
   }
 
-  return result.stdout;
+  return result.std_out;
 }
 
 std::string gcc_wrapper_t::get_object_file(const string_list_t& args) {
