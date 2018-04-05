@@ -21,8 +21,11 @@
 
 #include "sys_utils.hpp"
 
-#include <iostream>
 #include <stdexcept>
+
+#ifdef BUILDCACHE_DEBUG_OUTPUT
+#include <iostream>
+#endif
 
 namespace bcache {
 namespace {
@@ -135,8 +138,9 @@ string_list_t gcc_wrapper_t::filter_arguments(const string_list_t& args) {
     }
   }
 
-  // DEBUG
+#ifdef BUILDCACHE_DEBUG_OUTPUT
   std::cout << " == Filtered arguments: " << filtered_args.join(" ", true) << "\n";
+#endif
 
   return filtered_args;
 }

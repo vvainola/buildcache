@@ -22,7 +22,9 @@
 #include "hasher.hpp"
 #include "sys_utils.hpp"
 
+#ifdef BUILDCACHE_DEBUG_OUTPUT
 #include <iostream>
+#endif
 
 namespace bcache {
 compiler_wrapper_t::compiler_wrapper_t(cache_t& cache) : m_cache(cache) {
@@ -56,16 +58,18 @@ bool compiler_wrapper_t::handle_command(const string_list_t& args, int& return_c
     // Look up the entry in the cache.
     const auto cached_file = m_cache.lookup(hash);
     if (!cached_file.empty()) {
-      // DEBUG
+#ifdef BUILDCACHE_DEBUG_OUTPUT
       std::cout << " == HIT == " << hash.as_string() << ": " << cached_file << " => " << object_file
                 << "\n";
+#endif
 
       return_code = 0;
       return file::link_or_copy(cached_file, object_file);
     }
 
-    // DEBUG
+#ifdef BUILDCACHE_DEBUG_OUTPUT
     std::cout << " == MISS == " << hash.as_string() << ": " << object_file << "\n";
+#endif
 
     // Run the actual compiler command to produce the object file.
     const auto result = sys::run(args, false);
