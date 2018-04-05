@@ -29,15 +29,25 @@ public:
   typedef typename std::vector<std::string>::iterator iterator;
   typedef typename std::vector<std::string>::const_iterator const_iterator;
 
+  /// @brief Construct an empty list.
   string_list_t() {
   }
 
+  /// @brief Construct a list from command line arguments.
+  /// @param argc Argument count.
+  /// @param argv Argument array.
+  /// @note This is useful for handling command line arguments from a program main() function.
   string_list_t(const int argc, const char** argv) {
     for (int i = 0; i < argc; ++i) {
       m_args.emplace_back(std::string(argv[i]));
     }
   }
 
+  /// @brief Construct a list from a delimited string.
+  /// @param str The string.
+  /// @param delimiter The delimiter.
+  /// @note This is useful for splitting a string into a list of strings (e.g. the PATH environment
+  /// variable).
   string_list_t(const std::string& str, const std::string& delimiter) {
     std::string::size_type current_str_start = 0u;
     while (current_str_start < str.size()) {
@@ -52,10 +62,16 @@ public:
     }
   }
 
-  std::string join(const std::string& separator) const {
+  /// @brief Join all elements into a single string.
+  /// @param separator The separator to use between strings (e.g. " ").
+  /// @param escape Set this to true to escape each string.
+  /// @returns a string containing all the strings of the list.
+  /// @note When string escaping is enabled, the strings are escaped in a way that preserves
+  /// command line argument information. E.g. strings that contain spaces are surrounded by quotes.
+  std::string join(const std::string& separator, const bool escape = false) const {
     std::string result;
     for (auto arg : m_args) {
-      const auto escaped_arg = escape_arg(arg);
+      const auto escaped_arg = escape ? escape_arg(arg) : arg;
       if (result.empty()) {
         result = result + escaped_arg;
       } else {

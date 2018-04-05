@@ -58,7 +58,7 @@ run_result_t run(const string_list_t& args, const bool quiet) {
   // Initialize the run result.
   auto result = make_run_result();
 
-  std::string cmd = args.join(" ");
+  std::string cmd = args.join(" ", true);
 
   FILE* fp;
 #if defined(_WIN32)

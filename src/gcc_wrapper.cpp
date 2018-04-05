@@ -134,7 +134,7 @@ string_list_t gcc_wrapper_t::filter_arguments(const string_list_t& args) {
   }
 
   // DEBUG
-  std::cout << " == Filtered arguments: " << filtered_args.join(" ") << "\n";
+  std::cout << " == Filtered arguments: " << filtered_args.join(" ", true) << "\n";
 
   return filtered_args;
 }

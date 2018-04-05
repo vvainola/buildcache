@@ -42,7 +42,7 @@ bool compiler_wrapper_t::handle_command(const string_list_t& args, int& return_c
     hasher.update(preprocess_source(args));
 
     // Hash the (filtered) command line flags.
-    hasher.update(filter_arguments(args).join(" "));
+    hasher.update(filter_arguments(args).join(" ", true));
 
     // Hash the compiler version string.
     hasher.update(get_compiler_id(args));
