@@ -24,6 +24,11 @@ set(CMAKE_CXX_STANDARD 11)
 set(CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(MINGW)
+  # For ease of deployment, statically link the standard libraries.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+endif()
+
 add_subdirectory(third_party)
 
 add_executable(buildcache
@@ -42,3 +47,7 @@ add_executable(buildcache
   sys_utils.hpp
   )
 target_link_libraries(buildcache md4)
+
+if(WIN32 OR MINGW)
+  target_link_libraries(buildcache userenv)
+endif()

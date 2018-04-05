@@ -63,7 +63,7 @@ run_result_t run(const string_list_t& args, const bool quiet) {
 
   FILE* fp;
 #if defined(_WIN32)
-  fp = _wpopen(utf8_to_ucs2(cmd).c_str(), "r");
+  fp = _wpopen(utf8_to_ucs2(cmd).c_str(), L"r");
 #else
   fp = popen(cmd.c_str(), "r");
 #endif

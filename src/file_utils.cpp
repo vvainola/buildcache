@@ -26,10 +26,15 @@
 #include <sstream>
 
 #if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <shlobj.h>
+#include <userenv.h>
 #else
 #include <cstdlib>
 #include <limits.h>
@@ -121,10 +126,12 @@ std::string get_file_part(const std::string& path) {
 
 std::string get_user_home_dir() {
 #if defined(_WIN32)
+#if 0
+  // TODO(m): We should use SHGetKnownFolderPath() for Vista and later, but this fails to build in
+  // older MinGW so we skip it a.t.m.
   std::string local_app_data;
   PWSTR path = nullptr;
   try {
-    // Using SHGetKnownFolderPath() for Vista and later.
     if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, NULL, &path))) {
       local_app_data = sys::ucs2_to_utf8(std::wstring(path));
     }
@@ -134,6 +141,19 @@ std::string get_user_home_dir() {
     }
   }
   return local_app_data;
+#else
+  std::string user_home;
+  HANDLE token = 0;
+  if (SUCCEEDED(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token))) {
+    WCHAR buf[MAX_PATH] = {0};
+    DWORD buf_size = MAX_PATH;
+    if (SUCCEEDED(GetUserProfileDirectoryW(token, buf, &buf_size))) {
+      user_home = sys::ucs2_to_utf8(std::wstring(buf, buf_size));
+    }
+    CloseHandle(token);
+  }
+  return user_home;
+#endif
 #else
   const auto* home_env = getenv("HOME");
   return (home_env != nullptr) ? std::string(home_env) : std::string();
@@ -233,8 +253,9 @@ bool link_or_copy(const std::string& from_path, const std::string& to_path) {
   // instance.
   bool success;
 #ifdef _WIN32
-  success = (CreateHardLinkW(
-                 utf8_to_ucs2(to_path).c_str(), utf8_to_ucs2(from_path).c_str(), nullptr) != 0);
+  success =
+      (CreateHardLinkW(
+           sys::utf8_to_ucs2(to_path).c_str(), sys::utf8_to_ucs2(from_path).c_str(), nullptr) != 0);
 #else
   success = (link(from_path.c_str(), to_path.c_str()) == 0);
 #endif
