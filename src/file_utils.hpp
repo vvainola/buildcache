@@ -71,6 +71,20 @@ std::string get_file_part(const std::string& path);
 /// @returns the full path to the user home directory.
 std::string get_user_home_dir();
 
+/// @brief Resolve a path.
+///
+/// Relative paths are converted into absolute paths, and symbolic links are resolved.
+/// @param path The path to resolve.
+/// @returns an absolute path to a regular file, or an empty string if the path could not be
+/// resolved.
+std::string resolve_path(const std::string& path);
+
+/// @brief Find the true path to an executable file.
+/// @param path The file to find.
+/// @returns an absolute path to the true executable file (symlinks resolved and all), or an empty
+/// string if the file could not be found.
+std::string find_executable(const std::string& path);
+
 /// @brief Create a directory.
 /// @param path The path to the directory.
 /// @returns true if the directory was successfully created.

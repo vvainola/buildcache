@@ -54,23 +54,35 @@ namespace {
 
 [[noreturn]] void wrap_compiler_and_exit(int argc, const char** argv) {
   auto args = bcache::arg_list_t(argc, argv);
-
-  // TODO(m): Follow symlinks to find the true compiler command! It affects things like if we can
-  // match the compiler name or not, and what version string we get. We also want to avoid
-  // incorrectly identifying other compiler accelerators (e.g. ccache) as actual compilers.
-
-  // Initialize a cache object.
-  bcache::cache_t cache;
-
-  // Select a matching compiler wrapper.
-  std::unique_ptr<bcache::compiler_wrapper_t> wrapper;
-  if (bcache::gcc_wrapper_t::can_handle_command(args)) {
-    wrapper.reset(new bcache::gcc_wrapper_t(cache));
+  if (args.size() < 1) {
+    // Should never happen.
+    std::exit(1);
   }
 
-  // Run the wrapper, if any.
+  // Find the true path to the executable file. This affects things like if we can match the
+  // compiler name or not, and what version string we get. We also want to avoid incorrectly
+  // identifying other compiler accelerators (e.g. ccache) as actual compilers.
+  const auto true_exe_path = bcache::file::find_executable(args[0]);
+
+  bool was_wrapped = false;
   int return_code = 1;
-  const bool was_wrapped = (wrapper ? wrapper->handle_command(args, return_code) : false);
+  if (!true_exe_path.empty()) {
+    args[0] = true_exe_path;
+
+    // Initialize a cache object.
+    bcache::cache_t cache;
+
+    // Select a matching compiler wrapper.
+    std::unique_ptr<bcache::compiler_wrapper_t> wrapper;
+    if (bcache::gcc_wrapper_t::can_handle_command(args)) {
+      wrapper.reset(new bcache::gcc_wrapper_t(cache));
+    }
+
+    // Run the wrapper, if any.
+    if (wrapper) {
+      was_wrapped = wrapper->handle_command(args, return_code);
+    }
+  }
 
   // Fall back to running the command as is.
   if (!was_wrapped) {

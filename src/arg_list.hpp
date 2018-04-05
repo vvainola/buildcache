@@ -37,6 +37,20 @@ public:
     }
   }
 
+  arg_list_t(const std::string& str, const std::string& delimiter) {
+    std::string::size_type current_str_start = 0u;
+    while (current_str_start < str.size()) {
+      const auto pos = str.find(delimiter, current_str_start);
+      if (pos == std::string::npos) {
+        m_args.emplace_back(str.substr(current_str_start));
+        current_str_start = str.size();
+      } else {
+        m_args.emplace_back(str.substr(current_str_start, pos - current_str_start));
+        current_str_start = pos + 1;
+      }
+    }
+  }
+
   std::string join(const std::string& separator) const {
     std::string result;
     for (auto arg : m_args) {

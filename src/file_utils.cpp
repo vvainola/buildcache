@@ -31,6 +31,9 @@
 #include <windows.h>
 #include <shlobj.h>
 #else
+#include <cstdlib>
+#include <limits.h>
+#include <stdlib.h>
 #include <unistd.h>
 #endif
 
@@ -40,6 +43,22 @@
 namespace bcache {
 namespace file {
 namespace {
+// Directory separator for paths.
+#ifdef _WIN32
+const char PATH_SEPARATOR_CHR = '\\';
+#else
+const char PATH_SEPARATOR_CHR = '/';
+#endif
+const auto PATH_SEPARATOR = std::string(1, PATH_SEPARATOR_CHR);
+
+// Delimiter character for the PATH environment variable.
+#ifdef _WIN32
+const char PATH_DELIMITER_CHR = ';';
+#else
+const char PATH_DELIMITER_CHR = ':';
+#endif
+const auto PATH_DELIMITER = std::string(1, PATH_DELIMITER_CHR);
+
 // This is a static variable that holds a strictly incrementing number used for generating unique
 // temporary file names.
 std::atomic_uint_fast32_t s_tmp_name_number;
@@ -70,11 +89,7 @@ tmp_file_t::~tmp_file_t() {
 }
 
 std::string append_path(const std::string& path, const std::string& append) {
-#if defined(_WIN32)
-  return path + std::string("\\") + append;
-#else
-  return path + std::string("/") + append;
-#endif
+  return path + PATH_SEPARATOR + append;
 }
 
 std::string append_path(const std::string& path, const char* append) {
@@ -99,7 +114,7 @@ std::string get_file_part(const std::string& path) {
     pos = std::max(pos1, pos2);
   }
 #else
-  const auto pos = path.rfind("/");
+  const auto pos = path.rfind(PATH_SEPARATOR);
 #endif
   return (pos != std::string::npos) ? path.substr(pos + 1) : path;
 }
@@ -123,6 +138,54 @@ std::string get_user_home_dir() {
   const auto* home_env = getenv("HOME");
   return (home_env != nullptr) ? std::string(home_env) : std::string();
 #endif
+}
+
+bool is_absolute_path(const std::string& path) {
+#ifdef _WIN32
+  const bool is_abs_drive = (path.size() >= 3) && (path[1] == ':') && (path[1] == '\\');
+  const bool is_abs_net = (path.size() >= 2) && (path[0] == '\\') && (path[1] == '\\');
+  return is_abs_drive || is_abs_net;
+#else
+  return (path.size() >= 1) && (path[0] == PATH_SEPARATOR_CHR);
+#endif
+}
+
+std::string resolve_path(const std::string& path) {
+#if defined(_WIN32)
+  // TODO(m): Implement me!
+  return path;
+#else
+  auto* char_ptr = realpath(path.c_str(), nullptr);
+  if (char_ptr != nullptr) {
+    const auto result = std::string(char_ptr);
+    std::free(char_ptr);
+    return result;
+  }
+  return std::string();
+#endif
+}
+
+std::string find_executable(const std::string& path) {
+  if (is_absolute_path(path)) {
+    return resolve_path(path);
+  }
+
+  // Get the PATH environment variable.
+  const auto* path_env = getenv("PATH");
+  if (!path_env) {
+    return std::string();
+  }
+  const auto search_path = arg_list_t(std::string(path_env), PATH_DELIMITER);
+
+  // Iterate the path from start to end and see if we can find the executable file.
+  for (const auto& base_path : search_path) {
+    const auto true_path = resolve_path(append_path(base_path, path));
+    if (!true_path.empty()) {
+      return true_path;
+    }
+  }
+
+  return std::string();
 }
 
 bool create_dir(const std::string& path) {
