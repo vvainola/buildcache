@@ -22,7 +22,7 @@ To use BuildCache for your builds, simply prefix the build command with
 `buildcache`. For instance:
 
 ```bash
-$ buildcache g++ -O2 hello.cpp -o hello.o
+$ buildcache g++ -c -O2 hello.cpp -o hello.o
 ```
 
 A convenient solution for bigger CMake-based projects is to use the
@@ -43,7 +43,7 @@ distributed compilation. To use icecream you can set the environment variable
 `BUILDCACHE_PREFIX` to the icecc executable, e.g:
 
 ```bash
-$ BUILDCACHE_PREFIX=/usr/bin/icecc buildcache g++ -O2 hello.cpp -o hello.o
+$ BUILDCACHE_PREFIX=/usr/bin/icecc buildcache g++ -c -O2 hello.cpp -o hello.o
 ```
 
 ## Supported compilers and languages
