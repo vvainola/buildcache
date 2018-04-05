@@ -26,6 +26,11 @@
 
 namespace bcache {
 namespace {
+bool is_source_file(const std::string& arg) {
+  const auto ext = file::get_extension(arg);
+  return ((ext == ".cpp") || (ext == ".cc") || (ext == ".cxx") || (ext == ".c"));
+}
+
 arg_list_t make_preprocessor_cmd(const arg_list_t& args, const std::string& preprocessed_file) {
   arg_list_t preprocess_args;
 
@@ -62,7 +67,10 @@ gcc_wrapper_t::gcc_wrapper_t(cache_t& cache) : compiler_wrapper_t(cache) {
 bool gcc_wrapper_t::can_handle_command(const arg_list_t& args) {
   // Is this the right compiler?
   return (args.size() >= 1) &&
-         ((args[0].find("gcc") != std::string::npos) || (args[0].find("g++") != std::string::npos));
+         ((args[0].find("gcc") != std::string::npos) ||
+          (args[0].find("g++") != std::string::npos) ||
+          (args[0].find("c++") != std::string::npos) || (args[0].find("cc") != std::string::npos) ||
+          (args[0].find("clang++") != std::string::npos));
 }
 
 std::string gcc_wrapper_t::preprocess_source(const arg_list_t& args) {
@@ -79,7 +87,7 @@ std::string gcc_wrapper_t::preprocess_source(const arg_list_t& args) {
   }
 
   // Run the preprocessor step.
-  const auto preprocessed_file = get_temp_file(".pp");
+  const auto preprocessed_file = get_temp_file(".i");
   const auto preprocessor_args = make_preprocessor_cmd(args, preprocessed_file.path());
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
@@ -87,7 +95,11 @@ std::string gcc_wrapper_t::preprocess_source(const arg_list_t& args) {
   }
 
   // Read and return the preprocessed file.
-  return file::read(preprocessed_file.path());
+  const auto preprocessed_source = file::read(preprocessed_file.path());
+  if (preprocessed_source.empty()) {
+    throw std::runtime_error("Could not read the preprocessed source file.");
+  }
+  return preprocessed_source;
 }
 
 arg_list_t gcc_wrapper_t::filter_arguments(const arg_list_t& args) {
@@ -102,17 +114,13 @@ arg_list_t gcc_wrapper_t::filter_arguments(const arg_list_t& args) {
     if (!skip_next_arg) {
       // Does this argument specify a file (we don't want to hash those).
       const bool is_arg_plus_file_name =
-          ((arg == "-I") || (arg == "-MF") || (arg == "-MT") || (arg == "-o"));
-
-      // Is this a source file (we don't want to hash it)?
-      const auto ext = file::get_extension(arg);
-      const bool is_source_file = ((ext == ".cpp") || (ext == ".c"));
+          ((arg == "-I") || (arg == "-MF") || (arg == "-MT") || (arg == "-MQ") || (arg == "-o"));
 
       // Generally unwanted argument (things that will not change how we go from preprocessed code
       // to binary object files)?
       const auto first_two_chars = arg.substr(0, 2);
-      const bool is_unwanted_arg =
-          ((first_two_chars == "-I") || (first_two_chars == "-D") || is_source_file);
+      const bool is_unwanted_arg = ((first_two_chars == "-I") || (first_two_chars == "-D") ||
+                                    (first_two_chars == "-M") || is_source_file(arg));
 
       if (is_arg_plus_file_name) {
         skip_next_arg = true;

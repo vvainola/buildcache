@@ -55,6 +55,20 @@ bool init_root_folder(const std::string& path) {
   }
   return success;
 }
+
+struct cache_entry_path_t {
+  cache_entry_path_t(const std::string& _dir, const std::string& _file) : dir(_dir), file(_file) {
+  }
+  const std::string dir;
+  const std::string file;
+};
+
+cache_entry_path_t hash_to_cache_entry_path(const hasher_t::hash_t& hash, const cache_t& cache) {
+  const std::string str = hash.as_string();
+  const auto full_dir_path = file::append_path(cache.root_folder(), str.substr(0, 2));
+  const auto full_file_path = file::append_path(full_dir_path, str.substr(2));
+  return cache_entry_path_t(full_dir_path, full_file_path);
+}
 }  // namespace
 
 cache_t::cache_t() {
@@ -91,9 +105,12 @@ void cache_t::add(const hasher_t::hash_t& hash, const std::string& object_file) 
     return;
   }
 
-  // TODO(m): Implement me!
-  (void)hash;
-  (void)object_file;
+  // Create an entry in the cache.
+  const auto cache_entry_path = hash_to_cache_entry_path(hash, *this);
+  if (!file::dir_exists(cache_entry_path.dir)) {
+    file::create_dir(cache_entry_path.dir);
+  }
+  file::link_or_copy(object_file, cache_entry_path.file);
 }
 
 std::string cache_t::lookup(const hasher_t::hash_t& hash) {
@@ -101,9 +118,8 @@ std::string cache_t::lookup(const hasher_t::hash_t& hash) {
     return std::string();
   }
 
-  // TODO(m): Implement me!
-  (void)hash;
-  return std::string();
+  const auto cache_entry_path = hash_to_cache_entry_path(hash, *this);
+  return file::file_exists(cache_entry_path.file) ? cache_entry_path.file : std::string();
 }
 
 }  // namespace bcache

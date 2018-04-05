@@ -53,15 +53,19 @@ bool compiler_wrapper_t::handle_command(const arg_list_t& args, int& return_code
     // Get the object (target) file for this compilation command.
     const auto object_file = get_object_file(args);
 
-    // DEBUG
-    std::cout << " == HASH: " << hash.as_string() << ", object file: " << object_file << "\n";
-
     // Look up the entry in the cache.
     const auto cached_file = m_cache.lookup(hash);
     if (!cached_file.empty()) {
-      // TODO(m): Implement me!
-      return false;
+      // DEBUG
+      std::cout << " == HIT == " << hash.as_string() << ": " << cached_file << " => "
+                << object_file << "\n";
+
+      return_code = 0;
+      return file::link_or_copy(cached_file, object_file);
     }
+
+    // DEBUG
+    std::cout << " == MISS == " << hash.as_string() << ": " << object_file << "\n";
 
     // Run the actual compiler command to produce the object file.
     const auto result = sys::run(args, false);

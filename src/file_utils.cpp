@@ -45,9 +45,8 @@ namespace {
 std::atomic_uint_fast32_t s_tmp_name_number;
 }  // namespace
 
-tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension)
-{
-  // Get unique identifiers for this file.
+tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension) {
+// Get unique identifiers for this file.
 #ifdef _WIN32
   const auto pid = static_cast<int>(GetCurrentProcessId());
 #else
@@ -64,7 +63,7 @@ tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension)
   m_path = file::append_path(dir, file_name + extension);
 }
 
-tmp_file_t::~tmp_file_t(){
+tmp_file_t::~tmp_file_t() {
   if (file_exists(m_path)) {
     file::remove(m_path);
   }
@@ -102,7 +101,7 @@ std::string get_file_part(const std::string& path) {
 #else
   const auto pos = path.rfind("/");
 #endif
-  return (pos != std::string::npos) ? path.substr(pos + 1) : std::string();
+  return (pos != std::string::npos) ? path.substr(pos + 1) : path;
 }
 
 std::string get_user_home_dir() {
@@ -143,31 +142,52 @@ void remove(const std::string& path) {
 }
 
 bool dir_exists(const std::string& path) {
-// TODO(m): Check that it's acutally a dir!
 #ifdef _WIN32
   struct __stat64 buffer;
-  return (_wstat64(sys::utf8_to_ucs2(path).c_str(), &buffer) == 0);
+  const auto success = (_wstat64(sys::utf8_to_ucs2(path).c_str(), &buffer) == 0);
+  return success && S_ISDIR(buffer.st_mode);
 #else
   struct stat buffer;
-  return (stat(path.c_str(), &buffer) == 0);
+  const auto success = (stat(path.c_str(), &buffer) == 0);
+  return success && S_ISDIR(buffer.st_mode);
 #endif
 }
 
 bool file_exists(const std::string& path) {
-// TODO(m): Check that it's acutally a file!
 #ifdef _WIN32
   struct __stat64 buffer;
-  return (_wstat64(sys::utf8_to_ucs2(path).c_str(), &buffer) == 0);
+  const auto success = (_wstat64(sys::utf8_to_ucs2(path).c_str(), &buffer) == 0);
+  return success && S_ISREG(buffer.st_mode);
 #else
   struct stat buffer;
-  return (stat(path.c_str(), &buffer) == 0);
+  const auto success = (stat(path.c_str(), &buffer) == 0);
+  return success && S_ISREG(buffer.st_mode);
 #endif
+}
+
+bool link_or_copy(const std::string& from_path, const std::string& to_path) {
+  // First try to make a hard link. This may fail if the file paths are on different volumes for
+  // instance.
+  bool success;
+#ifdef _WIN32
+  success = (CreateHardLinkW(
+                 utf8_to_ucs2(to_path).c_str(), utf8_to_ucs2(from_path).c_str(), nullptr) != 0);
+#else
+  success = (link(from_path.c_str(), to_path.c_str()) == 0);
+#endif
+
+  // If the hard link failed, make a copy instead.
+  if (!success) {
+    // TODO(m): Implement me!
+  }
+
+  return success;
 }
 
 std::string read(const std::string& path) {
   FILE* f;
 
-  // Open the file.
+// Open the file.
 #ifdef _WIN32
   const auto err = _wfopen_s(&f, sys::utf8_to_ucs2(path).c_str(), L"rb");
   if (err != 0) {
@@ -187,7 +207,7 @@ std::string read(const std::string& path) {
 
   // Read the data into a string.
   std::string str;
-  str.reserve(static_cast<std::string::size_type>(file_size));
+  str.resize(static_cast<std::string::size_type>(file_size));
   auto bytes_left = file_size;
   while ((bytes_left != 0u) && !std::feof(f)) {
     auto* ptr = &str[file_size - bytes_left];
@@ -198,7 +218,8 @@ std::string read(const std::string& path) {
   // Close the file.
   std::fclose(f);
 
-  return str;
+  return (bytes_left == 0u) ? str : std::string();
 }
+
 }  // namespace file
 }  // namespace bcache

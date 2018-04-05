@@ -70,12 +70,10 @@ namespace {
 
   // Run the wrapper, if any.
   int return_code = 1;
-  if (wrapper) {
-    wrapper->handle_command(args, return_code);
-  }
+  const bool was_wrapped = (wrapper ? wrapper->handle_command(args, return_code) : false);
 
   // Fall back to running the command as is.
-  if (return_code != 0) {
+  if (!was_wrapped) {
     auto result = bcache::sys::run(args, false);
     return_code = result.return_code;
   }
