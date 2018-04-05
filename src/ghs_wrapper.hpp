@@ -17,25 +17,23 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_GCC_WRAPPER_HPP_
-#define BUILDCACHE_GCC_WRAPPER_HPP_
+#ifndef BUILDCACHE_GHS_WRAPPER_HPP_
+#define BUILDCACHE_GHS_WRAPPER_HPP_
 
-#include "compiler_wrapper.hpp"
+#include "gcc_wrapper.hpp"
 
 #include <string>
 
 namespace bcache {
-class gcc_wrapper_t : public compiler_wrapper_t {
+/// @brief This is a wrapper for the Green Hills Software C/C++ compiler.
+///
+/// The GHS compiler is fairly compatible with the GCC wrapper, so we derive from it.
+class ghs_wrapper_t : public gcc_wrapper_t {
 public:
-  gcc_wrapper_t(cache_t& cache);
+  ghs_wrapper_t(cache_t& cache);
 
   static bool can_handle_command(const std::string& compiler_exe);
-
-private:
-  virtual std::string preprocess_source(const string_list_t& args) override;
-  virtual string_list_t filter_arguments(const string_list_t& args) override;
-  virtual std::string get_compiler_id(const string_list_t& args) override;
-  virtual std::string get_object_file(const string_list_t& args) override;
 };
 }  // namespace bcache
-#endif  // BUILDCACHE_GCC_WRAPPER_HPP_
+
+#endif  // BUILDCACHE_GHS_WRAPPER_HPP_

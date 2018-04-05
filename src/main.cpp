@@ -21,6 +21,7 @@
 #include "cache.hpp"
 #include "compiler_wrapper.hpp"
 #include "gcc_wrapper.hpp"
+#include "ghs_wrapper.hpp"
 #include "sys_utils.hpp"
 
 #include <iostream>
@@ -74,6 +75,8 @@ namespace {
     std::unique_ptr<bcache::compiler_wrapper_t> wrapper;
     if (bcache::gcc_wrapper_t::can_handle_command(true_exe_path)) {
       wrapper.reset(new bcache::gcc_wrapper_t(cache));
+    } else if (bcache::ghs_wrapper_t::can_handle_command(true_exe_path)) {
+      wrapper.reset(new bcache::ghs_wrapper_t(cache));
     }
 
     // Run the wrapper, if any.

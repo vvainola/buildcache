@@ -40,6 +40,8 @@ add_executable(buildcache
   file_utils.hpp
   gcc_wrapper.cpp
   gcc_wrapper.hpp
+  ghs_wrapper.cpp
+  ghs_wrapper.hpp
   hasher.hpp
   main.cpp
   string_list.hpp

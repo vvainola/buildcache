@@ -17,25 +17,19 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_GCC_WRAPPER_HPP_
-#define BUILDCACHE_GCC_WRAPPER_HPP_
+#include "ghs_wrapper.hpp"
 
-#include "compiler_wrapper.hpp"
-
-#include <string>
+#include "file_utils.hpp"
 
 namespace bcache {
-class gcc_wrapper_t : public compiler_wrapper_t {
-public:
-  gcc_wrapper_t(cache_t& cache);
+ghs_wrapper_t::ghs_wrapper_t(cache_t& cache) : gcc_wrapper_t(cache) {
+}
 
-  static bool can_handle_command(const std::string& compiler_exe);
-
-private:
-  virtual std::string preprocess_source(const string_list_t& args) override;
-  virtual string_list_t filter_arguments(const string_list_t& args) override;
-  virtual std::string get_compiler_id(const string_list_t& args) override;
-  virtual std::string get_object_file(const string_list_t& args) override;
-};
+bool ghs_wrapper_t::can_handle_command(const std::string& compiler_exe) {
+  // Is this the right compiler?
+  const auto cmd = file::get_file_part(compiler_exe);
+  return (cmd.find("ccarm") != std::string::npos) || (cmd.find("cxarm") != std::string::npos) ||
+         (cmd.find("ccthumb") != std::string::npos) || (cmd.find("cxthumb") != std::string::npos) ||
+         (cmd.find("ccintarm") != std::string::npos) || (cmd.find("cxintarm") != std::string::npos);
+}
 }  // namespace bcache
-#endif  // BUILDCACHE_GCC_WRAPPER_HPP_
