@@ -165,7 +165,7 @@ std::string get_user_home_dir() {
 
 bool is_absolute_path(const std::string& path) {
 #ifdef _WIN32
-  const bool is_abs_drive = (path.size() >= 3) && (path[1] == ':') && (path[1] == '\\');
+  const bool is_abs_drive = (path.size() >= 3) && (path[1] == ':') && (path[2] == '\\');
   const bool is_abs_net = (path.size() >= 2) && (path[0] == '\\') && (path[1] == '\\');
   return is_abs_drive || is_abs_net;
 #else
@@ -203,7 +203,7 @@ std::string find_executable(const std::string& path) {
   // Iterate the path from start to end and see if we can find the executable file.
   for (const auto& base_path : search_path) {
     const auto true_path = resolve_path(append_path(base_path, path));
-    if (!true_path.empty()) {
+    if ((!true_path.empty()) && file_exists(true_path)) {
       return true_path;
     }
   }
