@@ -43,15 +43,7 @@ public:
 
     /// @brief Convert a hash to a hexadecimal string.
     /// @returns A hexadecimal string representation of the given hash.
-    const std::string as_string() const {
-      static const char digits[17] = "0123456789abcdef";
-      std::string result(SIZE * 2, '0');
-      for (size_t i = 0; i < SIZE; ++i) {
-        result[i * 2] = digits[m_data[i] >> 4];
-        result[i * 2 + 1] = digits[m_data[i] & 0x0fu];
-      }
-      return result;
-    }
+    const std::string as_string() const;
 
   private:
     // The hash size is 128 bits.
@@ -70,10 +62,14 @@ public:
     MD4_Update(&m_ctx, text.data(), text.size());
   }
 
+  /// @brief Update the hash with more data.
+  /// @param path Path to a file that contains the data to hash.
+  /// @returns true if the operation was successful.
+  bool update_from_file(const std::string& path);
+
   /// @brief Finalize the hash calculation.
   /// @param[out] result The result of the hash.
   /// @note This method must only be called once.
-  // void final(hash_t& result) {
   hash_t final() {
     hash_t result;
     MD4_Final(result.data(), &m_ctx);

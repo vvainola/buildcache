@@ -17,26 +17,29 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_GHS_WRAPPER_HPP_
-#define BUILDCACHE_GHS_WRAPPER_HPP_
+#include "hasher.hpp"
 
-#include "gcc_wrapper.hpp"
-
-#include <string>
+#include "file_utils.hpp"
 
 namespace bcache {
-/// @brief This is a wrapper for the Green Hills Software C/C++ compiler.
-///
-/// The GHS compiler is fairly compatible with the GCC wrapper, so we derive from it.
-class ghs_wrapper_t : public gcc_wrapper_t {
-public:
-  ghs_wrapper_t(cache_t& cache);
+const std::string hasher_t::hash_t::as_string() const {
+  static const char digits[17] = "0123456789abcdef";
+  std::string result(SIZE * 2, '0');
+  for (size_t i = 0; i < SIZE; ++i) {
+    result[i * 2] = digits[m_data[i] >> 4];
+    result[i * 2 + 1] = digits[m_data[i] & 0x0fu];
+  }
+  return result;
+}
 
-  static bool can_handle_command(const std::string& compiler_exe);
-
-private:
-  virtual std::string get_compiler_id(const string_list_t& args) override;
-};
+bool hasher_t::update_from_file(const std::string& path) {
+  // TODO(m): Investigate if using buffered input gives better performance (at least it should use
+  // less memory, and it should be nicer to the CPU caches).
+  const auto file_data = file::read(path);
+  if (file_data.empty()) {
+    return false;
+  }
+  update(file_data);
+  return true;
+}
 }  // namespace bcache
-
-#endif  // BUILDCACHE_GHS_WRAPPER_HPP_

@@ -42,6 +42,7 @@ add_executable(buildcache
   gcc_wrapper.hpp
   ghs_wrapper.cpp
   ghs_wrapper.hpp
+  hasher.cpp
   hasher.hpp
   main.cpp
   string_list.hpp
