@@ -33,16 +33,6 @@ struct run_result_t {
   std::string std_err;  ///< The contents of stderr.
 };
 
-/// @brief Convert a UCS-2 string to a UTF-8 string.
-/// @param str16 The UCS-2 encoded wide character string.
-/// @returns a UTF-8 encoded string.
-std::string ucs2_to_utf8(const std::wstring& str16);
-
-/// @brief Convert a UTF-8 string to a UCS-2 string.
-/// @param str8 The UTF-8 encoded string.
-/// @returns a UCS-2 encoded wide charater string.
-std::wstring utf8_to_ucs2(const std::string& str8);
-
 /// @brief Run the given command.
 /// @param args The command and its arguments (the first item is the command).
 /// @param quiet Supress output to stdout/stderr during execution.

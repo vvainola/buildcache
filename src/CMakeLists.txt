@@ -48,6 +48,8 @@ add_executable(buildcache
   string_list.hpp
   sys_utils.cpp
   sys_utils.hpp
+  unicode_utils.cpp
+  unicode_utils.hpp
   )
 target_link_libraries(buildcache md4)
 

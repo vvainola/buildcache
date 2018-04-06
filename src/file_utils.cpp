@@ -19,7 +19,8 @@
 
 #include "file_utils.hpp"
 
-#include "sys_utils.hpp"
+#include "string_list.hpp"
+#include "unicode_utils.hpp"
 
 #include <atomic>
 #include <cstdio>
@@ -135,7 +136,7 @@ std::string get_user_home_dir() {
   PWSTR path = nullptr;
   try {
     if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, NULL, &path))) {
-      local_app_data = sys::ucs2_to_utf8(std::wstring(path));
+      local_app_data = ucs2_to_utf8(std::wstring(path));
     }
   } finally {
     if (path != nullptr) {
@@ -150,7 +151,7 @@ std::string get_user_home_dir() {
     WCHAR buf[MAX_PATH] = {0};
     DWORD buf_size = MAX_PATH;
     if (SUCCEEDED(GetUserProfileDirectoryW(token, buf, &buf_size))) {
-      user_home = sys::ucs2_to_utf8(std::wstring(buf, buf_size));
+      user_home = ucs2_to_utf8(std::wstring(buf, buf_size));
     }
     CloseHandle(token);
   }
@@ -212,7 +213,7 @@ std::string find_executable(const std::string& path) {
 
 bool create_dir(const std::string& path) {
 #ifdef _WIN32
-  return (_wmkdir(sys::utf8_to_ucs2(path).c_str()) == 0);
+  return (_wmkdir(utf8_to_ucs2(path).c_str()) == 0);
 #else
   return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0);
 #endif
@@ -220,7 +221,7 @@ bool create_dir(const std::string& path) {
 
 void remove_file(const std::string& path) {
 #ifdef _WIN32
-  _wremove(sys::utf8_to_ucs2(path).c_str());
+  _wremove(utf8_to_ucs2(path).c_str());
 #else
   std::remove(path.c_str());
 #endif
@@ -229,7 +230,7 @@ void remove_file(const std::string& path) {
 bool dir_exists(const std::string& path) {
 #ifdef _WIN32
   struct __stat64 buffer;
-  const auto success = (_wstat64(sys::utf8_to_ucs2(path).c_str(), &buffer) == 0);
+  const auto success = (_wstat64(utf8_to_ucs2(path).c_str(), &buffer) == 0);
   return success && S_ISDIR(buffer.st_mode);
 #else
   struct stat buffer;
@@ -241,7 +242,7 @@ bool dir_exists(const std::string& path) {
 bool file_exists(const std::string& path) {
 #ifdef _WIN32
   struct __stat64 buffer;
-  const auto success = (_wstat64(sys::utf8_to_ucs2(path).c_str(), &buffer) == 0);
+  const auto success = (_wstat64(utf8_to_ucs2(path).c_str(), &buffer) == 0);
   return success && S_ISREG(buffer.st_mode);
 #else
   struct stat buffer;
@@ -257,8 +258,7 @@ bool copy(const std::string& from_path, const std::string& to_path) {
 #ifdef _WIN32
   // TODO(m): We could handle paths longer than MAX_PATH, e.g. by prepending strings with "\\?\"?
   const bool success =
-      (CopyFileW(sys::utf8_to_ucs2(from_path).c_str(), sys::utf8_to_ucs2(to_path).c_str(), FALSE) !=
-       0);
+      (CopyFileW(utf8_to_ucs2(from_path).c_str(), utf8_to_ucs2(to_path).c_str(), FALSE) != 0);
 #else
   // For non-Windows systems we use a classic buffered read-write loop.
   bool success = false;
@@ -295,9 +295,8 @@ bool link_or_copy(const std::string& from_path, const std::string& to_path) {
   // instance.
   bool success;
 #ifdef _WIN32
-  success =
-      (CreateHardLinkW(
-           sys::utf8_to_ucs2(to_path).c_str(), sys::utf8_to_ucs2(from_path).c_str(), nullptr) != 0);
+  success = (CreateHardLinkW(
+                 utf8_to_ucs2(to_path).c_str(), utf8_to_ucs2(from_path).c_str(), nullptr) != 0);
 #else
   success = (link(from_path.c_str(), to_path.c_str()) == 0);
 #endif
@@ -315,7 +314,7 @@ std::string read(const std::string& path) {
 
 // Open the file.
 #ifdef _WIN32
-  const auto err = _wfopen_s(&f, sys::utf8_to_ucs2(path).c_str(), L"rb");
+  const auto err = _wfopen_s(&f, utf8_to_ucs2(path).c_str(), L"rb");
   if (err != 0) {
     return std::string();
   }
