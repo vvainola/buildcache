@@ -79,6 +79,9 @@ run_result_t run(const string_list_t& args, const bool quiet) {
   const auto cmd = args.join(" ", true);
 
 #if defined(_WIN32)
+  // TODO(m): We want to use proper CreateProcess() to get both stdout and stderr etc. Right now the
+  // code is broken (it occasionally hangs), so we currently use _wpopen() instead.
+#if 0
   HANDLE std_out_read_handle = nullptr;
   HANDLE std_out_write_handle = nullptr;
   HANDLE std_err_read_handle = nullptr;
@@ -172,7 +175,21 @@ run_result_t run(const string_list_t& args, const bool quiet) {
   if (std_err_write_handle != nullptr) {
     CloseHandle(std_err_write_handle);
   }
-
+#else
+  auto* fp = _wpopen(utf8_to_ucs2(cmd).c_str(), L"r");
+  if (fp != nullptr) {
+    // Collect stdout until the pipe is closed.
+    char buf[1000];
+    while (fgets(buf, sizeof(buf), fp)) {
+      if (!quiet) {
+        std::cout << buf;
+      }
+      result.std_out += std::string(buf);
+    }
+    result.return_code = _pclose(fp);
+    successfully_launched_program = true;
+  }
+#endif
 #else
   // TODO(m): We should use proper fork/exec to get both stdout and stderr etc.
   auto* fp = popen(cmd.c_str(), "r");
