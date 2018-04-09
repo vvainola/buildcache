@@ -48,8 +48,15 @@ $ BUILDCACHE_PREFIX=/usr/bin/icecc buildcache g++ -c -O2 hello.cpp -o hello.o
 
 ## Supported compilers and languages
 
-Currently only C and C++ via GCC and Clang are supported. New backends are
-relatively easy to add though.
+Currently the following compilers and languages are supported:
+
+| Compiler | Languages | Supported |
+| -------- | --------- | --------- |
+| GCC      | C, C++    | Yes       |
+| Clang    | C, C++    | Yes       |
+| GHS      | C, C++    | Yes       |
+
+New backends are relatively easy to add.
 
 ## Status
 
