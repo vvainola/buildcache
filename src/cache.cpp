@@ -96,8 +96,24 @@ void cache_t::show_stats() {
     return;
   }
 
-  // TODO(m): Implement me!
-  std::cout << "*** Stats have not yet been implemented\n";
+  // Calculate the total cache size.
+  // TODO(m): Exclude the tmp folder and any other meta data files.
+  const auto files = file::walk_directory(m_root_folder);
+  int num_files = 0;
+  int64_t total_size = 0;
+  for (const auto& file : files) {
+    if (!file.is_dir()) {
+      num_files++;
+      total_size += file.size();
+    }
+  }
+  const double total_size_mb = static_cast<double>(total_size) / (1024.0 * 1024.0);
+
+  std::cout << "cache directory:   " << m_root_folder << "\n";
+  std::cout << "files in cache:    " << num_files << "\n";
+  std::cout << "cache size:        " << total_size_mb << " MB\n";
+
+  // TODO(m): Implement more stats.
 }
 
 void cache_t::add(const hasher_t::hash_t& hash, const std::string& object_file) {
