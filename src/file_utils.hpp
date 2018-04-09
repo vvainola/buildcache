@@ -20,7 +20,9 @@
 #ifndef BUILDCACHE_FILE_UTILS_HPP_
 #define BUILDCACHE_FILE_UTILS_HPP_
 
+#include <cstdint>
 #include <string>
+#include <vector>
 
 namespace bcache {
 namespace file {
@@ -44,6 +46,54 @@ public:
 
 private:
   std::string m_path;
+};
+
+/// @brief Information about a file.
+class file_info_t {
+public:
+  /// @brief File time (seconds since the Unix epoch, i.e. 00:00:00 UTC on 1 January 1970).
+  using time_t = int64_t;
+
+  file_info_t(const std::string& path,
+              const time_t modify_time,
+              const time_t access_time,
+              const int64_t size,
+              const bool is_dir);
+
+  file_info_t(const file_info_t&) = default;
+  file_info_t(file_info_t&&) = default;
+
+  /// @returns the full path to the file.
+  const std::string& path() const {
+    return m_path;
+  }
+
+  /// @returns the modification time of the file.
+  time_t modify_time() const {
+    return m_modify_time;
+  }
+
+  /// @returns the last access time of the file.
+  time_t access_time() const {
+    return m_access_time;
+  }
+
+  /// @returns the size of the file (in bytes), or zero if the file is a directory.
+  int64_t size() const {
+    return m_size;
+  }
+
+  /// @returns true if file is a directory.
+  int64_t is_dir() const {
+    return m_is_dir;
+  }
+
+private:
+  const std::string& m_path;
+  const time_t m_modify_time;
+  const time_t m_access_time;
+  const int64_t m_size;
+  const bool m_is_dir;
 };
 
 ///@{
@@ -90,6 +140,11 @@ std::string resolve_path(const std::string& path);
 /// @returns an absolute path to the true executable file (symlinks resolved and all), or an empty
 /// string if the file could not be found.
 std::string find_executable(const std::string& path);
+
+/// @brief Walk a directory and its subdirectories.
+/// @param path The path to the directory.
+/// @returns a vector of file information objects.
+std::vector<file_info_t> walk_directory(const std::string& path);
 
 /// @brief Create a directory.
 /// @param path The path to the directory.

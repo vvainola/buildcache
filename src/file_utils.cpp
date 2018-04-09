@@ -43,8 +43,11 @@
 #undef log
 #else
 #include <cstdlib>
+#include <dirent.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
@@ -115,6 +118,18 @@ tmp_file_t::~tmp_file_t() {
   if (file_exists(m_path)) {
     remove_file(m_path);
   }
+}
+
+file_info_t::file_info_t(const std::string& path,
+                         const file_info_t::time_t modify_time,
+                         const file_info_t::time_t access_time,
+                         const int64_t size,
+                         const bool is_dir)
+    : m_path(path),
+      m_modify_time(modify_time),
+      m_access_time(access_time),
+      m_size(size),
+      m_is_dir(is_dir) {
 }
 
 std::string append_path(const std::string& path, const std::string& append) {
@@ -391,5 +406,47 @@ std::string read(const std::string& path) {
   return str;
 }
 
+std::vector<file_info_t> walk_directory(const std::string& path) {
+  std::vector<file_info_t> files;
+
+#ifdef _WIN32
+  throw std::runtime_error("WIN32: Not yet implemented.");
+#else
+  auto* dir = opendir(path.c_str());
+  if (dir == nullptr) {
+    throw std::runtime_error("Unable to walk the directory.");
+  }
+
+  auto* entity = readdir(dir);
+  while(entity != nullptr) {
+    const auto name = std::string(entity->d_name);
+    if ((name != ".") && (name != "..")) {
+      const std::string file_path = append_path(path, name);
+      struct stat file_stat;
+      if (stat(file_path.c_str(), &file_stat) == 0) {
+        const time_t modify_time = static_cast<time_t>(file_stat.st_mtim.tv_sec);
+        const time_t access_time = static_cast<time_t>(file_stat.st_atim.tv_sec);
+        int64_t size = 0;
+        bool is_dir = false;
+        if (entity->d_type == DT_DIR) {
+          auto subdir_files = walk_directory(file_path);
+          for (const auto& entry : subdir_files) {
+            files.emplace_back(entry);
+          }
+          is_dir = true;
+        } else if (entity->d_type == DT_REG) {
+          size = static_cast<int64_t>(file_stat.st_size);
+        }
+        files.emplace_back(file_info_t(file_path, modify_time, access_time, size, is_dir));
+      }
+    }
+    entity = readdir(dir);
+  }
+
+  closedir(dir);
+#endif
+
+  return files;
+}
 }  // namespace file
 }  // namespace bcache
