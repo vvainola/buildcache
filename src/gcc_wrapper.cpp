@@ -95,9 +95,6 @@ std::string gcc_wrapper_t::preprocess_source(const string_list_t& args) {
 
   // Read and return the preprocessed file.
   const auto preprocessed_source = file::read(preprocessed_file.path());
-  if (preprocessed_source.empty()) {
-    throw std::runtime_error("Could not read the preprocessed source file.");
-  }
   return preprocessed_source;
 }
 

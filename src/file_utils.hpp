@@ -67,6 +67,12 @@ std::string get_extension(const std::string& path);
 /// path does not contain a separator, the entire path is returned.
 std::string get_file_part(const std::string& path);
 
+/// @brief Get the directory part of a path.
+/// @param path The path to a file.
+/// @returns The part of the path before the final path separator. If the path does not contain a
+/// separator, the entire path is returned.
+std::string get_dir_part(const std::string& path);
+
 /// @brief Get the user home directory.
 /// @returns the full path to the user home directory.
 std::string get_user_home_dir();
@@ -107,21 +113,21 @@ bool file_exists(const std::string& path);
 /// @brief Make a full copy of a file.
 /// @param from_path The source file.
 /// @param to_path The destination file.
-/// @returns true if the operation was successful.
-bool copy(const std::string& from_path, const std::string& to_path);
+/// @throws runtime_error if the operation could not be completed.
+void copy(const std::string& from_path, const std::string& to_path);
 
 /// @brief Make a hard link or a full copy of a file.
 ///
 /// A hard link will be performed if possible. Otherwise a full copy will be made.
 /// @param from_path The source file.
 /// @param to_path The destination file.
-/// @returns true if the operation was successful.
-bool link_or_copy(const std::string& from_path, const std::string& to_path);
+/// @throws runtime_error if the operation could not be completed.
+void link_or_copy(const std::string& from_path, const std::string& to_path);
 
 /// @brief Read a file into a string.
 /// @param path The path to the file.
-/// @returns the contents of the file as a string. If the file could not be read, an empty string is
-/// returned.
+/// @returns the contents of the file as a string.
+/// @throws runtime_error if the operation could not be completed.
 std::string read(const std::string& path);
 }  // namespace file
 }  // namespace bcache

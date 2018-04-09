@@ -19,6 +19,7 @@
 
 #include "file_utils.hpp"
 
+#include "debug_utils.hpp"
 #include "string_list.hpp"
 #include "unicode_utils.hpp"
 
@@ -38,6 +39,8 @@
 #include <windows.h>
 #include <shlobj.h>
 #include <userenv.h>
+#undef ERROR
+#undef log
 #else
 #include <cstdlib>
 #include <limits.h>
@@ -70,6 +73,24 @@ const auto PATH_DELIMITER = std::string(1, PATH_DELIMITER_CHR);
 // This is a static variable that holds a strictly incrementing number used for generating unique
 // temporary file names.
 std::atomic_uint_fast32_t s_tmp_name_number;
+
+std::string::size_type get_last_path_separator_pos(const std::string& path) {
+#if defined(_WIN32)
+  const auto pos1 = path.rfind("/");
+  const auto pos2 = path.rfind("\\");
+  std::string::size_type pos;
+  if (pos1 == std::string::npos) {
+    pos = pos2;
+  } else if (pos2 == std::string::npos) {
+    pos = pos1;
+  } else {
+    pos = std::max(pos1, pos2);
+  }
+#else
+  const auto pos = path.rfind(PATH_SEPARATOR);
+#endif
+  return pos;
+}
 }  // namespace
 
 tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension) {
@@ -110,21 +131,13 @@ std::string get_extension(const std::string& path) {
 }
 
 std::string get_file_part(const std::string& path) {
-#if defined(_WIN32)
-  const auto pos1 = path.rfind("/");
-  const auto pos2 = path.rfind("\\");
-  std::string::size_type pos;
-  if (pos1 == std::string::npos) {
-    pos = pos2;
-  } else if (pos2 == std::string::npos) {
-    pos = pos1;
-  } else {
-    pos = std::max(pos1, pos2);
-  }
-#else
-  const auto pos = path.rfind(PATH_SEPARATOR);
-#endif
+  const auto pos = get_last_path_separator_pos(path);
   return (pos != std::string::npos) ? path.substr(pos + 1) : path;
+}
+
+std::string get_dir_part(const std::string& path) {
+  const auto pos = get_last_path_separator_pos(path);
+  return (pos != std::string::npos) ? path.substr(0, pos) : path;
 }
 
 std::string get_user_home_dir() {
@@ -251,20 +264,24 @@ bool file_exists(const std::string& path) {
 #endif
 }
 
-bool copy(const std::string& from_path, const std::string& to_path) {
-// TODO(m): We should make this safer by copying to a temporary file and do a rename to the target
-// file name once the copy has finished. This should prevent half-finished copies if the process
-// is terminated prematurely (e.g. CTRL+C).
+void copy(const std::string& from_path, const std::string& to_path) {
+  // Copy to a temporary file first and once the copy has succeeded rename it to the target file.
+  // This should prevent half-finished copies if the process is terminated prematurely (e.g.
+  // CTRL+C).
+  const auto base_path = get_dir_part(to_path);
+  auto tmp_file = tmp_file_t(base_path, ".tmp");
+
 #ifdef _WIN32
   // TODO(m): We could handle paths longer than MAX_PATH, e.g. by prepending strings with "\\?\"?
-  const bool success =
-      (CopyFileW(utf8_to_ucs2(from_path).c_str(), utf8_to_ucs2(to_path).c_str(), FALSE) != 0);
+  bool success =
+      (CopyFileW(utf8_to_ucs2(from_path).c_str(), utf8_to_ucs2(tmp_file.path()).c_str(), FALSE) !=
+       0);
 #else
   // For non-Windows systems we use a classic buffered read-write loop.
   bool success = false;
   auto* from_file = std::fopen(from_path.c_str(), "rb");
   if (from_file != nullptr) {
-    auto* to_file = std::fopen(to_path.c_str(), "wb");
+    auto* to_file = std::fopen(tmp_file.path().c_str(), "wb");
     if (to_file != nullptr) {
       // We use a buffer size that typically fits in an L1 cache.
       static const int BUFFER_SIZE = 8192;
@@ -287,10 +304,35 @@ bool copy(const std::string& from_path, const std::string& to_path) {
   }
 #endif
 
-  return success;
+  // Rename the temporary file to its target name.
+  if (success) {
+    // First remove the old file, if any (otherwise the rename will fail).
+    if (file_exists(to_path)) {
+      remove_file(to_path);
+    }
+
+#ifdef _WIN32
+    success = (_wrename(utf8_to_ucs2(tmp_file.path()).c_str(), utf8_to_ucs2(to_path).c_str()) == 0);
+#else
+    success = (std::rename(tmp_file.path().c_str(), to_path.c_str()) == 0);
+#endif
+    if (!success) {
+      debug::log(debug::ERROR) << "Copying failed due to a failing rename operation.";
+    }
+  }
+
+  if (!success) {
+    // Note: At this point the temporary file (if any) will be deleted.
+    throw std::runtime_error("Unable to copy file.");
+  }
 }
 
-bool link_or_copy(const std::string& from_path, const std::string& to_path) {
+void link_or_copy(const std::string& from_path, const std::string& to_path) {
+  // First remove the old file, if any (otherwise the hard link will fail).
+  if (file_exists(to_path)) {
+    remove_file(to_path);
+  }
+
   // First try to make a hard link. However this may fail if the files are on different volumes for
   // instance.
   bool success;
@@ -303,10 +345,9 @@ bool link_or_copy(const std::string& from_path, const std::string& to_path) {
 
   // If the hard link failed, make a full copy instead.
   if (!success) {
-    success = copy(from_path, to_path);
+    debug::log(debug::DEBUG) << "Hard link failed - copying instead.";
+    copy(from_path, to_path);
   }
-
-  return success;
 }
 
 std::string read(const std::string& path) {
@@ -316,12 +357,12 @@ std::string read(const std::string& path) {
 #ifdef _WIN32
   const auto err = _wfopen_s(&f, utf8_to_ucs2(path).c_str(), L"rb");
   if (err != 0) {
-    return std::string();
+    throw std::runtime_error("Unable to open the file.");
   }
 #else
   f = std::fopen(path.c_str(), "rb");
   if (f == nullptr) {
-    return std::string();
+    throw std::runtime_error("Unable to open the file.");
   }
 #endif
 
@@ -343,7 +384,11 @@ std::string read(const std::string& path) {
   // Close the file.
   std::fclose(f);
 
-  return (bytes_left == 0u) ? str : std::string();
+  if (bytes_left != 0u) {
+    throw std::runtime_error("Unable to read the file.");
+  }
+
+  return str;
 }
 
 }  // namespace file

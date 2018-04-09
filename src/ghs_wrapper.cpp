@@ -45,9 +45,7 @@ std::string ghs_wrapper_t::get_compiler_id(const string_list_t& args) {
   // Instead, we just take a hash of the compiler binary.
   const auto& compiler_exe = args[0];
   hasher_t hasher;
-  if (hasher.update_from_file(compiler_exe)) {
-    return hasher.final().as_string();
-  }
-  throw std::runtime_error("Unable to hash the compiler executable file.");
+  hasher.update_from_file(compiler_exe);
+  return hasher.final().as_string();
 }
 }  // namespace bcache

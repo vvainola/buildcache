@@ -65,7 +65,8 @@ bool compiler_wrapper_t::handle_command(const string_list_t& args,
                               << object_file;
 
       return_code = 0;
-      return file::link_or_copy(cached_file, object_file);
+      file::link_or_copy(cached_file, object_file);
+      return true;
     }
 
     debug::log(debug::INFO) << "Cache miss: " << hash.as_string() << ": " << object_file;

@@ -64,8 +64,8 @@ public:
 
   /// @brief Update the hash with more data.
   /// @param path Path to a file that contains the data to hash.
-  /// @returns true if the operation was successful.
-  bool update_from_file(const std::string& path);
+  /// @throws runtime_error if the operation could not be completed.
+  void update_from_file(const std::string& path);
 
   /// @brief Finalize the hash calculation.
   /// @param[out] result The result of the hash.

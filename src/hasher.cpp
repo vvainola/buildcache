@@ -32,14 +32,10 @@ const std::string hasher_t::hash_t::as_string() const {
   return result;
 }
 
-bool hasher_t::update_from_file(const std::string& path) {
+void hasher_t::update_from_file(const std::string& path) {
   // TODO(m): Investigate if using buffered input gives better performance (at least it should use
   // less memory, and it should be nicer to the CPU caches).
   const auto file_data = file::read(path);
-  if (file_data.empty()) {
-    return false;
-  }
   update(file_data);
-  return true;
 }
 }  // namespace bcache
