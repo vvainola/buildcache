@@ -421,11 +421,16 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
   while(entity != nullptr) {
     const auto name = std::string(entity->d_name);
     if ((name != ".") && (name != "..")) {
-      const std::string file_path = append_path(path, name);
+      const auto file_path = append_path(path, name);
       struct stat file_stat;
       if (stat(file_path.c_str(), &file_stat) == 0) {
-        const time_t modify_time = static_cast<time_t>(file_stat.st_mtim.tv_sec);
-        const time_t access_time = static_cast<time_t>(file_stat.st_atim.tv_sec);
+#ifdef __APPLE__
+        const auto modify_time = static_cast<time_t>(file_stat.st_mtimespec.tv_sec);
+        const auto access_time = static_cast<time_t>(file_stat.st_atimespec.tv_sec);
+#else
+        const auto modify_time = static_cast<time_t>(file_stat.st_mtim.tv_sec);
+        const auto access_time = static_cast<time_t>(file_stat.st_atim.tv_sec);
+#endif
         int64_t size = 0;
         bool is_dir = false;
         if (entity->d_type == DT_DIR) {
