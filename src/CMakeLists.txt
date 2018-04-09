@@ -36,6 +36,8 @@ add_executable(buildcache
   cache.hpp
   compiler_wrapper.cpp
   compiler_wrapper.hpp
+  debug_utils.cpp
+  debug_utils.hpp
   file_utils.cpp
   file_utils.hpp
   gcc_wrapper.cpp
@@ -52,12 +54,6 @@ add_executable(buildcache
   unicode_utils.hpp
   )
 target_link_libraries(buildcache md4)
-
-# TODO(m): This is a very temporary solution for enabling debug output. A better solution is to
-# check an environment variable at runtime.
-if(FALSE)
-  target_compile_definitions(buildcache PRIVATE "-DBUILDCACHE_DEBUG_OUTPUT")
-endif()
 
 if(WIN32 OR MINGW)
   target_link_libraries(buildcache userenv)

@@ -19,12 +19,9 @@
 
 #include "compiler_wrapper.hpp"
 
+#include "debug_utils.hpp"
 #include "hasher.hpp"
 #include "sys_utils.hpp"
-
-#ifdef BUILDCACHE_DEBUG_OUTPUT
-#include <iostream>
-#endif
 
 namespace bcache {
 compiler_wrapper_t::compiler_wrapper_t(cache_t& cache) : m_cache(cache) {
@@ -64,18 +61,14 @@ bool compiler_wrapper_t::handle_command(const string_list_t& args,
     // Look up the entry in the cache.
     const auto cached_file = m_cache.lookup(hash);
     if (!cached_file.empty()) {
-#ifdef BUILDCACHE_DEBUG_OUTPUT
-      std::cout << " == HIT == " << hash.as_string() << ": " << cached_file << " => " << object_file
-                << "\n";
-#endif
+      debug::log(debug::INFO) << "Cache hit: " << hash.as_string() << ": " << cached_file << " => "
+                              << object_file;
 
       return_code = 0;
       return file::link_or_copy(cached_file, object_file);
     }
 
-#ifdef BUILDCACHE_DEBUG_OUTPUT
-    std::cout << " == MISS == " << hash.as_string() << ": " << object_file << "\n";
-#endif
+    debug::log(debug::INFO) << "Cache miss: " << hash.as_string() << ": " << object_file;
 
     // Run the actual compiler command to produce the object file.
     // Note: When we run prefixed we use the original arguments. This makes sure that ICECC can
@@ -89,16 +82,10 @@ bool compiler_wrapper_t::handle_command(const string_list_t& args,
     // Everything's ok!
     return true;
   } catch (std::exception& e) {
-#ifdef BUILDCACHE_DEBUG_OUTPUT
-    std::cerr << " == EXCEPTION == " << e.what() << "\n";
-#else
-    (void)e;
-#endif
+    debug::log(debug::DEBUG) << "Exception: " << e.what();
   } catch (...) {
     // Catch-all in order to not propagate exceptions any higher up (we'll return false).
-#ifdef BUILDCACHE_DEBUG_OUTPUT
-    std::cerr << " == UNKNOWN EXCEPTION ==\n";
-#endif
+    debug::log(debug::ERROR) << "UNEXPECTED EXCEPTION";
   }
 
   return false;

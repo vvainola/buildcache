@@ -58,6 +58,24 @@ Currently the following compilers and languages are supported:
 
 New backends are relatively easy to add.
 
+## Debugging
+
+To get debug output from a BuildCache run, set the environment variable
+`BUILDCACHE_DEBUG` to the desired debug level:
+
+| BUILDCACHE_DEBUG | Level | Comment           |
+| ---------------- | ----- | ----------------- |
+| 1                | DEBUG | Maximum printouts |
+| 2                | INFO  |                   |
+| 3                | ERROR |                   |
+| 4                | FATAL |                   |
+
+For instance:
+
+```bash
+$ BUILDCACHE_DEBUG=2 buildcache g++ -c -O2 hello.cpp -o hello.o
+```
+
 ## Status
 
 **NOTE:** BuildCache is still in early development and should not be considered

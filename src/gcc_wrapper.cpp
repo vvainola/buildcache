@@ -19,13 +19,10 @@
 
 #include "gcc_wrapper.hpp"
 
+#include "debug_utils.hpp"
 #include "sys_utils.hpp"
 
 #include <stdexcept>
-
-#ifdef BUILDCACHE_DEBUG_OUTPUT
-#include <iostream>
-#endif
 
 namespace bcache {
 namespace {
@@ -134,9 +131,7 @@ string_list_t gcc_wrapper_t::filter_arguments(const string_list_t& args) {
     }
   }
 
-#ifdef BUILDCACHE_DEBUG_OUTPUT
-  std::cout << " == Filtered arguments: " << filtered_args.join(" ", true) << "\n";
-#endif
+  debug::log(debug::DEBUG) << "Filtered arguments: " << filtered_args.join(" ", true);
 
   return filtered_args;
 }
