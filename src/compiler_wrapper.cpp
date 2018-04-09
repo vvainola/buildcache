@@ -85,10 +85,23 @@ bool compiler_wrapper_t::handle_command(const string_list_t& args,
 
     // Create a new entry in the cache.
     m_cache.add(hash, object_file);
+
+    // Everything's ok!
     return true;
+  } catch (std::exception& e) {
+#ifdef BUILDCACHE_DEBUG_OUTPUT
+    std::cerr << " == EXCEPTION == " << e.what() << "\n";
+#else
+    (void)e;
+#endif
   } catch (...) {
-    return false;
+    // Catch-all in order to not propagate exceptions any higher up (we'll return false).
+#ifdef BUILDCACHE_DEBUG_OUTPUT
+    std::cerr << " == UNKNOWN EXCEPTION ==\n";
+#endif
   }
+
+  return false;
 }
 
 file::tmp_file_t compiler_wrapper_t::get_temp_file(const std::string& extension) const {

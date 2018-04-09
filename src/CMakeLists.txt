@@ -53,6 +53,12 @@ add_executable(buildcache
   )
 target_link_libraries(buildcache md4)
 
+# TODO(m): This is a very temporary solution for enabling debug output. A better solution is to
+# check an environment variable at runtime.
+if(FALSE)
+  target_compile_definitions(buildcache PRIVATE "-DBUILDCACHE_DEBUG_OUTPUT")
+endif()
+
 if(WIN32 OR MINGW)
   target_link_libraries(buildcache userenv)
 endif()
