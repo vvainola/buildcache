@@ -20,6 +20,7 @@
 #include "sys_utils.hpp"
 
 #include "debug_utils.hpp"
+#include "file_utils.hpp"
 #include "unicode_utils.hpp"
 
 #include <cstdio>
@@ -68,8 +69,29 @@ std::string read_from_win_file(HANDLE file_handle,
   }
   return result;
 }
+#endif  // _WIN32
 
-#endif
+// This is a workaround for buggy compiler identification in ICECC: It will not properly identify
+// C++ compilers that do not end with "++", for instance.
+std::string make_exe_path_suitable_for_icecc(const std::string& path) {
+  const auto exe_name = file::get_file_part(path, false);
+  const auto exe_ext = file::get_extension(path);
+
+  // Handle g++ with "-*" suffixes.
+  if ((exe_name == "g++-4") || (exe_name == "g++-5") || (exe_name == "g++-6") ||
+      (exe_name == "g++-7")) {
+    auto candidate = file::append_path(file::get_dir_part(path), "g++");
+    if (!file::file_exists(candidate)) {
+      candidate = candidate + exe_ext;
+    }
+    if (file::file_exists(candidate)) {
+      return candidate;
+    }
+  }
+
+  return path;
+}
+
 }  // namespace
 
 run_result_t run(const string_list_t& args, const bool quiet) {
@@ -218,12 +240,22 @@ run_result_t run(const string_list_t& args, const bool quiet) {
 
 run_result_t run_with_prefix(const string_list_t& args, const bool quiet) {
   // Prepend the argument list with a prefix, if any.
+  bool is_icecc_prefix = false;
   string_list_t prefixed_args;
   const auto* prefix_env = std::getenv("BUILDCACHE_PREFIX");
   if (prefix_env != nullptr) {
-    prefixed_args += std::string(prefix_env);
+    const auto prefix_str = std::string(prefix_env);
+    prefixed_args += prefix_str;
+
+    // Are we prefixed by ICECC?
+    is_icecc_prefix = (file::get_file_part(prefix_str, false) == "icecc");
   }
   prefixed_args += args;
+
+  // This is a hack to work around ICECC bugs.
+  if (is_icecc_prefix) {
+    prefixed_args[1] = make_exe_path_suitable_for_icecc(prefixed_args[1]);
+  }
 
   // Run the command.
   return run(prefixed_args, quiet);
