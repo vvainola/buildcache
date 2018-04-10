@@ -106,7 +106,7 @@ log::log(const log_level_t level) : m_level(level) {
 log::~log() {
   if (m_level >= get_log_level()) {
     const auto level_str = std::string("(") + get_level_string(m_level) + ")";
-    std::cout << "buildcache[" << get_process_id() << "] " << pad_string(level_str, 7) << " "
+    std::cout << "BuildCache[" << get_process_id() << "] " << pad_string(level_str, 7) << " "
               << m_stream.str() << "\n"
               << std::flush;
   }
