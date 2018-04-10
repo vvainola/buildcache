@@ -102,6 +102,21 @@ std::string::size_type get_last_path_separator_pos(const std::string& path) {
 #endif
   return pos;
 }
+
+#ifdef _WIN32
+int64_t two_dwords_to_int64(const DWORD low, const DWORD high) {
+  return static_cast<int64_t>(static_cast<uint64_t>(static_cast<uint32_t>(low)) |
+                              (static_cast<uint64_t>(static_cast<uint32_t>(high)) << 32));
+}
+
+file_info_t::time_t win32_filetime_as_unix_epoch(const FILETIME& file_time) {
+  // The FILETIME represents the number of 100-nanosecond intervals since January 1, 1601 (UTC).
+  // I.e. the Windows epoch starts 11644473600 seconds before the UNIX epoch.
+  const auto t64 = two_dwords_to_int64(file_time.dwLowDateTime, file_time.dwHighDateTime);
+  return static_cast<file_info_t::time_t>((t64 / 10000000L) - 11644473600L);
+}
+#endif
+
 }  // namespace
 
 tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension) {
@@ -438,7 +453,42 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
   std::vector<file_info_t> files;
 
 #ifdef _WIN32
-  throw std::runtime_error("WIN32: Not yet implemented.");
+  const auto search_str = utf8_to_ucs2(append_path(path, "*"));
+  WIN32_FIND_DATAW find_data;
+  auto find_handle = FindFirstFileW(search_str.c_str(), &find_data);
+  if (find_handle == INVALID_HANDLE_VALUE) {
+    throw std::runtime_error("Unable to walk the directory.");
+  }
+  do {
+    const auto name = ucs2_to_utf8(std::wstring(&find_data.cFileName[0]));
+    if ((name != ".") && (name != "..")) {
+      const auto file_path = append_path(path, name);
+
+      const auto modify_time = win32_filetime_as_unix_epoch(find_data.ftLastWriteTime);
+      const auto access_time = win32_filetime_as_unix_epoch(find_data.ftLastAccessTime);
+
+      int64_t size = 0;
+      bool is_dir = false;
+      if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+        auto subdir_files = walk_directory(file_path);
+        for (const auto& entry : subdir_files) {
+          files.emplace_back(entry);
+        }
+        is_dir = true;
+      } else {
+        size = two_dwords_to_int64(find_data.nFileSizeLow, find_data.nFileSizeHigh);
+      }
+      files.emplace_back(file_info_t(file_path, modify_time, access_time, size, is_dir));
+    }
+  } while (FindNextFileW(find_handle, &find_data) != 0);
+
+  FindClose(find_handle);
+
+  const auto find_error = GetLastError();
+  if (find_error != ERROR_NO_MORE_FILES) {
+    throw std::runtime_error("Failed to walk the directory.");
+  }
+
 #else
   auto* dir = opendir(path.c_str());
   if (dir == nullptr) {
@@ -446,18 +496,18 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
   }
 
   auto* entity = readdir(dir);
-  while(entity != nullptr) {
+  while (entity != nullptr) {
     const auto name = std::string(entity->d_name);
     if ((name != ".") && (name != "..")) {
       const auto file_path = append_path(path, name);
       struct stat file_stat;
       if (stat(file_path.c_str(), &file_stat) == 0) {
 #ifdef __APPLE__
-        const auto modify_time = static_cast<time_t>(file_stat.st_mtimespec.tv_sec);
-        const auto access_time = static_cast<time_t>(file_stat.st_atimespec.tv_sec);
+        const auto modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtimespec.tv_sec);
+        const auto access_time = static_cast<file_info_t::time_t>(file_stat.st_atimespec.tv_sec);
 #else
-        const auto modify_time = static_cast<time_t>(file_stat.st_mtim.tv_sec);
-        const auto access_time = static_cast<time_t>(file_stat.st_atim.tv_sec);
+        const auto modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtim.tv_sec);
+        const auto access_time = static_cast<file_info_t::time_t>(file_stat.st_atim.tv_sec);
 #endif
         int64_t size = 0;
         bool is_dir = false;
