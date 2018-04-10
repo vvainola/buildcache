@@ -100,34 +100,36 @@ const std::string BUILDCACHE_EXE_NAME = "buildcache";
     // identifying other compiler accelerators (e.g. ccache) as actual compilers.
     const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
 
-    return_code = 1;
+    try {
+      return_code = 1;
 
-    // Initialize a cache object.
-    bcache::cache_t cache;
+      // Initialize a cache object.
+      bcache::cache_t cache;
 
-    // Select a matching compiler wrapper.
-    std::unique_ptr<bcache::compiler_wrapper_t> wrapper;
-    if (bcache::gcc_wrapper_t::can_handle_command(true_exe_path)) {
-      wrapper.reset(new bcache::gcc_wrapper_t(cache));
-    } else if (bcache::ghs_wrapper_t::can_handle_command(true_exe_path)) {
-      wrapper.reset(new bcache::ghs_wrapper_t(cache));
+      // Select a matching compiler wrapper.
+      std::unique_ptr<bcache::compiler_wrapper_t> wrapper;
+      if (bcache::gcc_wrapper_t::can_handle_command(true_exe_path)) {
+        wrapper.reset(new bcache::gcc_wrapper_t(cache));
+      } else if (bcache::ghs_wrapper_t::can_handle_command(true_exe_path)) {
+        wrapper.reset(new bcache::ghs_wrapper_t(cache));
+      }
+
+      // Run the wrapper, if any.
+      if (wrapper) {
+        was_wrapped = wrapper->handle_command(args, true_exe_path, return_code);
+      }
+    } catch (const std::exception& e) {
+      bcache::debug::log(bcache::debug::ERROR) << "Unexpected error: " << e.what();
+      return_code = 1;
+    } catch (...) {
+      bcache::debug::log(bcache::debug::ERROR) << "Unexpected error.";
+      return_code = 1;
     }
 
-    // Run the wrapper, if any.
-    if (wrapper) {
-      was_wrapped = wrapper->handle_command(args, true_exe_path, return_code);
-    }
-  } catch (const std::exception& e) {
-    bcache::debug::log(bcache::debug::ERROR) << "Unexpected error: " << e.what();
-    return_code = 1;
-  } catch (...) {
-    bcache::debug::log(bcache::debug::ERROR) << "Unexpected error.";
-    return_code = 1;
-  }
-
-  try {
-    // Fall back to running the command as is.
+    // Fall back to running the command as is, but with the first argument replaced with the true
+    // executable path in order to avoid infinite recursion in case of symlinking.
     if (!was_wrapped) {
+      args[0] = true_exe_path;
       auto result = bcache::sys::run_with_prefix(args, false);
       return_code = result.return_code;
     }
@@ -166,6 +168,11 @@ void print_help(const char* program_name) {
 }  // namespace
 
 int main(int argc, const char** argv) {
+  // Handle symlink invokation.
+  if (bcache::file::get_file_part(std::string(argv[0]), false) != BUILDCACHE_EXE_NAME) {
+    wrap_compiler_and_exit(argc, &argv[0]);
+  }
+
   if (argc < 2) {
     print_help(argv[0]);
     std::exit(1);
