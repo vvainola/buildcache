@@ -145,9 +145,13 @@ std::string get_extension(const std::string& path) {
   return (pos != std::string::npos) ? path.substr(pos) : std::string();
 }
 
-std::string get_file_part(const std::string& path) {
+std::string get_file_part(const std::string& path, const bool include_ext) {
   const auto pos = get_last_path_separator_pos(path);
-  return (pos != std::string::npos) ? path.substr(pos + 1) : path;
+  const auto file_name = (pos != std::string::npos) ? path.substr(pos + 1) : path;
+  const auto ext_pos = file_name.rfind(".");
+  return (include_ext || (ext_pos == std::string::npos) || (ext_pos == 0))
+             ? file_name
+             : file_name.substr(0, ext_pos);
 }
 
 std::string get_dir_part(const std::string& path) {
@@ -216,7 +220,7 @@ std::string resolve_path(const std::string& path) {
 #endif
 }
 
-std::string find_executable(const std::string& path) {
+std::string find_executable(const std::string& path, const std::string& exclude) {
   if (is_absolute_path(path)) {
     return resolve_path(path);
   }
@@ -232,11 +236,15 @@ std::string find_executable(const std::string& path) {
   for (const auto& base_path : search_path) {
     const auto true_path = resolve_path(append_path(base_path, path));
     if ((!true_path.empty()) && file_exists(true_path)) {
-      return true_path;
+      // Check that this is not the excluded file name.
+      const auto true_name = get_file_part(true_path, false);
+      if (true_name != exclude) {
+        return true_path;
+      }
     }
   }
 
-  return std::string();
+  throw std::runtime_error("Could not find the executable file.");
 }
 
 bool create_dir(const std::string& path) {

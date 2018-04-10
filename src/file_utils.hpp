@@ -113,9 +113,10 @@ std::string get_extension(const std::string& path);
 
 /// @brief Get the file name part of a path.
 /// @param path The path to a file.
-/// @returns The part of the path after the final path separator (including any extension). If the
-/// path does not contain a separator, the entire path is returned.
-std::string get_file_part(const std::string& path);
+/// @param include_ext Include the file extension in the file name.
+/// @returns The part of the path after the final path separator. If the path does not contain a
+/// separator, the entire path is returned.
+std::string get_file_part(const std::string& path, const bool include_ext = true);
 
 /// @brief Get the directory part of a path.
 /// @param path The path to a file.
@@ -137,9 +138,10 @@ std::string resolve_path(const std::string& path);
 
 /// @brief Find the true path to an executable file.
 /// @param path The file to find.
-/// @returns an absolute path to the true executable file (symlinks resolved and all), or an empty
-/// string if the file could not be found.
-std::string find_executable(const std::string& path);
+/// @param exclude A file name to exclude (excluding the file extension).
+/// @returns an absolute path to the true executable file (symlinks resolved and all).
+/// @throws runtime_error if the file could not be found.
+std::string find_executable(const std::string& path, const std::string& exclude = std::string());
 
 /// @brief Walk a directory and its subdirectories.
 /// @param path The path to the directory.

@@ -30,6 +30,9 @@
 #include <string>
 
 namespace {
+// The name of the BuildCache executable (excluding the file extension).
+const std::string BUILDCACHE_EXE_NAME = "buildcache";
+
 [[noreturn]] void clear_cache_and_exit() {
   int return_code = 0;
   try {
@@ -95,25 +98,24 @@ namespace {
     // Find the true path to the executable file. This affects things like if we can match the
     // compiler name or not, and what version string we get. We also want to avoid incorrectly
     // identifying other compiler accelerators (e.g. ccache) as actual compilers.
-    const auto true_exe_path = bcache::file::find_executable(args[0]);
+    const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
 
     return_code = 1;
-    if (!true_exe_path.empty()) {
-      // Initialize a cache object.
-      bcache::cache_t cache;
 
-      // Select a matching compiler wrapper.
-      std::unique_ptr<bcache::compiler_wrapper_t> wrapper;
-      if (bcache::gcc_wrapper_t::can_handle_command(true_exe_path)) {
-        wrapper.reset(new bcache::gcc_wrapper_t(cache));
-      } else if (bcache::ghs_wrapper_t::can_handle_command(true_exe_path)) {
-        wrapper.reset(new bcache::ghs_wrapper_t(cache));
-      }
+    // Initialize a cache object.
+    bcache::cache_t cache;
 
-      // Run the wrapper, if any.
-      if (wrapper) {
-        was_wrapped = wrapper->handle_command(args, true_exe_path, return_code);
-      }
+    // Select a matching compiler wrapper.
+    std::unique_ptr<bcache::compiler_wrapper_t> wrapper;
+    if (bcache::gcc_wrapper_t::can_handle_command(true_exe_path)) {
+      wrapper.reset(new bcache::gcc_wrapper_t(cache));
+    } else if (bcache::ghs_wrapper_t::can_handle_command(true_exe_path)) {
+      wrapper.reset(new bcache::ghs_wrapper_t(cache));
+    }
+
+    // Run the wrapper, if any.
+    if (wrapper) {
+      was_wrapped = wrapper->handle_command(args, true_exe_path, return_code);
     }
   } catch (const std::exception& e) {
     bcache::debug::log(bcache::debug::ERROR) << "Unexpected error: " << e.what();
