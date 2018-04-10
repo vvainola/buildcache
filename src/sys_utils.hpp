@@ -28,7 +28,7 @@ namespace bcache {
 namespace sys {
 /// @brief Run results from an external command.
 struct run_result_t {
-  int return_code;     ///< The program return code (zero for success).
+  int return_code;      ///< The program return code (zero for success).
   std::string std_out;  ///< The contents of stdout.
   std::string std_err;  ///< The contents of stderr.
 };

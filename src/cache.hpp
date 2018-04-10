@@ -60,7 +60,13 @@ public:
   std::string lookup(const hasher_t::hash_t& hash);
 
 private:
+  void load_config();
+  void save_config();
+
+  void perform_housekeeping();
+
   std::string m_root_folder;
+  int64_t m_max_size;
   bool m_is_valid;
 };
 

@@ -60,9 +60,6 @@ public:
               const int64_t size,
               const bool is_dir);
 
-  file_info_t(const file_info_t&) = default;
-  file_info_t(file_info_t&&) = default;
-
   /// @returns the full path to the file.
   const std::string& path() const {
     return m_path;
@@ -89,11 +86,11 @@ public:
   }
 
 private:
-  const std::string m_path;
-  const time_t m_modify_time;
-  const time_t m_access_time;
-  const int64_t m_size;
-  const bool m_is_dir;
+  std::string m_path;
+  time_t m_modify_time;
+  time_t m_access_time;
+  int64_t m_size;
+  bool m_is_dir;
 };
 
 ///@{
