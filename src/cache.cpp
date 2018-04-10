@@ -19,6 +19,7 @@
 
 #include "cache.hpp"
 
+#include "debug_utils.hpp"
 #include "file_utils.hpp"
 
 #include <cstdlib>
@@ -69,6 +70,12 @@ cache_entry_path_t hash_to_cache_entry_path(const hasher_t::hash_t& hash, const 
   const auto full_file_path = file::append_path(full_dir_path, str.substr(2));
   return cache_entry_path_t(full_dir_path, full_file_path);
 }
+
+std::vector<file::file_info_t> get_cache_files(const std::string& root_folder) {
+  // TODO(m): Exclude the tmp folder and any other meta data files.
+  const auto files = file::walk_directory(root_folder);
+  return files;
+}
 }  // namespace
 
 cache_t::cache_t() {
@@ -87,8 +94,24 @@ void cache_t::clear() {
     return;
   }
 
-  // TODO(m): Implement me!
-  std::cout << "*** Clearing the cache has not yet been implemented\n";
+  // Remove all cached files.
+  const auto files = get_cache_files(m_root_folder);
+  int num_files = 0;
+  int64_t total_size = 0;
+  for (const auto& file : files) {
+    if (!file.is_dir()) {
+      try {
+        file::remove_file(file.path());
+        num_files++;
+        total_size += file.size();
+      } catch (const std::exception& e) {
+        debug::log(debug::ERROR) << e.what();
+      }
+    }
+  }
+  const double total_size_mb = static_cast<double>(total_size) / (1024.0 * 1024.0);
+
+  std::cout << "Removed " << num_files << " cached files (" << total_size_mb << " MB)\n";
 }
 
 void cache_t::show_stats() {
@@ -97,8 +120,7 @@ void cache_t::show_stats() {
   }
 
   // Calculate the total cache size.
-  // TODO(m): Exclude the tmp folder and any other meta data files.
-  const auto files = file::walk_directory(m_root_folder);
+  const auto files = get_cache_files(m_root_folder);
   int num_files = 0;
   int64_t total_size = 0;
   for (const auto& file : files) {

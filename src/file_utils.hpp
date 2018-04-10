@@ -89,7 +89,7 @@ public:
   }
 
 private:
-  const std::string& m_path;
+  const std::string m_path;
   const time_t m_modify_time;
   const time_t m_access_time;
   const int64_t m_size;
@@ -155,6 +155,7 @@ bool create_dir(const std::string& path);
 
 /// @brief Remove an existing file.
 /// @param path The path to the file.
+/// @throws runtime_error if the file could not be removed.
 void remove_file(const std::string& path);
 
 /// @brief Check if a directory exists.

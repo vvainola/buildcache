@@ -135,7 +135,11 @@ tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension) {
 
 tmp_file_t::~tmp_file_t() {
   if (file_exists(m_path)) {
-    remove_file(m_path);
+    try {
+      remove_file(m_path);
+    } catch (const std::exception& e) {
+      debug::log(debug::ERROR) << e.what();
+    }
   }
 }
 
@@ -292,10 +296,13 @@ bool create_dir(const std::string& path) {
 
 void remove_file(const std::string& path) {
 #ifdef _WIN32
-  _wremove(utf8_to_ucs2(path).c_str());
+  const auto success = (_wremove(utf8_to_ucs2(path).c_str()) == 0);
 #else
-  std::remove(path.c_str());
+  const auto success = (std::remove(path.c_str()) == 0);
 #endif
+  if (!success) {
+    throw std::runtime_error("Unable to remove file.");
+  }
 }
 
 bool dir_exists(const std::string& path) {
