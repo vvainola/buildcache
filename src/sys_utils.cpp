@@ -19,6 +19,7 @@
 
 #include "sys_utils.hpp"
 
+#include "debug_utils.hpp"
 #include "unicode_utils.hpp"
 
 #include <cstdio>
@@ -77,10 +78,11 @@ run_result_t run(const string_list_t& args, const bool quiet) {
 
   auto successfully_launched_program = false;
   const auto cmd = args.join(" ", true);
+  debug::log(debug::DEBUG) << "Invoking: " << cmd;
 
 #if defined(_WIN32)
-  // TODO(m): We want to use proper CreateProcess() to get both stdout and stderr etc. Right now the
-  // code is broken (it occasionally hangs), so we currently use _wpopen() instead.
+// TODO(m): We want to use proper CreateProcess() to get both stdout and stderr etc. Right now the
+// code is broken (it occasionally hangs), so we currently use _wpopen() instead.
 #if 0
   HANDLE std_out_read_handle = nullptr;
   HANDLE std_out_write_handle = nullptr;

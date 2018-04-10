@@ -170,6 +170,7 @@ void print_help(const char* program_name) {
 int main(int argc, const char** argv) {
   // Handle symlink invokation.
   if (bcache::file::get_file_part(std::string(argv[0]), false) != BUILDCACHE_EXE_NAME) {
+    bcache::debug::log(bcache::debug::DEBUG) << "Invoked as symlink: " << argv[0];
     wrap_compiler_and_exit(argc, &argv[0]);
   }
 

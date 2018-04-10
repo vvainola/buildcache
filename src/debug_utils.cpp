@@ -24,6 +24,22 @@
 #include <iostream>
 #include <string>
 
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#undef ERROR
+#undef log
+#include <vector>
+#else
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
 namespace bcache {
 namespace debug {
 namespace {
@@ -70,6 +86,18 @@ log_level_t get_log_level() {
 
   return static_cast<log_level_t>(log_level);
 }
+
+int get_process_id() {
+#ifdef _WIN32
+  return static_cast<int>(GetCurrentProcessId());
+#else
+  return static_cast<int>(getpid());
+#endif
+}
+
+std::string pad_string(const std::string& str, const size_t width) {
+  return (str.size() < width) ? (str + std::string(width - str.size(), ' ')) : str;
+}
 }  // namespace
 
 log::log(const log_level_t level) : m_level(level) {
@@ -77,7 +105,9 @@ log::log(const log_level_t level) : m_level(level) {
 
 log::~log() {
   if (m_level >= get_log_level()) {
-    std::cout << "  <buildcache " << get_level_string(m_level) << "> " << m_stream.str() << "\n"
+    const auto level_str = std::string("(") + get_level_string(m_level) + ")";
+    std::cout << "buildcache[" << get_process_id() << "] " << pad_string(level_str, 7) << " "
+              << m_stream.str() << "\n"
               << std::flush;
   }
 }

@@ -77,6 +77,14 @@ const auto PATH_DELIMITER = std::string(1, PATH_DELIMITER_CHR);
 // temporary file names.
 std::atomic_uint_fast32_t s_tmp_name_number;
 
+int get_process_id() {
+#ifdef _WIN32
+  return static_cast<int>(GetCurrentProcessId());
+#else
+  return static_cast<int>(getpid());
+#endif
+}
+
 std::string::size_type get_last_path_separator_pos(const std::string& path) {
 #if defined(_WIN32)
   const auto pos1 = path.rfind("/");
@@ -97,12 +105,8 @@ std::string::size_type get_last_path_separator_pos(const std::string& path) {
 }  // namespace
 
 tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension) {
-// Get unique identifiers for this file.
-#ifdef _WIN32
-  const auto pid = static_cast<int>(GetCurrentProcessId());
-#else
-  const auto pid = static_cast<int>(getpid());
-#endif
+  // Get unique identifiers for this file.
+  const auto pid = get_process_id();
   const auto number = ++s_tmp_name_number;
 
   // Generate a file name from the unique identifiers.
@@ -227,7 +231,11 @@ std::string find_executable(const std::string& path, const std::string& exclude)
   if (is_absolute_path(file_to_find)) {
     // Return the full path unless it points to the excluded executable.
     const auto true_path = resolve_path(file_to_find);
+    if (true_path.empty()) {
+      throw std::runtime_error("Could not resolve absolute path for the executable file.");
+    }
     if (get_file_part(true_path, false) != exclude) {
+      debug::log(debug::DEBUG) << "Found exe: " << true_path << " (looked for " << path << ")";
       return true_path;
     }
 
@@ -249,6 +257,8 @@ std::string find_executable(const std::string& path, const std::string& exclude)
       // Check that this is not the excluded file name.
       const auto true_name = get_file_part(true_path, false);
       if (true_name != exclude) {
+        debug::log(debug::DEBUG) << "Found exe: " << true_path << " (looked for " << file_to_find
+                                 << ")";
         return true_path;
       }
     }
