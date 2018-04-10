@@ -100,6 +100,11 @@ const std::string BUILDCACHE_EXE_NAME = "buildcache";
     // identifying other compiler accelerators (e.g. ccache) as actual compilers.
     const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
 
+    // Replace the command with the true exe path. Most of the following operations rely on having
+    // a correct executable path. Also, this is important to avoid recursions when we are invoked
+    // from a symlink, for instance.
+    args[0] = true_exe_path;
+
     try {
       return_code = 1;
 
@@ -116,7 +121,7 @@ const std::string BUILDCACHE_EXE_NAME = "buildcache";
 
       // Run the wrapper, if any.
       if (wrapper) {
-        was_wrapped = wrapper->handle_command(args, true_exe_path, return_code);
+        was_wrapped = wrapper->handle_command(args, return_code);
       }
     } catch (const std::exception& e) {
       bcache::debug::log(bcache::debug::ERROR) << "Unexpected error: " << e.what();
@@ -126,10 +131,8 @@ const std::string BUILDCACHE_EXE_NAME = "buildcache";
       return_code = 1;
     }
 
-    // Fall back to running the command as is, but with the first argument replaced with the true
-    // executable path in order to avoid infinite recursion in case of symlinking.
+    // Fall back to running the command as is.
     if (!was_wrapped) {
-      args[0] = true_exe_path;
       auto result = bcache::sys::run_with_prefix(args, false);
       return_code = result.return_code;
     }

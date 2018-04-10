@@ -30,33 +30,27 @@ compiler_wrapper_t::compiler_wrapper_t(cache_t& cache) : m_cache(cache) {
 compiler_wrapper_t::~compiler_wrapper_t() {
 }
 
-bool compiler_wrapper_t::handle_command(const string_list_t& args,
-                                        const std::string& true_exe_path,
-                                        int& return_code) {
+bool compiler_wrapper_t::handle_command(const string_list_t& args, int& return_code) {
   return_code = 1;
 
   try {
     // Start a hash.
     hasher_t hasher;
 
-    // For most operations we want the command to be replaced with the true exe path.
-    auto args_with_true_exe = args;
-    args_with_true_exe[0] = true_exe_path;
-
     // Hash the preprocessed file contents.
-    hasher.update(preprocess_source(args_with_true_exe));
+    hasher.update(preprocess_source(args));
 
     // Hash the (filtered) command line flags.
-    hasher.update(filter_arguments(args_with_true_exe).join(" ", true));
+    hasher.update(filter_arguments(args).join(" ", true));
 
     // Hash the compiler version string.
-    hasher.update(get_compiler_id(args_with_true_exe));
+    hasher.update(get_compiler_id(args));
 
     // Finalize the hash.
     const auto hash = hasher.final();
 
     // Get the object (target) file for this compilation command.
-    const auto object_file = get_object_file(args_with_true_exe);
+    const auto object_file = get_object_file(args);
 
     // Look up the entry in the cache.
     const auto cached_file = m_cache.lookup(hash);
@@ -72,8 +66,6 @@ bool compiler_wrapper_t::handle_command(const string_list_t& args,
     debug::log(debug::INFO) << "Cache miss: " << hash.as_string() << ": " << object_file;
 
     // Run the actual compiler command to produce the object file.
-    // Note: When we run prefixed we use the original arguments. This makes sure that ICECC can
-    // identify the toolchain correctly.
     const auto result = sys::run_with_prefix(args, false);
     return_code = result.return_code;
 
