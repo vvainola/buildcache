@@ -221,8 +221,18 @@ std::string resolve_path(const std::string& path) {
 }
 
 std::string find_executable(const std::string& path, const std::string& exclude) {
-  if (is_absolute_path(path)) {
-    return resolve_path(path);
+  auto file_to_find = path;
+
+  // Handle absolute paths.
+  if (is_absolute_path(file_to_find)) {
+    // Return the full path unless it points to the excluded executable.
+    const auto true_path = resolve_path(file_to_find);
+    if (get_file_part(true_path, false) != exclude) {
+      return true_path;
+    }
+
+    // ...otherwise search for the named file (which should be a symlink) in the PATH.
+    file_to_find = get_file_part(file_to_find);
   }
 
   // Get the PATH environment variable.
@@ -234,7 +244,7 @@ std::string find_executable(const std::string& path, const std::string& exclude)
 
   // Iterate the path from start to end and see if we can find the executable file.
   for (const auto& base_path : search_path) {
-    const auto true_path = resolve_path(append_path(base_path, path));
+    const auto true_path = resolve_path(append_path(base_path, file_to_find));
     if ((!true_path.empty()) && file_exists(true_path)) {
       // Check that this is not the excluded file name.
       const auto true_name = get_file_part(true_path, false);
