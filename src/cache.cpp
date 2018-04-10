@@ -71,10 +71,39 @@ cache_entry_path_t hash_to_cache_entry_path(const hasher_t::hash_t& hash, const 
   return cache_entry_path_t(full_dir_path, full_file_path);
 }
 
+bool is_cache_file(const std::string& path) {
+  const auto dir_name = file::get_file_part(file::get_dir_part(path));
+  const auto file_name = file::get_file_part(path, false);
+
+  // Is the dir name 2 characters long and the file name 30 characters long?
+  if ((dir_name.length() != 2) || (file_name.length() != 30)) {
+    return false;
+  }
+
+  // Is the dir + file name a valid hash (i.a. all characters are hex)?
+  const auto hash_str = dir_name + file_name;
+  for (const auto c : hash_str) {
+    if ((c < '0') || (c > 'f') || ((c > '9') && (c < 'a'))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 std::vector<file::file_info_t> get_cache_files(const std::string& root_folder) {
-  // TODO(m): Exclude the tmp folder and any other meta data files.
+  // Get all the files in the cache dir.
   const auto files = file::walk_directory(root_folder);
-  return files;
+
+  // Return only the files that are valid cache files.
+  std::vector<file::file_info_t> cache_files;
+  for (const auto& file : files) {
+    if ((!file.is_dir()) && is_cache_file(file.path())) {
+      cache_files.push_back(file);
+    }
+  }
+
+  return cache_files;
 }
 }  // namespace
 
