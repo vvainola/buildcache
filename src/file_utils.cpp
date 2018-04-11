@@ -358,7 +358,7 @@ void copy(const std::string& from_path, const std::string& to_path) {
         if (bytes_read == 0u) {
           break;
         }
-        const auto bytes_written = std::fwrite(buf.data(), 1, buf.size(), to_file);
+        const auto bytes_written = std::fwrite(buf.data(), 1, bytes_read, to_file);
         if (bytes_written != bytes_read) {
           success = false;
           break;
