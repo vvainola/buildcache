@@ -46,6 +46,9 @@ distributed compilation. To use icecream you can set the environment variable
 $ BUILDCACHE_PREFIX=/usr/bin/icecc buildcache g++ -c -O2 hello.cpp -o hello.o
 ```
 
+Note: At the time of writing there is a [bug](https://github.com/icecc/icecream/issues/390)
+in ICECC that may disable distributed compilation when ICECC is invoked via BuildCache.
+
 ## Supported compilers and languages
 
 Currently the following compilers and languages are supported:
@@ -80,7 +83,4 @@ $ BUILDCACHE_DEBUG=2 buildcache g++ -c -O2 hello.cpp -o hello.o
 
 **NOTE:** BuildCache is still in early development and should not be considered
 ready for production projects yet!
-
-There are many missing features, such as cache housekeeping (the cache
-currently grows indefinitely and needs to be cleared manually).
 
