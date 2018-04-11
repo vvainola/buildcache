@@ -90,7 +90,7 @@ std::string gcc_wrapper_t::preprocess_source(const string_list_t& args) {
   }
 
   // Run the preprocessor step.
-  const auto preprocessed_file = get_temp_file(".i");
+  const auto preprocessed_file = m_cache.get_temp_file(".i");
   const auto preprocessor_args = make_preprocessor_cmd(args, preprocessed_file.path());
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
@@ -152,13 +152,22 @@ std::string gcc_wrapper_t::get_compiler_id(const string_list_t& args) {
   return result.std_out;
 }
 
-std::string gcc_wrapper_t::get_object_file(const string_list_t& args) {
+std::map<std::string, std::string> gcc_wrapper_t::get_build_files(const string_list_t& args) {
+  std::map<std::string, std::string> files;
+  auto found_object_file = false;
   for (size_t i = 0u; i < args.size(); ++i) {
     const auto next_idx = i + 1u;
     if ((args[i] == "-o") && (next_idx < args.size())) {
-      return args[next_idx];
+      if (found_object_file) {
+        throw std::runtime_error("Only a single target object file can be specified.");
+      }
+      files["object"] = args[next_idx];
+      found_object_file = true;
     }
   }
-  throw std::runtime_error("Unable to get the target object file.");
+  if (!found_object_file) {
+    throw std::runtime_error("Unable to get the target object file.");
+  }
+  return files;
 }
 }  // namespace bcache

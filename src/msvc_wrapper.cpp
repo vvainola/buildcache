@@ -152,12 +152,21 @@ std::string msvc_wrapper_t::get_compiler_id(const string_list_t& args) {
   return result.std_out;
 }
 
-std::string msvc_wrapper_t::get_object_file(const string_list_t& args) {
+std::map<std::string, std::string> msvc_wrapper_t::get_build_files(const string_list_t& args) {
+  std::map<std::string, std::string> files;
+  auto found_object_file = false;
   for (const auto& arg : args) {
     if (arg_starts_with(arg, "Fo") && (file::get_extension(arg) == ".obj")) {
-      return arg.substr(3);
+      if (found_object_file) {
+        throw std::runtime_error("Only a single target object file can be specified.");
+      }
+      files["object"] = arg.substr(3);
+      found_object_file = true;
     }
   }
-  throw std::runtime_error("Unable to get the target object file.");
+  if (!found_object_file) {
+    throw std::runtime_error("Unable to get the target object file.");
+  }
+  return files;
 }
 }  // namespace bcache

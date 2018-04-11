@@ -35,7 +35,7 @@ public:
   static bool can_handle_command(const std::string& compiler_exe);
 
 private:
-  virtual std::string get_compiler_id(const string_list_t& args) override;
+  std::string get_compiler_id(const string_list_t& args) override;
 };
 }  // namespace bcache
 

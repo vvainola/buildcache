@@ -147,8 +147,8 @@ std::vector<file_info_t> walk_directory(const std::string& path);
 
 /// @brief Create a directory.
 /// @param path The path to the directory.
-/// @returns true if the directory was successfully created.
-bool create_dir(const std::string& path);
+/// @throws runtime_error if the file could not be removed.
+void create_dir(const std::string& path);
 
 /// @brief Remove an existing file.
 /// @param path The path to the file.
@@ -184,6 +184,12 @@ void link_or_copy(const std::string& from_path, const std::string& to_path);
 /// @returns the contents of the file as a string.
 /// @throws runtime_error if the operation could not be completed.
 std::string read(const std::string& path);
+
+/// @brief Write a string to a file.
+/// @param data The data string to write.
+/// @param path The path to the file.
+/// @throws runtime_error if the operation could not be completed.
+void write(const std::string& data, const std::string& path);
 }  // namespace file
 }  // namespace bcache
 

@@ -20,22 +20,36 @@
 #ifndef BUILDCACHE_CACHE_HPP_
 #define BUILDCACHE_CACHE_HPP_
 
+#include "file_utils.hpp"
 #include "hasher.hpp"
 
+#include <map>
 #include <string>
+#include <vector>
 
 namespace bcache {
 
 class cache_t {
 public:
-  cache_t();
-  ~cache_t();
+  struct entry_t {
+    /// @returns true if this object represents a valid cache entry. For a cache miss, the return
+    /// value is false.
+    operator bool() const {
+      return (!files.empty()) || (!std_out.empty()) || (!std_err.empty());
+    }
 
-  /// @brief Check if the cache is valid to use at all.
-  /// @returns true if it is safe to use the cache.
-  bool is_valid() const {
-    return m_is_valid;
-  }
+    std::map<std::string, std::string> files;
+    std::string std_out;
+    std::string std_err;
+    int return_code = 0;
+  };
+
+  /// @brief Initialize the cache object.
+  /// @throws runtime_error if the cache could not be initialized.
+  cache_t();
+
+  /// @brief De-initialzie the cache object.
+  ~cache_t();
 
   /// @brief Get the root folder of the cache.
   /// @returns the path to the root folder.
@@ -49,17 +63,25 @@ public:
   /// @brief Show cache statistics (print to standard out).
   void show_stats();
 
-  /// @brief Adds a file to the cache
+  /// @brief Adds a set of files to the cache
   /// @param hash The cache entry identifier.
-  /// @param object_file The file to copy into the cache.
-  void add(const hasher_t::hash_t& hash, const std::string& object_file);
+  /// @param entry The cache entry data (files, stdout, etc).
+  void add(const hasher_t::hash_t& hash, const entry_t& entry);
 
   /// @brief Check if an entry exists in the cache.
-  /// @returns The file name base (without extension) to the cache entry, or en empty string if the
-  /// entry did not exist in the cache.
-  std::string lookup(const hasher_t::hash_t& hash);
+  /// @returns A cache hit struct.
+  entry_t lookup(const hasher_t::hash_t& hash);
+
+  /// @brief Get a temporary file.
+  /// @param extension File extension (including the period).
+  /// @returns a temporary file object with a unique path.
+  file::tmp_file_t get_temp_file(const std::string& extension) const;
 
 private:
+  const std::string hash_to_cache_entry_path(const hasher_t::hash_t& hash) const;
+  const std::string get_tmp_folder() const;
+  const std::string get_cache_files_folder() const;
+
   void load_config();
   void save_config();
 
@@ -67,7 +89,6 @@ private:
 
   std::string m_root_folder;
   int64_t m_max_size;
-  bool m_is_valid;
 };
 
 }  // namespace bcache

@@ -27,6 +27,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 
 #if defined(_WIN32)
@@ -287,12 +288,15 @@ std::string find_executable(const std::string& path, const std::string& exclude)
   throw std::runtime_error("Could not find the executable file.");
 }
 
-bool create_dir(const std::string& path) {
+void create_dir(const std::string& path) {
 #ifdef _WIN32
-  return (_wmkdir(utf8_to_ucs2(path).c_str()) == 0);
+  const auto success = (_wmkdir(utf8_to_ucs2(path).c_str()) == 0);
 #else
-  return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0);
+  const auto success = (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0);
 #endif
+  if (!success) {
+    throw std::runtime_error("Unable to remove file.");
+  }
 }
 
 void remove_file(const std::string& path) {
@@ -455,6 +459,41 @@ std::string read(const std::string& path) {
   }
 
   return str;
+}
+
+void write(const std::string& data, const std::string& path) {
+  FILE* f;
+
+// Open the file.
+#ifdef _WIN32
+  const auto err = _wfopen_s(&f, utf8_to_ucs2(path).c_str(), L"wb");
+  if (err != 0) {
+    throw std::runtime_error("Unable to open the file.");
+  }
+#else
+  f = std::fopen(path.c_str(), "wb");
+  if (f == nullptr) {
+    throw std::runtime_error("Unable to open the file.");
+  }
+#endif
+
+  // Get file size.
+  const auto file_size = data.size();
+
+  // Write the data to the file.
+  auto bytes_left = file_size;
+  while ((bytes_left != 0u) && !std::ferror(f)) {
+    const auto* ptr = &data[file_size - bytes_left];
+    const auto bytes_written = std::fwrite(ptr, 1, bytes_left, f);
+    bytes_left -= bytes_written;
+  }
+
+  // Close the file.
+  std::fclose(f);
+
+  if (bytes_left != 0u) {
+    throw std::runtime_error("Unable to write the file.");
+  }
 }
 
 std::vector<file_info_t> walk_directory(const std::string& path) {

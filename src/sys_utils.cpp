@@ -26,6 +26,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <stdexcept>
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -41,14 +42,6 @@
 namespace bcache {
 namespace sys {
 namespace {
-run_result_t make_run_result() {
-  run_result_t result;
-  result.return_code = 1;
-  result.std_out = std::string();
-  result.std_err = std::string();
-  return result;
-}
-
 #if defined(_WIN32)
 std::string read_from_win_file(HANDLE file_handle,
                                std::ostream& stream,
@@ -96,7 +89,7 @@ std::string make_exe_path_suitable_for_icecc(const std::string& path) {
 
 run_result_t run(const string_list_t& args, const bool quiet) {
   // Initialize the run result.
-  auto result = make_run_result();
+  run_result_t result;
 
   auto successfully_launched_program = false;
   const auto cmd = args.join(" ", true);
