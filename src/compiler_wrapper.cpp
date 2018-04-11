@@ -70,9 +70,16 @@ bool compiler_wrapper_t::handle_command(const string_list_t& args, int& return_c
     return_code = result.return_code;
 
     // Create a new entry in the cache.
-    m_cache.add(hash, object_file);
+    // TODO(m): If we could store stdout, stderr and the return value in the cache, we might want
+    // to create cache entries for failed compilations too. Right now we just don't add cache
+    // entries for failed compilations.
+    if (return_code == 0) {
+      m_cache.add(hash, object_file);
+    }
 
     // Everything's ok!
+    // Note: Even if the compilation failed, we've done the expected job (running the compiler again
+    // would just take twice the time and give the same errors).
     return true;
   } catch (std::exception& e) {
     debug::log(debug::DEBUG) << "Exception: " << e.what();
