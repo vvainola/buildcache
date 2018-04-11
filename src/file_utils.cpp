@@ -220,7 +220,8 @@ std::string get_user_home_dir() {
 
 bool is_absolute_path(const std::string& path) {
 #ifdef _WIN32
-  const bool is_abs_drive = (path.size() >= 3) && (path[1] == ':') && (path[2] == '\\');
+  const bool is_abs_drive =
+      (path.size() >= 3) && (path[1] == ':') && ((path[2] == '\\') || (path[2] == '/'));
   const bool is_abs_net = (path.size() >= 2) && (path[0] == '\\') && (path[1] == '\\');
   return is_abs_drive || is_abs_net;
 #else

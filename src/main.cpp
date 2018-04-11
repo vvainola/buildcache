@@ -99,6 +99,9 @@ const std::string BUILDCACHE_EXE_NAME = "buildcache";
     // Find the true path to the executable file. This affects things like if we can match the
     // compiler name or not, and what version string we get. We also want to avoid incorrectly
     // identifying other compiler accelerators (e.g. ccache) as actual compilers.
+    // TODO(m): This call may throw an excepption, which currently means that we will not even try
+    // to run the original command. At the same time this is a protection against endless symlink
+    // recursion. Figure something out!
     const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
 
     // Replace the command with the true exe path. Most of the following operations rely on having
@@ -142,7 +145,7 @@ const std::string BUILDCACHE_EXE_NAME = "buildcache";
       return_code = result.return_code;
     }
   } catch (const std::exception& e) {
-    bcache::debug::log(bcache::debug::FATAL) << "Unexpected error." << e.what();
+    bcache::debug::log(bcache::debug::FATAL) << "Unexpected error: " << e.what();
     return_code = 1;
   } catch (...) {
     bcache::debug::log(bcache::debug::FATAL) << "Unexpected error.";
