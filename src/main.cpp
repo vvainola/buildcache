@@ -22,6 +22,7 @@
 #include "debug_utils.hpp"
 #include "gcc_wrapper.hpp"
 #include "ghs_wrapper.hpp"
+#include "msvc_wrapper.hpp"
 #include "string_list.hpp"
 #include "sys_utils.hpp"
 
@@ -117,6 +118,10 @@ const std::string BUILDCACHE_EXE_NAME = "buildcache";
         wrapper.reset(new bcache::gcc_wrapper_t(cache));
       } else if (bcache::ghs_wrapper_t::can_handle_command(true_exe_path)) {
         wrapper.reset(new bcache::ghs_wrapper_t(cache));
+      } else if (bcache::msvc_wrapper_t::can_handle_command(true_exe_path)) {
+        wrapper.reset(new bcache::msvc_wrapper_t(cache));
+      } else {
+        bcache::debug::log(bcache::debug::INFO) << "No suitable wrapper for " << true_exe_path;
       }
 
       // Run the wrapper, if any.

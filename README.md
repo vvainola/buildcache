@@ -57,6 +57,7 @@ Currently the following compilers and languages are supported:
 | -------- | --------- | --------- |
 | GCC      | C, C++    | Yes       |
 | Clang    | C, C++    | Yes       |
+| MSVC     | C, C++    | Yes       |
 | GHS      | C, C++    | Yes       |
 
 New backends are relatively easy to add.

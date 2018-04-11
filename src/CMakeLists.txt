@@ -47,6 +47,8 @@ add_executable(buildcache
   hasher.cpp
   hasher.hpp
   main.cpp
+  msvc_wrapper.cpp
+  msvc_wrapper.hpp
   string_list.hpp
   sys_utils.cpp
   sys_utils.hpp

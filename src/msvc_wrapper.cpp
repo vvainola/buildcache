@@ -17,7 +17,7 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "gcc_wrapper.hpp"
+#include "msvc_wrapper.hpp"
 
 #include "debug_utils.hpp"
 #include "sys_utils.hpp"
@@ -31,8 +31,19 @@ bool is_source_file(const std::string& arg) {
   return ((ext == ".cpp") || (ext == ".cc") || (ext == ".cxx") || (ext == ".c"));
 }
 
-string_list_t make_preprocessor_cmd(const string_list_t& args,
-                                    const std::string& preprocessed_file) {
+bool arg_starts_with(const std::string& str, const std::string& sub_str) {
+  const auto size = sub_str.size();
+  const auto is_flag = (size >= 1) && ((str[0] == '/') || (str[0] == '-'));
+  return is_flag && ((str.size() >= (size + 1)) && (str.substr(1, size) == sub_str));
+}
+
+bool arg_equals(const std::string& str, const std::string& sub_str) {
+  const auto size = sub_str.size();
+  const auto is_flag = (size >= 1) && ((str[0] == '/') || (str[0] == '-'));
+  return is_flag && ((str.size() >= (size + 1)) && (str.substr(1) == sub_str));
+}
+
+string_list_t make_preprocessor_cmd(const string_list_t& args) {
   string_list_t preprocess_args;
 
   // Drop arguments that we do not want/need.
@@ -41,11 +52,9 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
     auto arg = *it;
     auto drop_this_arg = drop_next_arg;
     drop_next_arg = false;
-    if (arg == "-c") {
+    if (arg_equals(arg, "c") || arg_starts_with(arg, "Fo") || arg_equals(arg, "C") ||
+        arg_equals(arg, "E")) {
       drop_this_arg = true;
-    } else if (arg == "-o") {
-      drop_this_arg = true;
-      drop_next_arg = true;
     }
     if (!drop_this_arg) {
       preprocess_args += arg;
@@ -53,52 +62,50 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
   }
 
   // Append the required arguments for producing preprocessed output.
-  preprocess_args += std::string("-E");
-  preprocess_args += std::string("-P");
-  preprocess_args += std::string("-o");
-  preprocess_args += preprocessed_file;
+  preprocess_args += std::string("/EP");
 
   return preprocess_args;
 }
 }  // namespace
 
-gcc_wrapper_t::gcc_wrapper_t(cache_t& cache) : compiler_wrapper_t(cache) {
+msvc_wrapper_t::msvc_wrapper_t(cache_t& cache) : compiler_wrapper_t(cache) {
 }
 
-bool gcc_wrapper_t::can_handle_command(const std::string& compiler_exe) {
+bool msvc_wrapper_t::can_handle_command(const std::string& compiler_exe) {
   // Is this the right compiler?
   const auto cmd = file::get_file_part(compiler_exe, false);
-  return (cmd.find("gcc") != std::string::npos) || (cmd.find("g++") != std::string::npos) ||
-         (cmd.find("clang++") != std::string::npos) || (cmd == "clang");
+  return (cmd == "cl");
 }
 
-std::string gcc_wrapper_t::preprocess_source(const string_list_t& args) {
-  // Are we compiling an object file?
+std::string msvc_wrapper_t::preprocess_source(const string_list_t& args) {
+  // Check if this is a compilation command that we support.
   auto is_object_compilation = false;
-  for (auto arg : args) {
-    if (arg == std::string("-c")) {
+  auto has_object_output = false;
+  for (const auto& arg : args) {
+    if (arg_equals(arg, "c")) {
       is_object_compilation = true;
-      break;
+    } else if (arg_starts_with(arg, "Fo") && (file::get_extension(arg) == ".obj")) {
+      has_object_output = true;
+    } else if (arg_equals(arg, "Zi") || arg_equals(arg, "ZI")) {
+      throw std::runtime_error("PDB generation is not supported.");
     }
   }
-  if (!is_object_compilation) {
-    throw std::runtime_error("Not an object file compilation command.");
+  if ((!is_object_compilation) || (!has_object_output)) {
+    throw std::runtime_error("Unsupported complation command.");
   }
 
   // Run the preprocessor step.
-  const auto preprocessed_file = get_temp_file(".i");
-  const auto preprocessor_args = make_preprocessor_cmd(args, preprocessed_file.path());
+  const auto preprocessor_args = make_preprocessor_cmd(args);
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
     throw std::runtime_error("Preprocessing command was unsuccessful.");
   }
 
-  // Read and return the preprocessed file.
-  const auto preprocessed_source = file::read(preprocessed_file.path());
-  return preprocessed_source;
+  // Return the preprocessed file (from stdout).
+  return result.std_out;
 }
 
-string_list_t gcc_wrapper_t::filter_arguments(const string_list_t& args) {
+string_list_t msvc_wrapper_t::filter_arguments(const string_list_t& args) {
   string_list_t filtered_args;
 
   // The first argument is the compiler binary without the path.
@@ -106,21 +113,16 @@ string_list_t gcc_wrapper_t::filter_arguments(const string_list_t& args) {
 
   // Note: We always skip the first arg since we have handled it already.
   bool skip_next_arg = true;
-  for (auto arg : args) {
+  for (const auto& arg : args) {
     if (!skip_next_arg) {
-      // Does this argument specify a file (we don't want to hash those).
-      const bool is_arg_plus_file_name =
-          ((arg == "-I") || (arg == "-MF") || (arg == "-MT") || (arg == "-MQ") || (arg == "-o"));
-
       // Generally unwanted argument (things that will not change how we go from preprocessed code
       // to binary object files)?
       const auto first_two_chars = arg.substr(0, 2);
-      const bool is_unwanted_arg = ((first_two_chars == "-I") || (first_two_chars == "-D") ||
-                                    (first_two_chars == "-M") || is_source_file(arg));
+      const bool is_unwanted_arg = ((arg_equals(first_two_chars, "F") && !arg_equals(arg, "F")) ||
+                                    arg_equals(first_two_chars, "I") ||
+                                    arg_equals(first_two_chars, "D") || is_source_file(arg));
 
-      if (is_arg_plus_file_name) {
-        skip_next_arg = true;
-      } else if (!is_unwanted_arg) {
+      if (!is_unwanted_arg) {
         filtered_args += arg;
       }
     } else {
@@ -133,26 +135,25 @@ string_list_t gcc_wrapper_t::filter_arguments(const string_list_t& args) {
   return filtered_args;
 }
 
-std::string gcc_wrapper_t::get_compiler_id(const string_list_t& args) {
+std::string msvc_wrapper_t::get_compiler_id(const string_list_t& args) {
   // TODO(m): Add things like executable file size too.
 
   // Get the version string for the compiler.
   string_list_t version_args;
   version_args += args[0];
-  version_args += "--version";
+  version_args += "2>&1";  // The version information is given on stderr.
   const auto result = sys::run(version_args);
-  if (result.return_code != 0) {
+  if (result.std_out.empty()) {
     throw std::runtime_error("Unable to get the compiler version information string.");
   }
 
   return result.std_out;
 }
 
-std::string gcc_wrapper_t::get_object_file(const string_list_t& args) {
-  for (size_t i = 0u; i < args.size(); ++i) {
-    const auto next_idx = i + 1u;
-    if ((args[i] == "-o") && (next_idx < args.size())) {
-      return args[next_idx];
+std::string msvc_wrapper_t::get_object_file(const string_list_t& args) {
+  for (const auto& arg : args) {
+    if (arg_starts_with(arg, "Fo") && (file::get_extension(arg) == ".obj")) {
+      return arg.substr(3);
     }
   }
   throw std::runtime_error("Unable to get the target object file.");

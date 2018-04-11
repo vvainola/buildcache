@@ -232,7 +232,7 @@ run_result_t run(const string_list_t& args, const bool quiet) {
 #endif
 
   if (!successfully_launched_program) {
-    std::cerr << "*** Unable to run command:\n    " << cmd << "\n";
+    throw std::runtime_error("Unable to start the child process.");
   }
 
   return result;
