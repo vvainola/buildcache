@@ -73,16 +73,20 @@ bool gcc_wrapper_t::can_handle_command(const std::string& compiler_exe) {
 }
 
 std::string gcc_wrapper_t::preprocess_source(const string_list_t& args) {
-  // Are we compiling an object file?
+  // Check if this is a compilation command that we support.
   auto is_object_compilation = false;
+  auto has_object_output = false;
   for (auto arg : args) {
-    if (arg == std::string("-c")) {
+    if (arg == "-c") {
       is_object_compilation = true;
-      break;
+    } else if (arg == "-o") {
+      has_object_output = true;
+    } else if (arg.substr(0, 1) == "@") {
+      throw std::runtime_error("Response files are currently not supported.");
     }
   }
-  if (!is_object_compilation) {
-    throw std::runtime_error("Not an object file compilation command.");
+  if ((!is_object_compilation) || (!has_object_output)) {
+    throw std::runtime_error("Unsupported complation command.");
   }
 
   // Run the preprocessor step.

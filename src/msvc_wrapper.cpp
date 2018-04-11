@@ -88,6 +88,8 @@ std::string msvc_wrapper_t::preprocess_source(const string_list_t& args) {
       has_object_output = true;
     } else if (arg_equals(arg, "Zi") || arg_equals(arg, "ZI")) {
       throw std::runtime_error("PDB generation is not supported.");
+    } else if (arg.substr(0, 1) == "@") {
+      throw std::runtime_error("Response files are currently not supported.");
     }
   }
   if ((!is_object_compilation) || (!has_object_output)) {
