@@ -103,8 +103,6 @@ run_result_t run(const string_list_t& args, const bool quiet) {
   debug::log(debug::DEBUG) << "Invoking: " << cmd;
 
 #if defined(_WIN32)
-// TODO(m): We want to use proper CreateProcess() to get both stdout and stderr etc. Right now the
-// code is broken (it occasionally hangs), so we currently use _wpopen() instead.
 #if 0
   HANDLE std_out_read_handle = nullptr;
   HANDLE std_out_write_handle = nullptr;
@@ -200,7 +198,15 @@ run_result_t run(const string_list_t& args, const bool quiet) {
     CloseHandle(std_err_write_handle);
   }
 #else
-  auto* fp = _wpopen(utf8_to_ucs2(cmd).c_str(), L"r");
+  // TODO(m): We should use proper CreateProcess() to get both stdout and stderr etc. Right now the
+  // above code is broken (it occasionally hangs), so we currently use _wpopen() instead.
+
+  // Note: We have to surround the entire string with quotes to avoid accidental stripping of quotes
+  // at the beginning/end of the cmd string (e.g. "C:\Program Files\foo\foo.exe" "hello world" would
+  // become C:\Program Files\foo\foo.exe" "hello world).
+  // See: https://stackoverflow.com/a/43822734/5778708
+  const auto extra_quoted_cmd = std::string("\"") + cmd + "\"";
+  auto* fp = _wpopen(utf8_to_ucs2(extra_quoted_cmd).c_str(), L"r");
   if (fp != nullptr) {
     // Collect stdout until the pipe is closed.
     char buf[1000];
