@@ -49,6 +49,8 @@ add_executable(buildcache
   main.cpp
   msvc_wrapper.cpp
   msvc_wrapper.hpp
+  serializer_utils.cpp
+  serializer_utils.hpp
   string_list.hpp
   sys_utils.cpp
   sys_utils.hpp
