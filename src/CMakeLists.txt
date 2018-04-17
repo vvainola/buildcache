@@ -57,7 +57,7 @@ add_executable(buildcache
   unicode_utils.cpp
   unicode_utils.hpp
   )
-target_link_libraries(buildcache md4)
+target_link_libraries(buildcache md4 lua)
 
 if(WIN32 OR MINGW)
   target_link_libraries(buildcache userenv)
