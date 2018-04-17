@@ -46,6 +46,8 @@ add_executable(buildcache
   ghs_wrapper.hpp
   hasher.cpp
   hasher.hpp
+  lua_wrapper.cpp
+  lua_wrapper.hpp
   main.cpp
   msvc_wrapper.cpp
   msvc_wrapper.hpp
