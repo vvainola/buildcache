@@ -17,19 +17,58 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
+//--------------------------------------------------------------------------------------------------
+// The cache directory layout is as follows:
+//
+//  [root_folder]                             (default: $HOME/.buildcache)
+//  |
+//  +- buildcache.conf                        (BuildCache configuration file)
+//  |
+//  +- tmp                                    (temporary files)
+//  |  |
+//  |  +- ...
+//  |
+//  +- c                                      (cache files)
+//     |
+//     +- 9e                                  (first 2 chars of hash)
+//     |  |
+//     |  +- 8967a0708e7876df765864531bcd3f   (last 30 chars of hash)
+//     |  |  |
+//     |  |  +- .entry                        (information about this cache entry)
+//     |  |  +- somefile                      (a cached file)
+//     |  |  +- yetanotherfile                (a cached file)
+//     |  |  +- ...
+//     |  |
+//     |  +- ...
+//     |
+//     +- ...
+//--------------------------------------------------------------------------------------------------
+
 #include "cache.hpp"
 
 #include "debug_utils.hpp"
 #include "file_utils.hpp"
+#include "serializer_utils.hpp"
 
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
+#include <stdexcept>
 
 namespace bcache {
 namespace {
 const int64_t DEFAULT_MAX_CACHE_SIZE_IN_BYTES = 5368709120L;  // 5 GB
+
+const std::string ROOT_FOLDER_NAME = ".buildcache";
+const std::string TEMP_FOLDER_NAME = "tmp";
+const std::string CACHE_FILES_FOLDER_NAME = "c";
+
+const std::string CONFIGURATION_FILE_NAME = "buildcache.conf";
+const std::string CACHE_ENTRY_FILE_NAME = ".entry";
+
+// The version of the entry file serialization data format.
+const int32_t ENTRY_DATA_FORMAT_VERSION = 1;
 
 std::string find_root_folder() {
   // Is the environment variable BUILDCACHE_DIR defined?
@@ -45,52 +84,37 @@ std::string find_root_folder() {
     auto home = file::get_user_home_dir();
     if (!home.empty()) {
       // TODO(m): Should use ".cache/buildcache".
-      return file::append_path(home, ".buildcache");
+      return file::append_path(home, ROOT_FOLDER_NAME);
     }
   }
 
   // We failed.
-  return std::string();
+  throw std::runtime_error("Unable to determine a home directory for BuildCache.");
 }
 
-bool init_root_folder(const std::string& path) {
-  auto success = true;
-  if (!file::dir_exists(path)) {
-    success = file::create_dir(path);
-  }
-  return success;
-}
-
-struct cache_entry_path_t {
-  cache_entry_path_t(const std::string& _dir, const std::string& _file) : dir(_dir), file(_file) {
-  }
-  const std::string dir;
-  const std::string file;
-};
-
-cache_entry_path_t hash_to_cache_entry_path(const hasher_t::hash_t& hash, const cache_t& cache) {
-  const std::string str = hash.as_string();
-  const auto full_dir_path = file::append_path(cache.root_folder(), str.substr(0, 2));
-  const auto full_file_path = file::append_path(full_dir_path, str.substr(2));
-  return cache_entry_path_t(full_dir_path, full_file_path);
-}
-
-bool is_cache_file(const std::string& path) {
-  const auto dir_name = file::get_file_part(file::get_dir_part(path));
-  const auto file_name = file::get_file_part(path, false);
-
-  // Is the dir name 2 characters long and the file name 30 characters long?
-  if ((dir_name.length() != 2) || (file_name.length() != 30)) {
+bool is_cache_file(const file::file_info_t& file_info) {
+  if (file_info.is_dir()) {
     return false;
   }
 
-  // Is the dir + file name a valid hash (i.a. all characters are hex)?
-  const auto hash_str = dir_name + file_name;
+  const auto entry_dir_path = file::get_dir_part(file_info.path());
+  const auto entry_dir_name = file::get_file_part(entry_dir_path);
+  const auto hash_prefix_dir_name = file::get_file_part(file::get_dir_part(entry_dir_path));
+
+  // Is the hash prefix dir name 2 characters long and the endtry dir name 30 characters long?
+  if ((hash_prefix_dir_name.length() != 2) || (entry_dir_name.length() != 30)) {
+    return false;
+  }
+
+  // Is the hash prefix dir + endtry dir name a valid hash (i.a. all characters are hex)?
+  const auto hash_str = hash_prefix_dir_name + entry_dir_name;
   for (const auto c : hash_str) {
     if ((c < '0') || (c > 'f') || ((c > '9') && (c < 'a'))) {
       return false;
     }
   }
+
+  debug::log(debug::DEBUG) << "Found cache file: " << file_info.path();
 
   return true;
 }
@@ -102,7 +126,7 @@ std::vector<file::file_info_t> get_cache_files(const std::string& root_folder) {
   // Return only the files that are valid cache files.
   std::vector<file::file_info_t> cache_files;
   for (const auto& file : files) {
-    if ((!file.is_dir()) && is_cache_file(file.path())) {
+    if (is_cache_file(file)) {
       cache_files.push_back(file);
     }
   }
@@ -110,7 +134,7 @@ std::vector<file::file_info_t> get_cache_files(const std::string& root_folder) {
   return cache_files;
 }
 
-bool time_for_housekeeping() {
+bool is_time_for_housekeeping() {
   // Get the time since the epoch, in microseconds.
   const auto t =
       std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::system_clock::now())
@@ -123,6 +147,34 @@ bool time_for_housekeeping() {
   // Only perform housekeeping 1% of the times that we are called.
   return (rnd % 100L) == 0L;
 }
+
+std::string serialize_entry(const cache_t::entry_t& entry) {
+  std::string data = serialize::from_int(ENTRY_DATA_FORMAT_VERSION);
+  data += serialize::from_map(entry.files);
+  data += serialize::from_string(entry.std_out);
+  data += serialize::from_string(entry.std_err);
+  data += serialize::from_int(static_cast<int32_t>(entry.return_code));
+  return data;
+}
+
+cache_t::entry_t deserialize_entry(const std::string& data) {
+  std::string::size_type pos = 0;
+
+  // Read and check the format version.
+  int32_t format_version = serialize::to_int(data, pos);
+  if (format_version != ENTRY_DATA_FORMAT_VERSION) {
+    throw std::runtime_error("Unsupported serialization format version.");
+  }
+
+  // De-serialize the entry.
+  cache_t::entry_t entry;
+  entry.files = serialize::to_map(data, pos);
+  entry.std_out = serialize::to_string(data, pos);
+  entry.std_err = serialize::to_string(data, pos);
+  entry.return_code = static_cast<int>(serialize::to_int(data, pos));
+
+  return entry;
+}
 }  // namespace
 
 cache_t::cache_t() {
@@ -130,7 +182,9 @@ cache_t::cache_t() {
   m_root_folder = find_root_folder();
 
   // Can we use the cache?
-  m_is_valid = init_root_folder(m_root_folder);
+  if (!file::dir_exists(m_root_folder)) {
+    file::create_dir(m_root_folder);
+  }
 
   load_config();
 }
@@ -138,24 +192,40 @@ cache_t::cache_t() {
 cache_t::~cache_t() {
 }
 
-void cache_t::clear() {
-  if (!m_is_valid) {
-    return;
+const std::string cache_t::get_tmp_folder() const {
+  const auto tmp_path = file::append_path(m_root_folder, TEMP_FOLDER_NAME);
+  if (!file::dir_exists(tmp_path)) {
+    file::create_dir(tmp_path);
   }
+  return tmp_path;
+}
 
+const std::string cache_t::get_cache_files_folder() const {
+  const auto cache_files_path = file::append_path(m_root_folder, CACHE_FILES_FOLDER_NAME);
+  if (!file::dir_exists(cache_files_path)) {
+    file::create_dir(cache_files_path);
+  }
+  return cache_files_path;
+}
+
+const std::string cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash) const {
+  const std::string str = hash.as_string();
+  const auto parent_dir_path = file::append_path(get_cache_files_folder(), str.substr(0, 2));
+  return file::append_path(parent_dir_path, str.substr(2));
+}
+
+void cache_t::clear() {
   // Remove all cached files.
   const auto files = get_cache_files(m_root_folder);
   int num_files = 0;
   int64_t total_size = 0;
   for (const auto& file : files) {
-    if (!file.is_dir()) {
-      try {
-        file::remove_file(file.path());
-        num_files++;
-        total_size += file.size();
-      } catch (const std::exception& e) {
-        debug::log(debug::ERROR) << e.what();
-      }
+    try {
+      file::remove_file(file.path());
+      num_files++;
+      total_size += file.size();
+    } catch (const std::exception& e) {
+      debug::log(debug::ERROR) << e.what();
     }
   }
   const double total_size_mb = static_cast<double>(total_size) / (1024.0 * 1024.0);
@@ -164,24 +234,19 @@ void cache_t::clear() {
 }
 
 void cache_t::show_stats() {
-  if (!m_is_valid) {
-    return;
-  }
-
   // Calculate the total cache size.
   const auto files = get_cache_files(m_root_folder);
   int num_files = 0;
   int64_t total_size = 0;
   for (const auto& file : files) {
-    if (!file.is_dir()) {
-      num_files++;
-      total_size += file.size();
-    }
+    num_files++;
+    total_size += file.size();
   }
   const double total_size_mb = static_cast<double>(total_size) / (1024.0 * 1024.0);
   const double max_size_mb = static_cast<double>(m_max_size) / (1024.0 * 1024.0);
 
   std::cout << "cache directory:   " << m_root_folder << "\n";
+  // std::cout << "primary config:    " << get_configuration_file_name() << "\n";
   std::cout << "files in cache:    " << num_files << "\n";
   std::cout << "cache size:        " << total_size_mb << " MB\n";
   std::cout << "max cache size:    " << max_size_mb << " MB\n";
@@ -189,42 +254,67 @@ void cache_t::show_stats() {
   // TODO(m): Implement more stats.
 }
 
-void cache_t::add(const hasher_t::hash_t& hash, const std::string& object_file) {
-  if (!m_is_valid) {
-    return;
+void cache_t::add(const hasher_t::hash_t& hash, const cache_t::entry_t& entry) {
+  // Create the required directories in the cache.
+  const auto cache_entry_path = hash_to_cache_entry_path(hash);
+  const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
+  if (!file::dir_exists(cache_entry_parent_path)) {
+    file::create_dir(cache_entry_parent_path);
+  }
+  if (!file::dir_exists(cache_entry_path)) {
+    file::create_dir(cache_entry_path);
   }
 
-  // Create an entry in the cache.
-  const auto cache_entry_path = hash_to_cache_entry_path(hash, *this);
-  if (!file::dir_exists(cache_entry_path.dir)) {
-    file::create_dir(cache_entry_path.dir);
+  // Copy the files into the cache.
+  for (const auto& file : entry.files) {
+    const auto target_path = file::append_path(cache_entry_path, file.first);
+    file::link_or_copy(file.second, target_path);
   }
-  file::link_or_copy(object_file, cache_entry_path.file);
+
+  // Create a cache entry file.
+  const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
+  file::write(serialize_entry(entry), cache_entry_file_name);
 
   // Occassionally perform housekeeping. We do it here, since:
   //  1) This is the only place where the cache should ever grow.
   //  2) Cache misses are slow anyway.
-  if (time_for_housekeeping()) {
+  if (is_time_for_housekeeping()) {
     perform_housekeeping();
   }
 }
 
-std::string cache_t::lookup(const hasher_t::hash_t& hash) {
-  if (!m_is_valid) {
-    return std::string();
-  }
+cache_t::entry_t cache_t::lookup(const hasher_t::hash_t& hash) {
+  // Get the path to the cache entry.
+  const auto cache_entry_path = hash_to_cache_entry_path(hash);
+  const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
 
-  const auto cache_entry_path = hash_to_cache_entry_path(hash, *this);
-  return file::file_exists(cache_entry_path.file) ? cache_entry_path.file : std::string();
+  try {
+    // Read the cache entry file (this will throw if the file does not exist - i.e. if we have a
+    // cache miss).
+    const auto entry_data = file::read(cache_entry_file_name);
+    auto entry = deserialize_entry(entry_data);
+
+    // Update the file names member of the entry, and check that the files exist.
+    for (auto& file : entry.files) {
+      const auto file_name = file.first;
+      const auto file_path = file::append_path(cache_entry_path, file_name);
+      if (!file::file_exists(file_path)) {
+        throw std::runtime_error("Missing file in cache entry.");
+      }
+      entry.files[file_name] = file_path;
+    }
+
+    return entry;
+  } catch (...) {
+    return entry_t();
+  }
 }
 
 void cache_t::load_config() {
   // Set default values.
   m_max_size = DEFAULT_MAX_CACHE_SIZE_IN_BYTES;
 
-  if (m_is_valid) {
-    // TODO(m): Load settings from a config file!
-  }
+  // TODO(m): Load settings from a config file!
 }
 
 void cache_t::save_config() {
@@ -264,6 +354,10 @@ void cache_t::perform_housekeeping() {
   const auto stop_t = std::chrono::high_resolution_clock::now();
   const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
   debug::log(debug::INFO) << "Finished housekeeping in " << dt << " ms";
+}
+
+file::tmp_file_t cache_t::get_temp_file(const std::string& extension) const {
+  return file::tmp_file_t(get_tmp_folder(), extension);
 }
 
 }  // namespace bcache

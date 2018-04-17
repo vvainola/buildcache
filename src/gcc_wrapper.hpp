@@ -32,10 +32,10 @@ public:
   static bool can_handle_command(const std::string& compiler_exe);
 
 private:
-  virtual std::string preprocess_source(const string_list_t& args) override;
-  virtual string_list_t filter_arguments(const string_list_t& args) override;
-  virtual std::string get_compiler_id(const string_list_t& args) override;
-  virtual std::string get_object_file(const string_list_t& args) override;
+  std::string preprocess_source(const string_list_t& args) override;
+  string_list_t filter_arguments(const string_list_t& args) override;
+  std::string get_compiler_id(const string_list_t& args) override;
+  std::map<std::string, std::string> get_build_files(const string_list_t& args) override;
 };
 }  // namespace bcache
 #endif  // BUILDCACHE_GCC_WRAPPER_HPP_

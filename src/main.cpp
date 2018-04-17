@@ -28,6 +28,7 @@
 
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace {
@@ -65,7 +66,7 @@ const std::string BUILDCACHE_EXE_NAME = "buildcache";
 }
 
 [[noreturn]] void print_version_and_exit() {
-  std::cout << "BuildCache version 0.0-dev\n";
+  std::cout << "BuildCache version 0.1-dev\n";
   std::exit(0);
 }
 

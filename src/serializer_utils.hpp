@@ -17,25 +17,23 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_MSVC_WRAPPER_HPP_
-#define BUILDCACHE_MSVC_WRAPPER_HPP_
+#ifndef BUILDCACHE_SERIALIZER_UTILS_HPP_
+#define BUILDCACHE_SERIALIZER_UTILS_HPP_
 
-#include "compiler_wrapper.hpp"
-
+#include <cstdint>
+#include <map>
 #include <string>
 
 namespace bcache {
-class msvc_wrapper_t : public compiler_wrapper_t {
-public:
-  msvc_wrapper_t(cache_t& cache);
+namespace serialize {
+std::string from_int(const int32_t x);
+std::string from_string(const std::string& x);
+std::string from_map(const std::map<std::string, std::string>& x);
 
-  static bool can_handle_command(const std::string& compiler_exe);
-
-private:
-  std::string preprocess_source(const string_list_t& args) override;
-  string_list_t filter_arguments(const string_list_t& args) override;
-  std::string get_compiler_id(const string_list_t& args) override;
-  std::map<std::string, std::string> get_build_files(const string_list_t& args) override;
-};
+int32_t to_int(const std::string& data, std::string::size_type& pos);
+std::string to_string(const std::string& data, std::string::size_type& pos);
+std::map<std::string, std::string> to_map(const std::string& data, std::string::size_type& pos);
+}  // namespace ser
 }  // namespace bcache
-#endif  // BUILDCACHE_MSVC_WRAPPER_HPP_
+
+#endif  // BUILDCACHE_SERIALIZER_UTILS_HPP_
