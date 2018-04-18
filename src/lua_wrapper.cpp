@@ -69,7 +69,7 @@ void lua_wrapper_t::runner_t::call(const std::string& func, const std::string& a
   }
   (void)lua_pushlstring(m_state, arg.c_str(), arg.size());
   if (lua_pcall(m_state, 1, 1, 0) != 0) {
-    bail("Unsuccessful call.");
+    bail("Lua error");
   }
 }
 
@@ -85,7 +85,7 @@ void lua_wrapper_t::runner_t::call(const std::string& func, const string_list_t&
     lua_rawseti(m_state, -2, static_cast<lua_Integer>(i));
   }
   if (lua_pcall(m_state, 1, 1, 0) != 0) {
-    bail("Unsuccessful call.");
+    bail("Lua error");
   }
 }
 
@@ -164,8 +164,16 @@ lua_wrapper_t::lua_wrapper_t(cache_t& cache, const std::string& lua_program_path
 bool lua_wrapper_t::can_handle_command(const std::string& compiler_exe,
                                        const std::string& lua_program_path) {
   runner_t runner(lua_program_path);
-  runner.call("can_handle_command", compiler_exe);
-  return runner.pop_bool();
+  auto result = false;
+  try {
+    runner.call("can_handle_command", compiler_exe);
+    result = runner.pop_bool();
+  } catch (...) {
+    // If anything went wrong when running this function, we can not be trusted to handle this
+    // command.
+    result = false;
+  }
+  return result;
 }
 
 std::string lua_wrapper_t::preprocess_source(const string_list_t& args) {
