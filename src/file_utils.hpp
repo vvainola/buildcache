@@ -65,17 +65,20 @@ public:
     return m_path;
   }
 
-  /// @returns the modification time of the file.
+  /// @returns the last modification time of the file, or the most recent modification time for any
+  /// of the recursively contained files if this is a directory.
   time_t modify_time() const {
     return m_modify_time;
   }
 
-  /// @returns the last access time of the file.
+  /// @returns the last access time of the file, or the most recent access time for any of the
+  /// recursively contained files if this is a directory.
   time_t access_time() const {
     return m_access_time;
   }
 
-  /// @returns the size of the file (in bytes), or zero if the file is a directory.
+  /// @returns the size of the file (in bytes), or the size of all the recursively contained files
+  /// if this is a directory.
   int64_t size() const {
     return m_size;
   }
@@ -143,6 +146,7 @@ std::string find_executable(const std::string& path, const std::string& exclude 
 /// @brief Walk a directory and its subdirectories.
 /// @param path The path to the directory.
 /// @returns a vector of file information objects.
+/// @note Directories are listed after any files that are contained within the directories.
 std::vector<file_info_t> walk_directory(const std::string& path);
 
 /// @brief Create a directory.
@@ -154,6 +158,11 @@ void create_dir(const std::string& path);
 /// @param path The path to the file.
 /// @throws runtime_error if the file could not be removed.
 void remove_file(const std::string& path);
+
+/// @brief Remove a directory and all its contents (recursively).
+/// @param path The path to the dir.
+/// @throws runtime_error if the dir could not be removed.
+void remove_dir(const std::string& path);
 
 /// @brief Check if a directory exists.
 /// @param path The path to the directory.

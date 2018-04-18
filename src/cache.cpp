@@ -92,14 +92,9 @@ std::string find_root_folder() {
   throw std::runtime_error("Unable to determine a home directory for BuildCache.");
 }
 
-bool is_cache_file(const file::file_info_t& file_info) {
-  if (file_info.is_dir()) {
-    return false;
-  }
-
-  const auto entry_dir_path = file::get_dir_part(file_info.path());
-  const auto entry_dir_name = file::get_file_part(entry_dir_path);
-  const auto hash_prefix_dir_name = file::get_file_part(file::get_dir_part(entry_dir_path));
+bool is_cache_entry_dir_path(const std::string& path) {
+  const auto entry_dir_name = file::get_file_part(path);
+  const auto hash_prefix_dir_name = file::get_file_part(file::get_dir_part(path));
 
   // Is the hash prefix dir name 2 characters long and the endtry dir name 30 characters long?
   if ((hash_prefix_dir_name.length() != 2) || (entry_dir_name.length() != 30)) {
@@ -114,24 +109,28 @@ bool is_cache_file(const file::file_info_t& file_info) {
     }
   }
 
-  debug::log(debug::DEBUG) << "Found cache file: " << file_info.path();
-
   return true;
 }
 
-std::vector<file::file_info_t> get_cache_files(const std::string& root_folder) {
-  // Get all the files in the cache dir.
-  const auto files = file::walk_directory(root_folder);
+std::vector<file::file_info_t> get_cache_entry_dirs(const std::string& root_folder) {
+  std::vector<file::file_info_t> cache_dirs;
 
-  // Return only the files that are valid cache files.
-  std::vector<file::file_info_t> cache_files;
-  for (const auto& file : files) {
-    if (is_cache_file(file)) {
-      cache_files.push_back(file);
+  try {
+    // Get all the files in the cache dir.
+    const auto files =
+        file::walk_directory(file::append_path(root_folder, CACHE_FILES_FOLDER_NAME));
+
+    // Return only the directories that are valid cache entries.
+    for (const auto& file : files) {
+      if (file.is_dir() && is_cache_entry_dir_path(file.path())) {
+        cache_dirs.push_back(file);
+      }
     }
+  } catch (const std::exception& e) {
+    debug::log(debug::ERROR) << e.what();
   }
 
-  return cache_files;
+  return cache_dirs;
 }
 
 bool is_time_for_housekeeping() {
@@ -216,38 +215,30 @@ const std::string cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash
 
 void cache_t::clear() {
   // Remove all cached files.
-  const auto files = get_cache_files(m_root_folder);
-  int num_files = 0;
-  int64_t total_size = 0;
-  for (const auto& file : files) {
-    try {
-      file::remove_file(file.path());
-      num_files++;
-      total_size += file.size();
-    } catch (const std::exception& e) {
-      debug::log(debug::ERROR) << e.what();
-    }
+  const auto cache_files_path = file::append_path(m_root_folder, CACHE_FILES_FOLDER_NAME);
+  try {
+    file::remove_dir(cache_files_path);
+  } catch (const std::exception& e) {
+    debug::log(debug::ERROR) << e.what();
   }
-  const double total_size_mb = static_cast<double>(total_size) / (1024.0 * 1024.0);
-
-  std::cout << "Removed " << num_files << " cached files (" << total_size_mb << " MB)\n";
+  std::cout << "Cleared the cache.\n";
 }
 
 void cache_t::show_stats() {
   // Calculate the total cache size.
-  const auto files = get_cache_files(m_root_folder);
-  int num_files = 0;
+  const auto dirs = get_cache_entry_dirs(m_root_folder);
+  int num_entries = 0;
   int64_t total_size = 0;
-  for (const auto& file : files) {
-    num_files++;
-    total_size += file.size();
+  for (const auto& dir : dirs) {
+    num_entries++;
+    total_size += dir.size();
   }
   const double total_size_mb = static_cast<double>(total_size) / (1024.0 * 1024.0);
   const double max_size_mb = static_cast<double>(m_max_size) / (1024.0 * 1024.0);
 
   std::cout << "cache directory:   " << m_root_folder << "\n";
   // std::cout << "primary config:    " << get_configuration_file_name() << "\n";
-  std::cout << "files in cache:    " << num_files << "\n";
+  std::cout << "entries in cache:  " << num_entries << "\n";
   std::cout << "cache size:        " << total_size_mb << " MB\n";
   std::cout << "max cache size:    " << max_size_mb << " MB\n";
 
@@ -324,29 +315,33 @@ void cache_t::save_config() {
 void cache_t::perform_housekeeping() {
   const auto start_t = std::chrono::high_resolution_clock::now();
 
-  // Sort the cache files according to their access time (oldest first).
-  auto files = get_cache_files(m_root_folder);
-  std::sort(files.begin(),
-            files.end(),
-            [](const file::file_info_t& a, const file::file_info_t& b) -> bool {
-              return a.access_time() > b.access_time();
-            });
+  debug::log(debug::INFO) << "Performing housekeeping.";
 
-  // Remove old cache files in order to keep the cache size under the configured limit.
-  int num_files = 0;
+  // Get all the cache entry directories.
+  auto dirs = get_cache_entry_dirs(m_root_folder);
+
+  // Sort the entries according to their access time (newest first).
+  std::sort(
+      dirs.begin(), dirs.end(), [](const file::file_info_t& a, const file::file_info_t& b) -> bool {
+        return a.access_time() > b.access_time();
+      });
+
+  // Remove old cache files and directories in order to keep the cache size under the configured
+  // limit.
+  int num_entries = 0;
   int64_t total_size = 0;
-  for (const auto& file : files) {
-    if (!file.is_dir()) {
-      num_files++;
-      total_size += file.size();
-      if (total_size > m_max_size) {
-        try {
-          debug::log(debug::DEBUG) << "Purging " << file.path() << " (" << file.size() << " bytes)";
-          file::remove_file(file.path());
-          total_size -= file.size();
-          num_files--;
-        } catch (const std::exception&) {
-        }
+  for (const auto& dir : dirs) {
+    num_entries++;
+    total_size += dir.size();
+    if (total_size > m_max_size) {
+      try {
+        debug::log(debug::DEBUG) << "Purging " << dir.path() << " (last accessed "
+                                 << dir.access_time() << ", " << dir.size() << " bytes)";
+        file::remove_dir(dir.path());
+        total_size -= dir.size();
+        num_entries--;
+      } catch (const std::exception& e) {
+        debug::log(debug::DEBUG) << "Failed: " << e.what();
       }
     }
   }

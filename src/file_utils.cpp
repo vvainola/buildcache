@@ -23,6 +23,7 @@
 #include "string_list.hpp"
 #include "unicode_utils.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstdint>
@@ -310,6 +311,16 @@ void remove_file(const std::string& path) {
   }
 }
 
+void remove_dir(const std::string& path) {
+  // Note: As it currently stands, remove_file() can actually remove empty directories too. So we
+  // use remove_file() for all our directory removal needs.
+  const auto files = walk_directory(path);
+  for (const auto& file : files) {
+    remove_file(file.path());
+  }
+  remove_file(path);
+}
+
 bool dir_exists(const std::string& path) {
 #ifdef _WIN32
   struct __stat64 buffer;
@@ -510,20 +521,23 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
     const auto name = ucs2_to_utf8(std::wstring(&find_data.cFileName[0]));
     if ((name != ".") && (name != "..")) {
       const auto file_path = append_path(path, name);
-
-      const auto modify_time = win32_filetime_as_unix_epoch(find_data.ftLastWriteTime);
-      const auto access_time = win32_filetime_as_unix_epoch(find_data.ftLastAccessTime);
-
+      file_info_t::time_t modify_time = 0;
+      file_info_t::time_t access_time = 0;
       int64_t size = 0;
       bool is_dir = false;
       if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
         auto subdir_files = walk_directory(file_path);
         for (const auto& entry : subdir_files) {
           files.emplace_back(entry);
+          size += entry.size();
+          modify_time = std::max(modify_time, entry.modify_time());
+          access_time = std::max(access_time, entry.access_time());
         }
         is_dir = true;
       } else {
         size = two_dwords_to_int64(find_data.nFileSizeLow, find_data.nFileSizeHigh);
+        modify_time = win32_filetime_as_unix_epoch(find_data.ftLastWriteTime);
+        access_time = win32_filetime_as_unix_epoch(find_data.ftLastAccessTime);
       }
       files.emplace_back(file_info_t(file_path, modify_time, access_time, size, is_dir));
     }
@@ -549,23 +563,28 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
       const auto file_path = append_path(path, name);
       struct stat file_stat;
       if (stat(file_path.c_str(), &file_stat) == 0) {
-#ifdef __APPLE__
-        const auto modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtimespec.tv_sec);
-        const auto access_time = static_cast<file_info_t::time_t>(file_stat.st_atimespec.tv_sec);
-#else
-        const auto modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtim.tv_sec);
-        const auto access_time = static_cast<file_info_t::time_t>(file_stat.st_atim.tv_sec);
-#endif
+        file_info_t::time_t modify_time = 0;
+        file_info_t::time_t access_time = 0;
         int64_t size = 0;
         bool is_dir = false;
         if (entity->d_type == DT_DIR) {
           auto subdir_files = walk_directory(file_path);
           for (const auto& entry : subdir_files) {
             files.emplace_back(entry);
+            size += entry.size();
+            modify_time = std::max(modify_time, entry.modify_time());
+            access_time = std::max(access_time, entry.access_time());
           }
           is_dir = true;
         } else if (entity->d_type == DT_REG) {
           size = static_cast<int64_t>(file_stat.st_size);
+#ifdef __APPLE__
+          modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtimespec.tv_sec);
+          access_time = static_cast<file_info_t::time_t>(file_stat.st_atimespec.tv_sec);
+#else
+          modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtim.tv_sec);
+          access_time = static_cast<file_info_t::time_t>(file_stat.st_atim.tv_sec);
+#endif
         }
         files.emplace_back(file_info_t(file_path, modify_time, access_time, size, is_dir));
       }
