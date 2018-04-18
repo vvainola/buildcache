@@ -42,10 +42,21 @@ private:
   public:
     runner_t(const std::string& program_path);
     ~runner_t();
+
+    void call(const std::string& func, const std::string& arg);
+    void call(const std::string& func, const string_list_t& arg);
+
+    bool pop_bool();
+    std::string pop_string(bool keep_value_on_the_stack = false);
+    string_list_t pop_string_list(bool keep_value_on_the_stack = false);
+    std::map<std::string, std::string> pop_map(bool keep_value_on_the_stack = false);
+
     lua_State* state();
     const std::string& program_path() const;
 
   private:
+    [[noreturn]] void bail(const std::string& message);
+
     lua_State* m_state;
     std::string m_program_path;
   };
