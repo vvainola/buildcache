@@ -60,7 +60,43 @@ Currently the following compilers and languages are supported:
 | MSVC     | C, C++    | Yes       |
 | GHS      | C, C++    | Yes       |
 
-New backends are relatively easy to add.
+New backends are relatively easy to add, both in C++ and in Lua (see below).
+
+## Using custom Lua plugins
+
+It is possible to extend the capabilities of BuildCache with [Lua](https://www.lua.org/).
+
+BuildCache first searches for Lua scripts in the paths given in the environment variable `BUILDCACHE_LUA_PATH` (colon separated on POSIX systems, and semicolon separated on Windows), and then continues searching in `$BUILDCACHE_DIR/lua`. If no matching script file was found, BuildCache falls back to the built in compiler wrappers (as listed above).
+
+Here is a minimal Lua example that caches the output of the "echo" command (yes, it's fairly pointless).
+
+**echo.lua**
+```lua
+function can_handle_command (compiler_exe)
+  -- Is the "echo" command being invoked?
+  return compiler_exe:lower():find("echo") ~= nil
+end
+
+function preprocess_source (args)
+  -- We do not generate a "preprocessed source".
+  return ''
+end
+
+function filter_arguments (args)
+  -- Return the arguments that may affect the result (i.e. all arguments).
+  return args
+end
+
+function get_compiler_id (args)
+  -- We use the full path to the executable as a program identifier.
+  return args[0]
+end
+
+function get_build_files (args)
+  -- This command will not produce any output files to be cached.
+  return {}
+end
+```
 
 ## Debugging
 

@@ -46,6 +46,8 @@ add_executable(buildcache
   ghs_wrapper.hpp
   hasher.cpp
   hasher.hpp
+  lua_wrapper.cpp
+  lua_wrapper.hpp
   main.cpp
   msvc_wrapper.cpp
   msvc_wrapper.hpp
@@ -57,7 +59,7 @@ add_executable(buildcache
   unicode_utils.cpp
   unicode_utils.hpp
   )
-target_link_libraries(buildcache md4)
+target_link_libraries(buildcache md4 lua)
 
 if(WIN32 OR MINGW)
   target_link_libraries(buildcache userenv)
