@@ -38,14 +38,14 @@ int panic_handler(lua_State* state) {
 }
 }  // namespace
 
-lua_wrapper_t::runner_t::runner_t(const std::string& program_path) : m_program_path(program_path) {
+lua_wrapper_t::runner_t::runner_t(const std::string& script_path) : m_script_path(script_path) {
   // Init Lua.
   m_state = luaL_newstate();
   (void)lua_atpanic(m_state, panic_handler);
   luaL_openlibs(m_state);
 
   // Load the program file.
-  if (luaL_loadfile(m_state, program_path.c_str()) != 0) {
+  if (luaL_loadfile(m_state, script_path.c_str()) != 0) {
     bail("Couldn't load file.");
   }
 
@@ -61,23 +61,24 @@ lua_wrapper_t::runner_t::~runner_t() {
   }
 }
 
-void lua_wrapper_t::runner_t::call(const std::string& func, const std::string& arg) {
+bool lua_wrapper_t::runner_t::call(const std::string& func, const std::string& arg) {
   lua_getglobal(m_state, func.c_str());
   if (!lua_isfunction(m_state, -1)) {
     debug::log(debug::ERROR) << "Missing Lua function: " << func;
-    throw std::runtime_error("Missing Lua function.");
+    return false;
   }
   (void)lua_pushlstring(m_state, arg.c_str(), arg.size());
   if (lua_pcall(m_state, 1, 1, 0) != 0) {
     bail("Lua error");
   }
+  return true;
 }
 
-void lua_wrapper_t::runner_t::call(const std::string& func, const string_list_t& args) {
+bool lua_wrapper_t::runner_t::call(const std::string& func, const string_list_t& args) {
   lua_getglobal(m_state, func.c_str());
   if (!lua_isfunction(m_state, -1)) {
-    debug::log(debug::ERROR) << "Missing Lua function: " << func;
-    throw std::runtime_error("Missing Lua function.");
+    debug::log(debug::DEBUG) << "Missing Lua function: " << func;
+    return false;
   }
   lua_newtable(m_state);
   for (size_t i = 0; i < args.size(); ++i) {
@@ -87,6 +88,7 @@ void lua_wrapper_t::runner_t::call(const std::string& func, const string_list_t&
   if (lua_pcall(m_state, 1, 1, 0) != 0) {
     bail("Lua error");
   }
+  return true;
 }
 
 bool lua_wrapper_t::runner_t::pop_bool() {
@@ -142,32 +144,25 @@ std::map<std::string, std::string> lua_wrapper_t::runner_t::pop_map(bool keep_va
 }
 
 [[noreturn]] void lua_wrapper_t::runner_t::bail(const std::string& message) {
-  debug::log(debug::ERROR) << message << " [" << m_program_path
+  debug::log(debug::ERROR) << message << " [" << m_script_path
                            << "]: " << lua_tostring(m_state, -1);
   lua_close(m_state);
   m_state = nullptr;
   throw std::runtime_error(message);
 }
 
-lua_State* lua_wrapper_t::runner_t::state() {
-  return m_state;
+lua_wrapper_t::lua_wrapper_t(cache_t& cache, const std::string& lua_script_path)
+    : compiler_wrapper_t(cache), m_runner(lua_script_path) {
 }
 
-const std::string& lua_wrapper_t::runner_t::program_path() const {
-  return m_program_path;
-}
-
-lua_wrapper_t::lua_wrapper_t(cache_t& cache, const std::string& lua_program_path)
-    : compiler_wrapper_t(cache), m_runner(lua_program_path) {
-}
-
-bool lua_wrapper_t::can_handle_command(const std::string& compiler_exe,
-                                       const std::string& lua_program_path) {
-  runner_t runner(lua_program_path);
+bool lua_wrapper_t::can_handle_command(const std::string& program_exe,
+                                       const std::string& lua_script_path) {
+  runner_t runner(lua_script_path);
   auto result = false;
   try {
-    runner.call("can_handle_command", compiler_exe);
-    result = runner.pop_bool();
+    if (runner.call("can_handle_command", program_exe)) {
+      result = runner.pop_bool();
+    }
   } catch (...) {
     // If anything went wrong when running this function, we can not be trusted to handle this
     // command.
@@ -177,22 +172,34 @@ bool lua_wrapper_t::can_handle_command(const std::string& compiler_exe,
 }
 
 std::string lua_wrapper_t::preprocess_source(const string_list_t& args) {
-  m_runner.call("preprocess_source", args);
-  return m_runner.pop_string();
+  if (m_runner.call("preprocess_source", args)) {
+    return m_runner.pop_string();
+  } else {
+    return compiler_wrapper_t::preprocess_source(args);
+  }
 }
 
 string_list_t lua_wrapper_t::filter_arguments(const string_list_t& args) {
-  m_runner.call("filter_arguments", args);
-  return m_runner.pop_string_list();
+  if (m_runner.call("filter_arguments", args)) {
+    return m_runner.pop_string_list();
+  } else {
+    return compiler_wrapper_t::filter_arguments(args);
+  }
 }
 
-std::string lua_wrapper_t::get_compiler_id(const string_list_t& args) {
-  m_runner.call("get_compiler_id", args);
-  return m_runner.pop_string();
+std::string lua_wrapper_t::get_program_id(const string_list_t& args) {
+  if (m_runner.call("get_program_id", args)) {
+    return m_runner.pop_string();
+  } else {
+    return compiler_wrapper_t::get_program_id(args);
+  }
 }
 
 std::map<std::string, std::string> lua_wrapper_t::get_build_files(const string_list_t& args) {
-  m_runner.call("get_build_files", args);
-  return m_runner.pop_map();
+  if (m_runner.call("get_build_files", args)) {
+    return m_runner.pop_map();
+  } else {
+    return compiler_wrapper_t::get_build_files(args);
+  }
 }
 }  // namespace bcache

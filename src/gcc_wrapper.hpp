@@ -29,12 +29,12 @@ class gcc_wrapper_t : public compiler_wrapper_t {
 public:
   gcc_wrapper_t(cache_t& cache);
 
-  static bool can_handle_command(const std::string& compiler_exe);
+  static bool can_handle_command(const std::string& program_exe);
 
 private:
   std::string preprocess_source(const string_list_t& args) override;
   string_list_t filter_arguments(const string_list_t& args) override;
-  std::string get_compiler_id(const string_list_t& args) override;
+  std::string get_program_id(const string_list_t& args) override;
   std::map<std::string, std::string> get_build_files(const string_list_t& args) override;
 };
 }  // namespace bcache

@@ -32,10 +32,10 @@ class ghs_wrapper_t : public gcc_wrapper_t {
 public:
   ghs_wrapper_t(cache_t& cache);
 
-  static bool can_handle_command(const std::string& compiler_exe);
+  static bool can_handle_command(const std::string& program_exe);
 
 private:
-  std::string get_compiler_id(const string_list_t& args) override;
+  std::string get_program_id(const string_list_t& args) override;
 };
 }  // namespace bcache
 

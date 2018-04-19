@@ -98,6 +98,16 @@ function get_build_files (args)
 end
 ```
 
+The following methods can be implemented (see [compiler_wrapper.hpp](src/compiler_wrapper.hpp) for a more detailed documentation):
+
+| Function | Returns | Default |
+| --- | --- | --- |
+| can_handle_command (program_exe) | Can the wrapper handle this program? | - |
+| preprocess_source (args) | The preprocessed source code (e.g. for C/C++) | An empty string |
+| filter_arguments (args) | Arguments that can affect the build output | All arguments |
+| get_program_id (args) | A unique program identification | The MD4 hash of the binary |
+| get_build_files (args) | A table of build result files | An empty table |
+
 ## Debugging
 
 To get debug output from a BuildCache run, set the environment variable

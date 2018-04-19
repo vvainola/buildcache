@@ -71,9 +71,9 @@ string_list_t make_preprocessor_cmd(const string_list_t& args) {
 msvc_wrapper_t::msvc_wrapper_t(cache_t& cache) : compiler_wrapper_t(cache) {
 }
 
-bool msvc_wrapper_t::can_handle_command(const std::string& compiler_exe) {
+bool msvc_wrapper_t::can_handle_command(const std::string& program_exe) {
   // Is this the right compiler?
-  const auto cmd = file::get_file_part(compiler_exe, false);
+  const auto cmd = file::get_file_part(program_exe, false);
   return (cmd == "cl");
 }
 
@@ -137,7 +137,7 @@ string_list_t msvc_wrapper_t::filter_arguments(const string_list_t& args) {
   return filtered_args;
 }
 
-std::string msvc_wrapper_t::get_compiler_id(const string_list_t& args) {
+std::string msvc_wrapper_t::get_program_id(const string_list_t& args) {
   // TODO(m): Add things like executable file size too.
 
   // Get the version string for the compiler.
