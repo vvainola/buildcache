@@ -20,7 +20,7 @@
 #ifndef BUILDCACHE_LUA_WRAPPER_HPP_
 #define BUILDCACHE_LUA_WRAPPER_HPP_
 
-#include "compiler_wrapper.hpp"
+#include "program_wrapper.hpp"
 
 #include <string>
 
@@ -29,7 +29,7 @@ typedef struct lua_State lua_State;
 }
 
 namespace bcache {
-class lua_wrapper_t : public compiler_wrapper_t {
+class lua_wrapper_t : public program_wrapper_t {
 public:
   lua_wrapper_t(cache_t& cache, const std::string& lua_script_path);
 

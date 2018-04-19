@@ -20,12 +20,12 @@
 #ifndef BUILDCACHE_GCC_WRAPPER_HPP_
 #define BUILDCACHE_GCC_WRAPPER_HPP_
 
-#include "compiler_wrapper.hpp"
+#include "program_wrapper.hpp"
 
 #include <string>
 
 namespace bcache {
-class gcc_wrapper_t : public compiler_wrapper_t {
+class gcc_wrapper_t : public program_wrapper_t {
 public:
   gcc_wrapper_t(cache_t& cache);
 

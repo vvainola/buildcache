@@ -34,8 +34,6 @@ add_subdirectory(third_party)
 add_executable(buildcache
   cache.cpp
   cache.hpp
-  compiler_wrapper.cpp
-  compiler_wrapper.hpp
   debug_utils.cpp
   debug_utils.hpp
   file_utils.cpp
@@ -51,6 +49,8 @@ add_executable(buildcache
   main.cpp
   msvc_wrapper.cpp
   msvc_wrapper.hpp
+  program_wrapper.cpp
+  program_wrapper.hpp
   serializer_utils.cpp
   serializer_utils.hpp
   string_list.hpp

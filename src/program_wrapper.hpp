@@ -17,8 +17,8 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_COMPILER_WRAPPER_HPP_
-#define BUILDCACHE_COMPILER_WRAPPER_HPP_
+#ifndef BUILDCACHE_PROGRAM_WRAPPER_HPP_
+#define BUILDCACHE_PROGRAM_WRAPPER_HPP_
 
 #include "cache.hpp"
 #include "file_utils.hpp"
@@ -27,11 +27,11 @@
 #include <string>
 
 namespace bcache {
-class compiler_wrapper_t {
+class program_wrapper_t {
 public:
-  virtual ~compiler_wrapper_t();
+  virtual ~program_wrapper_t();
 
-  /// @brief Try to wrap a compiler command.
+  /// @brief Try to wrap a program command.
   /// @param args Command and arguments.
   /// @param[out] return_code The command return code (if handled).
   /// @returns true if the command was recognized and handled.
@@ -39,7 +39,7 @@ public:
 
 protected:
   // This constructor is called by derived classes.
-  compiler_wrapper_t(cache_t& cache);
+  program_wrapper_t(cache_t& cache);
 
   /// @brief Generate the preprocessed source text.
   /// @param args The command line.
@@ -54,9 +54,9 @@ protected:
   /// @throws runtime_error if the request could not be completed.
   ///
   /// @note The purpose of this function is to create a list of arguments that is suitable for
-  /// hashing (i.e. uniquely identifying) the compilation options. As such, things like absolute
-  /// file paths and compilation defines should be excluded (since they are resolved in the
-  /// preprocess step).
+  /// hashing (i.e. uniquely identifying) the program options. As such, things like absolute file
+  /// paths and compilation defines should be excluded (since they are resolved in the preprocess
+  /// step).
   virtual string_list_t filter_arguments(const string_list_t& args);
 
   /// @brief Get a string that uniquely identifies the program.
@@ -75,4 +75,4 @@ protected:
 };
 }  // namespace bcache
 
-#endif  // BUILDCACHE_COMPILER_WRAPPER_HPP_
+#endif  // BUILDCACHE_PROGRAM_WRAPPER_HPP_

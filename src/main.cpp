@@ -18,12 +18,12 @@
 //--------------------------------------------------------------------------------------------------
 
 #include "cache.hpp"
-#include "compiler_wrapper.hpp"
 #include "debug_utils.hpp"
 #include "gcc_wrapper.hpp"
 #include "ghs_wrapper.hpp"
 #include "lua_wrapper.hpp"
 #include "msvc_wrapper.hpp"
+#include "program_wrapper.hpp"
 #include "string_list.hpp"
 #include "sys_utils.hpp"
 
@@ -143,7 +143,7 @@ bool is_lua_script(const std::string& script_path) {
       bcache::cache_t cache;
 
       // Select a matching compiler wrapper.
-      std::unique_ptr<bcache::compiler_wrapper_t> wrapper;
+      std::unique_ptr<bcache::program_wrapper_t> wrapper;
 
       // Try Lua wrappers first (so you can override internal wrappers).
       // Iterate over the existing Lua paths.

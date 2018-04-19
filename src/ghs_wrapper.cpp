@@ -43,6 +43,6 @@ std::string ghs_wrapper_t::get_program_id(const string_list_t& args) {
   // sent to stderr instead of stdout.
 
   // Instead, we fall back to the default program ID logic.
-  return compiler_wrapper_t::get_program_id(args);
+  return program_wrapper_t::get_program_id(args);
 }
 }  // namespace bcache

@@ -20,12 +20,12 @@
 #ifndef BUILDCACHE_MSVC_WRAPPER_HPP_
 #define BUILDCACHE_MSVC_WRAPPER_HPP_
 
-#include "compiler_wrapper.hpp"
+#include "program_wrapper.hpp"
 
 #include <string>
 
 namespace bcache {
-class msvc_wrapper_t : public compiler_wrapper_t {
+class msvc_wrapper_t : public program_wrapper_t {
 public:
   msvc_wrapper_t(cache_t& cache);
 

@@ -152,7 +152,7 @@ std::map<std::string, std::string> lua_wrapper_t::runner_t::pop_map(bool keep_va
 }
 
 lua_wrapper_t::lua_wrapper_t(cache_t& cache, const std::string& lua_script_path)
-    : compiler_wrapper_t(cache), m_runner(lua_script_path) {
+    : program_wrapper_t(cache), m_runner(lua_script_path) {
 }
 
 bool lua_wrapper_t::can_handle_command(const std::string& program_exe,
@@ -175,7 +175,7 @@ std::string lua_wrapper_t::preprocess_source(const string_list_t& args) {
   if (m_runner.call("preprocess_source", args)) {
     return m_runner.pop_string();
   } else {
-    return compiler_wrapper_t::preprocess_source(args);
+    return program_wrapper_t::preprocess_source(args);
   }
 }
 
@@ -183,7 +183,7 @@ string_list_t lua_wrapper_t::filter_arguments(const string_list_t& args) {
   if (m_runner.call("filter_arguments", args)) {
     return m_runner.pop_string_list();
   } else {
-    return compiler_wrapper_t::filter_arguments(args);
+    return program_wrapper_t::filter_arguments(args);
   }
 }
 
@@ -191,7 +191,7 @@ std::string lua_wrapper_t::get_program_id(const string_list_t& args) {
   if (m_runner.call("get_program_id", args)) {
     return m_runner.pop_string();
   } else {
-    return compiler_wrapper_t::get_program_id(args);
+    return program_wrapper_t::get_program_id(args);
   }
 }
 
@@ -199,7 +199,7 @@ std::map<std::string, std::string> lua_wrapper_t::get_build_files(const string_l
   if (m_runner.call("get_build_files", args)) {
     return m_runner.pop_map();
   } else {
-    return compiler_wrapper_t::get_build_files(args);
+    return program_wrapper_t::get_build_files(args);
   }
 }
 }  // namespace bcache

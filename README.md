@@ -98,7 +98,7 @@ function get_build_files (args)
 end
 ```
 
-The following methods can be implemented (see [compiler_wrapper.hpp](src/compiler_wrapper.hpp) for a more detailed documentation):
+The following methods can be implemented (see [program_wrapper.hpp](src/program_wrapper.hpp) for a more detailed documentation):
 
 | Function | Returns | Default |
 | --- | --- | --- |

@@ -62,7 +62,7 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 }
 }  // namespace
 
-gcc_wrapper_t::gcc_wrapper_t(cache_t& cache) : compiler_wrapper_t(cache) {
+gcc_wrapper_t::gcc_wrapper_t(cache_t& cache) : program_wrapper_t(cache) {
 }
 
 bool gcc_wrapper_t::can_handle_command(const std::string& program_exe) {
