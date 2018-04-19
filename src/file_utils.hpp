@@ -156,13 +156,15 @@ void create_dir(const std::string& path);
 
 /// @brief Remove an existing file.
 /// @param path The path to the file.
+/// @param ignore_errors Set this to true to ignore errors related to removing files.
 /// @throws runtime_error if the file could not be removed.
-void remove_file(const std::string& path);
+void remove_file(const std::string& path, const bool ignore_errors = false);
 
 /// @brief Remove a directory and all its contents (recursively).
 /// @param path The path to the dir.
+/// @param ignore_errors Set this to true to ignore errors related to removing files.
 /// @throws runtime_error if the dir could not be removed.
-void remove_dir(const std::string& path);
+void remove_dir(const std::string& path, const bool ignore_errors = false);
 
 /// @brief Check if a directory exists.
 /// @param path The path to the directory.

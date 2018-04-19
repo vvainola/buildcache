@@ -39,6 +39,7 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <direct.h>
 #include <shlobj.h>
 #include <userenv.h>
 #undef ERROR
@@ -119,6 +120,16 @@ file_info_t::time_t win32_filetime_as_unix_epoch(const FILETIME& file_time) {
 }
 #endif
 
+void remove_dir_internal(const std::string& path, const bool ignore_errors) {
+#ifdef _WIN32
+  const auto success = (_wrmdir(utf8_to_ucs2(path).c_str()) == 0);
+#else
+  const auto success = (rmdir(path.c_str()) == 0);
+#endif
+  if ((!success) && (!ignore_errors)) {
+    throw std::runtime_error("Unable to remove dir.");
+  }
+}
 }  // namespace
 
 tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension) {
@@ -300,25 +311,27 @@ void create_dir(const std::string& path) {
   }
 }
 
-void remove_file(const std::string& path) {
+void remove_file(const std::string& path, const bool ignore_errors) {
 #ifdef _WIN32
-  const auto success = (_wremove(utf8_to_ucs2(path).c_str()) == 0);
+  const auto success = (_wunlink(utf8_to_ucs2(path).c_str()) == 0);
 #else
-  const auto success = (std::remove(path.c_str()) == 0);
+  const auto success = (unlink(path.c_str()) == 0);
 #endif
-  if (!success) {
+  if ((!success) && (!ignore_errors)) {
     throw std::runtime_error("Unable to remove file.");
   }
 }
 
-void remove_dir(const std::string& path) {
-  // Note: As it currently stands, remove_file() can actually remove empty directories too. So we
-  // use remove_file() for all our directory removal needs.
+void remove_dir(const std::string& path, const bool ignore_errors) {
   const auto files = walk_directory(path);
   for (const auto& file : files) {
-    remove_file(file.path());
+    if (file.is_dir()) {
+      remove_dir_internal(file.path(), ignore_errors);
+    } else {
+      remove_file(file.path(), ignore_errors);
+    }
   }
-  remove_file(path);
+  remove_dir_internal(path, ignore_errors);
 }
 
 bool dir_exists(const std::string& path) {

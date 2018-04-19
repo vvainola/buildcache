@@ -116,14 +116,16 @@ std::vector<file::file_info_t> get_cache_entry_dirs(const std::string& root_fold
   std::vector<file::file_info_t> cache_dirs;
 
   try {
-    // Get all the files in the cache dir.
-    const auto files =
-        file::walk_directory(file::append_path(root_folder, CACHE_FILES_FOLDER_NAME));
+    const auto cache_files_dir = file::append_path(root_folder, CACHE_FILES_FOLDER_NAME);
+    if (file::dir_exists(cache_files_dir)) {
+      // Get all the files in the cache dir.
+      const auto files = file::walk_directory(cache_files_dir);
 
-    // Return only the directories that are valid cache entries.
-    for (const auto& file : files) {
-      if (file.is_dir() && is_cache_entry_dir_path(file.path())) {
-        cache_dirs.push_back(file);
+      // Return only the directories that are valid cache entries.
+      for (const auto& file : files) {
+        if (file.is_dir() && is_cache_entry_dir_path(file.path())) {
+          cache_dirs.push_back(file);
+        }
       }
     }
   } catch (const std::exception& e) {
@@ -217,11 +219,11 @@ void cache_t::clear() {
   // Remove all cached files.
   const auto cache_files_path = file::append_path(m_root_folder, CACHE_FILES_FOLDER_NAME);
   try {
-    file::remove_dir(cache_files_path);
+    file::remove_dir(cache_files_path, true);
+    std::cout << "Cleared the cache.\n";
   } catch (const std::exception& e) {
     debug::log(debug::ERROR) << e.what();
   }
-  std::cout << "Cleared the cache.\n";
 }
 
 void cache_t::show_stats() {
