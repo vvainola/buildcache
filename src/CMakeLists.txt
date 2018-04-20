@@ -49,6 +49,8 @@ add_executable(buildcache
   main.cpp
   msvc_wrapper.cpp
   msvc_wrapper.hpp
+  perf_utils.cpp
+  perf_utils.hpp
   program_wrapper.cpp
   program_wrapper.hpp
   serializer_utils.cpp
