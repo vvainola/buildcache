@@ -60,6 +60,9 @@ void report() {
   if (is_perf_enabled()) {
     std::cerr << "Find exectuable:    " << s_perf_log[ID_FIND_EXECUTABLE] << " us\n";
     std::cerr << "Find wrapper:       " << s_perf_log[ID_FIND_WRAPPER] << " us\n";
+    std::cerr << "Lua - Init:         " << s_perf_log[ID_LUA_INIT] << " us\n";
+    std::cerr << "Lua - Load script:  " << s_perf_log[ID_LUA_LOAD_SCRIPT] << " us\n";
+    std::cerr << "Lua - Run:          " << s_perf_log[ID_LUA_RUN] << " us\n";
     std::cerr << "Preprocess:         " << s_perf_log[ID_PREPROCESS] << " us\n";
     std::cerr << "Filter arguments:   " << s_perf_log[ID_FILTER_ARGS] << " us\n";
     std::cerr << "Get program id:     " << s_perf_log[ID_GET_PRG_ID] << " us\n";

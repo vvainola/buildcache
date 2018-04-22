@@ -20,6 +20,7 @@
 #include "lua_wrapper.hpp"
 
 #include "debug_utils.hpp"
+#include "perf_utils.hpp"
 
 extern "C" {
 #include <lua.h>
@@ -40,18 +41,30 @@ int panic_handler(lua_State* state) {
 
 lua_wrapper_t::runner_t::runner_t(const std::string& script_path) : m_script_path(script_path) {
   // Init Lua.
+  PERF_START(LUA_INIT);
   m_state = luaL_newstate();
   (void)lua_atpanic(m_state, panic_handler);
   luaL_openlibs(m_state);
+  PERF_STOP(LUA_INIT);
 
   // Load the program file.
-  if (luaL_loadfile(m_state, script_path.c_str()) != 0) {
-    bail("Couldn't load file.");
+  {
+    PERF_START(LUA_LOAD_SCRIPT);
+    const auto success = (luaL_loadfile(m_state, script_path.c_str()) == 0);
+    PERF_STOP(LUA_LOAD_SCRIPT);
+    if (!success) {
+      bail("Couldn't load file.");
+    }
   }
 
   // Prime run of the script (define functions etc).
-  if (lua_pcall(m_state, 0, 0, 0) != 0) {
-    bail("Couldn't run script.");
+  {
+    PERF_START(LUA_RUN);
+    const auto success = (lua_pcall(m_state, 0, 0, 0) == 0);
+    PERF_STOP(LUA_RUN);
+    if (!success) {
+      bail("Couldn't run script.");
+    }
   }
 }
 
@@ -68,7 +81,10 @@ bool lua_wrapper_t::runner_t::call(const std::string& func, const std::string& a
     return false;
   }
   (void)lua_pushlstring(m_state, arg.c_str(), arg.size());
-  if (lua_pcall(m_state, 1, 1, 0) != 0) {
+  PERF_START(LUA_RUN);
+  const auto success = (lua_pcall(m_state, 1, 1, 0) == 0);
+  PERF_STOP(LUA_RUN);
+  if (!success) {
     bail("Lua error");
   }
   return true;
@@ -85,7 +101,10 @@ bool lua_wrapper_t::runner_t::call(const std::string& func, const string_list_t&
     (void)lua_pushlstring(m_state, args[i].c_str(), args[i].size());
     lua_rawseti(m_state, -2, static_cast<lua_Integer>(i));
   }
-  if (lua_pcall(m_state, 1, 1, 0) != 0) {
+  PERF_START(LUA_RUN);
+  const auto success = (lua_pcall(m_state, 1, 1, 0) == 0);
+  PERF_STOP(LUA_RUN);
+  if (!success) {
     bail("Lua error");
   }
   return true;
