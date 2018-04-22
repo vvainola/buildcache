@@ -68,10 +68,14 @@ It is possible to extend the capabilities of BuildCache with [Lua](https://www.l
 
 BuildCache first searches for Lua scripts in the paths given in the environment variable `BUILDCACHE_LUA_PATH` (colon separated on POSIX systems, and semicolon separated on Windows), and then continues searching in `$BUILDCACHE_DIR/lua`. If no matching script file was found, BuildCache falls back to the built in compiler wrappers (as listed above).
 
+**Note:** To use Lua standard libraries (`coroutine`, `debug`, `io`, `math`, `os`, `package`, `string`, `table` or `utf8`), you must first load them by calling `require_std(name)`. For convenience it is possible to load all standard libraries with `require_std("*")`, but beware that it is slower than to load only the libraries that are actually used.
+
 Here is a minimal Lua example that caches the output of the "echo" command (yes, it's fairly pointless).
 
 **echo.lua**
 ```lua
+require_std("string")
+
 function can_handle_command (compiler_exe)
   -- Is the "echo" command being invoked?
   return compiler_exe:lower():find("echo") ~= nil

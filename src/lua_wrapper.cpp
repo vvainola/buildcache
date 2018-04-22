@@ -23,9 +23,9 @@
 #include "perf_utils.hpp"
 
 extern "C" {
+#include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <lauxlib.h>
 }
 
 #include <stdexcept>
@@ -37,6 +37,56 @@ int panic_handler(lua_State* state) {
                            << ")";
   return 0;  // Return to Lua to abort.
 }
+
+int l_require_std(lua_State* state) {
+  // Get the module name from the stack.
+  luaL_checkstring(state, 1);
+  size_t arg_len;
+  const auto* arg = lua_tolstring(state, 1, &arg_len);
+  const auto module_name = std::string(arg, arg_len);
+
+  // Load the selected standard library module.
+  if (module_name == "package") {
+    luaL_requiref(state, module_name.c_str(), luaopen_package, 1);
+  } else if (module_name == "coroutine") {
+    luaL_requiref(state, module_name.c_str(), luaopen_coroutine, 1);
+  } else if (module_name == "table") {
+    luaL_requiref(state, module_name.c_str(), luaopen_table, 1);
+  } else if (module_name == "io") {
+    luaL_requiref(state, module_name.c_str(), luaopen_io, 1);
+  } else if (module_name == "os") {
+    luaL_requiref(state, module_name.c_str(), luaopen_os, 1);
+  } else if (module_name == "string") {
+    luaL_requiref(state, module_name.c_str(), luaopen_string, 1);
+  } else if (module_name == "math") {
+    luaL_requiref(state, module_name.c_str(), luaopen_math, 1);
+  } else if (module_name == "utf8") {
+    luaL_requiref(state, module_name.c_str(), luaopen_utf8, 1);
+  } else if (module_name == "debug") {
+    luaL_requiref(state, module_name.c_str(), luaopen_debug, 1);
+  } else if (module_name == "*") {
+    luaL_openlibs(state);
+    return 0;
+  } else {
+    return luaL_error(state, "Invalid standard library: \"%s\".", module_name.c_str());
+  }
+
+  return 1;  // Number of results.
+}
+
+void load_default_libs(lua_State* state) {
+  // To minimize startup overhead when loading Lua scripts, we only pre-load a minimal environment.
+  // Standard libraries can be loaded by Lua scripts on an op-in basis using the require_std()
+  // function.
+
+  // Load the basic library.
+  luaL_requiref(state, "_G", luaopen_base, 1);
+  lua_pop(state, 1);
+
+  // We provide a custom function, require_std(), that can be used for loading standard libraries.
+  lua_pushcfunction(state, l_require_std);
+  lua_setglobal(state, "require_std");
+}
 }  // namespace
 
 lua_wrapper_t::runner_t::runner_t(const std::string& script_path) : m_script_path(script_path) {
@@ -44,7 +94,7 @@ lua_wrapper_t::runner_t::runner_t(const std::string& script_path) : m_script_pat
   PERF_START(LUA_INIT);
   m_state = luaL_newstate();
   (void)lua_atpanic(m_state, panic_handler);
-  luaL_openlibs(m_state);
+  load_default_libs(m_state);
   PERF_STOP(LUA_INIT);
 
   // Load the program file.
@@ -163,8 +213,7 @@ std::map<std::string, std::string> lua_wrapper_t::runner_t::pop_map(bool keep_va
 }
 
 [[noreturn]] void lua_wrapper_t::runner_t::bail(const std::string& message) {
-  debug::log(debug::ERROR) << message << " [" << m_script_path
-                           << "]: " << lua_tostring(m_state, -1);
+  debug::log(debug::ERROR) << lua_tostring(m_state, -1);
   lua_close(m_state);
   m_state = nullptr;
   throw std::runtime_error(message);
