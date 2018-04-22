@@ -17,27 +17,43 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_UNICODE_UTILS_HPP_
-#define BUILDCACHE_UNICODE_UTILS_HPP_
+#ifndef BUILDCACHE_PERF_UTILS_HPP_
+#define BUILDCACHE_PERF_UTILS_HPP_
 
-#include <string>
+#include <cstdint>
 
 namespace bcache {
-/// @brief Convert a UCS-2 string to a UTF-8 string.
-/// @param str16 The UCS-2 encoded wide character string.
-/// @returns a UTF-8 encoded string.
-std::string ucs2_to_utf8(const std::wstring& str16);
+namespace perf {
+enum id_t {
+  ID_FIND_EXECUTABLE = 0,
+  ID_FIND_WRAPPER = 1,
+  ID_PREPROCESS = 2,
+  ID_FILTER_ARGS = 3,
+  ID_GET_PRG_ID = 4,
+  ID_CACHE_LOOKUP = 5,
+  ID_GET_BUILD_FILES = 6,
+  ID_RUN_FOR_MISS = 7,
+  ID_ADD_TO_CACHE = 8,
+  ID_RUN_FOR_FALLBACK = 9,
+  NUM_PERF_IDS
+};
 
-/// @brief Convert a UTF-8 string to a UCS-2 string.
-/// @param str8 The UTF-8 encoded string.
-/// @returns a UCS-2 encoded wide charater string.
-std::wstring utf8_to_ucs2(const std::string& str8);
+/// @brief Start measuring time.
+/// @returns a starting time point.
+int64_t start();
 
-/// @brief Convert the string to lower case.
-/// @param str The string to convert.
-/// @returns a lower case version of the input string.
-/// @note This function currently only works on the ASCII subset of Unicode.
-std::string lower_case(const std::string& str);
+/// @brief Stop measuring time.
+/// @param start_time The starting time for the measurment.
+/// @param id The id of the measurment.
+void stop(const int64_t start_time, const id_t id);
+
+/// @brief Report the results.
+void report();
+}  // namespace perf
 }  // namespace bcache
 
-#endif  // BUILDCACHE_UNICODE_UTILS_HPP_
+// Convenience macros.
+#define PERF_START(id) const auto t0_ID_##id = bcache::perf::start()
+#define PERF_STOP(id) bcache::perf::stop(t0_ID_##id, bcache::perf::ID_##id);
+
+#endif  // BUILDCACHE_PERF_UTILS_HPP_

@@ -21,13 +21,14 @@
 
 #include "debug_utils.hpp"
 #include "sys_utils.hpp"
+#include "unicode_utils.hpp"
 
 #include <stdexcept>
 
 namespace bcache {
 namespace {
 bool is_source_file(const std::string& arg) {
-  const auto ext = file::get_extension(arg);
+  const auto ext = lower_case(file::get_extension(arg));
   return ((ext == ".cpp") || (ext == ".cc") || (ext == ".cxx") || (ext == ".c"));
 }
 
@@ -73,7 +74,7 @@ msvc_wrapper_t::msvc_wrapper_t(cache_t& cache) : program_wrapper_t(cache) {
 
 bool msvc_wrapper_t::can_handle_command(const std::string& program_exe) {
   // Is this the right compiler?
-  const auto cmd = file::get_file_part(program_exe, false);
+  const auto cmd = lower_case(file::get_file_part(program_exe, false));
   return (cmd == "cl");
 }
 

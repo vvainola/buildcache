@@ -23,9 +23,11 @@
 #include "ghs_wrapper.hpp"
 #include "lua_wrapper.hpp"
 #include "msvc_wrapper.hpp"
+#include "perf_utils.hpp"
 #include "program_wrapper.hpp"
 #include "string_list.hpp"
 #include "sys_utils.hpp"
+#include "unicode_utils.hpp"
 
 #include <iostream>
 #include <memory>
@@ -58,7 +60,49 @@ bcache::string_list_t get_lua_paths(const bcache::cache_t& cache) {
 }
 
 bool is_lua_script(const std::string& script_path) {
-  return (bcache::file::get_extension(script_path) == ".lua");
+  return (bcache::lower_case(bcache::file::get_extension(script_path)) == ".lua");
+}
+
+std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(bcache::cache_t& cache,
+                                                                 const std::string& true_exe_path) {
+  std::unique_ptr<bcache::program_wrapper_t> wrapper;
+
+  // Try Lua wrappers first (so you can override internal wrappers).
+  // Iterate over the existing Lua paths.
+  for (const auto& lua_root_dir : get_lua_paths(cache)) {
+    if (bcache::file::dir_exists(lua_root_dir)) {
+      // Find all .lua files in the given directory.
+      const auto lua_files = bcache::file::walk_directory(lua_root_dir);
+      for (const auto& file_info : lua_files) {
+        const auto script_path = file_info.path();
+        if ((!file_info.is_dir()) && is_lua_script(script_path)) {
+          // Check if the given wrapper can handle this command (first match wins).
+          if (bcache::lua_wrapper_t::can_handle_command(true_exe_path, script_path)) {
+            bcache::debug::log(bcache::debug::DEBUG)
+                << "Found matching Lua wrapper for " << true_exe_path << ": " << script_path;
+            wrapper.reset(new bcache::lua_wrapper_t(cache, script_path));
+            break;
+          }
+        }
+      }
+    }
+    if (wrapper) {
+      break;
+    }
+  }
+
+  // If no Lua wrappers were found, try built in wrappers.
+  if (!wrapper) {
+    if (bcache::gcc_wrapper_t::can_handle_command(true_exe_path)) {
+      wrapper.reset(new bcache::gcc_wrapper_t(cache));
+    } else if (bcache::ghs_wrapper_t::can_handle_command(true_exe_path)) {
+      wrapper.reset(new bcache::ghs_wrapper_t(cache));
+    } else if (bcache::msvc_wrapper_t::can_handle_command(true_exe_path)) {
+      wrapper.reset(new bcache::msvc_wrapper_t(cache));
+    }
+  }
+
+  return wrapper;
 }
 
 [[noreturn]] void clear_cache_and_exit() {
@@ -129,7 +173,9 @@ bool is_lua_script(const std::string& script_path) {
     // TODO(m): This call may throw an excepption, which currently means that we will not even try
     // to run the original command. At the same time this is a protection against endless symlink
     // recursion. Figure something out!
+    PERF_START(FIND_EXECUTABLE);
     const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
+    PERF_STOP(FIND_EXECUTABLE);
 
     // Replace the command with the true exe path. Most of the following operations rely on having
     // a correct executable path. Also, this is important to avoid recursions when we are invoked
@@ -143,42 +189,9 @@ bool is_lua_script(const std::string& script_path) {
       bcache::cache_t cache;
 
       // Select a matching compiler wrapper.
-      std::unique_ptr<bcache::program_wrapper_t> wrapper;
-
-      // Try Lua wrappers first (so you can override internal wrappers).
-      // Iterate over the existing Lua paths.
-      for (const auto& lua_root_dir : get_lua_paths(cache)) {
-        if (bcache::file::dir_exists(lua_root_dir)) {
-          // Find all .lua files in the given directory.
-          const auto lua_files = bcache::file::walk_directory(lua_root_dir);
-          for (const auto& file_info : lua_files) {
-            const auto script_path = file_info.path();
-            if ((!file_info.is_dir()) && is_lua_script(script_path)) {
-              // Check if the given wrapper can handle this command (first match wins).
-              if (bcache::lua_wrapper_t::can_handle_command(true_exe_path, script_path)) {
-                bcache::debug::log(bcache::debug::DEBUG) << "Found matching Lua wrapper for "
-                                                         << true_exe_path << ": " << script_path;
-                wrapper.reset(new bcache::lua_wrapper_t(cache, script_path));
-                break;
-              }
-            }
-          }
-        }
-        if (wrapper) {
-          break;
-        }
-      }
-
-      // If no Lua wrappers were found, try built in wrappers.
-      if (!wrapper) {
-        if (bcache::gcc_wrapper_t::can_handle_command(true_exe_path)) {
-          wrapper.reset(new bcache::gcc_wrapper_t(cache));
-        } else if (bcache::ghs_wrapper_t::can_handle_command(true_exe_path)) {
-          wrapper.reset(new bcache::ghs_wrapper_t(cache));
-        } else if (bcache::msvc_wrapper_t::can_handle_command(true_exe_path)) {
-          wrapper.reset(new bcache::msvc_wrapper_t(cache));
-        }
-      }
+      PERF_START(FIND_WRAPPER);
+      auto wrapper = find_suitable_wrapper(cache, true_exe_path);
+      PERF_STOP(FIND_WRAPPER);
 
       // Run the wrapper, if any.
       if (wrapper) {
@@ -196,7 +209,9 @@ bool is_lua_script(const std::string& script_path) {
 
     // Fall back to running the command as is.
     if (!was_wrapped) {
+      PERF_START(RUN_FOR_FALLBACK);
       auto result = bcache::sys::run_with_prefix(args, false);
+      PERF_STOP(RUN_FOR_FALLBACK);
       return_code = result.return_code;
     }
   } catch (const std::exception& e) {
@@ -206,6 +221,9 @@ bool is_lua_script(const std::string& script_path) {
     bcache::debug::log(bcache::debug::FATAL) << "Unexpected error.";
     return_code = 1;
   }
+
+  // Report performance timings.
+  bcache::perf::report();
 
   std::exit(return_code);
 }
