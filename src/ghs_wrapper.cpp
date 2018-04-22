@@ -20,7 +20,7 @@
 #include "ghs_wrapper.hpp"
 
 #include "file_utils.hpp"
-#include "hasher.hpp"
+#include "unicode_utils.hpp"
 
 #include <stdexcept>
 
@@ -30,7 +30,7 @@ ghs_wrapper_t::ghs_wrapper_t(cache_t& cache) : gcc_wrapper_t(cache) {
 
 bool ghs_wrapper_t::can_handle_command(const std::string& program_exe) {
   // Is this the right compiler?
-  const auto cmd = file::get_file_part(program_exe, false);
+  const auto cmd = lower_case(file::get_file_part(program_exe, false));
   return (cmd.find("ccarm") != std::string::npos) || (cmd.find("cxarm") != std::string::npos) ||
          (cmd.find("ccthumb") != std::string::npos) || (cmd.find("cxthumb") != std::string::npos) ||
          (cmd.find("ccintarm") != std::string::npos) || (cmd.find("cxintarm") != std::string::npos);

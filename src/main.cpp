@@ -26,6 +26,7 @@
 #include "program_wrapper.hpp"
 #include "string_list.hpp"
 #include "sys_utils.hpp"
+#include "unicode_utils.hpp"
 
 #include <iostream>
 #include <memory>
@@ -58,7 +59,7 @@ bcache::string_list_t get_lua_paths(const bcache::cache_t& cache) {
 }
 
 bool is_lua_script(const std::string& script_path) {
-  return (bcache::file::get_extension(script_path) == ".lua");
+  return (bcache::lower_case(bcache::file::get_extension(script_path)) == ".lua");
 }
 
 [[noreturn]] void clear_cache_and_exit() {
