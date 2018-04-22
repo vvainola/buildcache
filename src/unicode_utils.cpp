@@ -31,13 +31,11 @@
 #endif  // USE_CPP11_CODECVT
 
 namespace bcache {
-
+namespace {
 #if !defined(USE_CPP11_CODECVT)
-
 // These conversion routines are based on code by Roelof Berg.
 // Original: https//github.com/RoelofBerg/Utf8Ucs2Converter
 
-namespace {
 bool utf8_char_to_ucs2_char(const char* utf8_token, wchar_t& ucs2_char, uint32_t& utf8_token_len) {
   // We do math that relies on unsigned data types.
   const unsigned char* utf8_token_u = reinterpret_cast<const unsigned char*>(utf8_token);
@@ -112,8 +110,28 @@ void ucs2_char_to_utf8_char(const wchar_t ucs2_char, char* utf8_token) {
     utf8_token_u[0] = static_cast<unsigned char>(0xE0 | ucs2_char_value);
   }
 }
+#endif  // USE_CPP11_CODECVT
 }  // namespace
 
+#if defined(USE_CPP11_CODECVT)
+std::string ucs2_to_utf8(const std::wstring& str16) {
+  std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
+  try {
+    return conv.to_bytes(str16);
+  } catch (...) {
+    return std::string();
+  }
+}
+
+std::wstring utf8_to_ucs2(const std::string& str8) {
+  std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
+  try {
+    return conv.from_bytes(str8);
+  } catch (...) {
+    return std::wstring();
+  }
+}
+#else
 std::string ucs2_to_utf8(const std::wstring& str16) {
   std::string result;
   const auto* cursor = str16.c_str();
@@ -144,26 +162,17 @@ std::wstring utf8_to_ucs2(const std::string& str8) {
 
   return result;
 }
-
-#else
-
-std::string ucs2_to_utf8(const std::wstring& str16) {
-  std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
-  try {
-    return conv.to_bytes(str16);
-  } catch (...) {
-    return std::string();
-  }
-}
-
-std::wstring utf8_to_ucs2(const std::string& str8) {
-  std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
-  try {
-    return conv.from_bytes(str8);
-  } catch (...) {
-    return std::wstring();
-  }
-}
-
 #endif  // USE_CPP11_CODECVT
+
+std::string lower_case(const std::string &str) {
+  std::string result(str.size(), ' ');
+  for (std::string::size_type i = 0; i < str.size(); ++i) {
+    auto in = str[i];
+    if(('A' <= in) && (in <= 'Z')) {
+      in += ('a' - 'A');
+    }
+    result[i] = in;
+  }
+  return result;
+}
 }  // namespace bcache
