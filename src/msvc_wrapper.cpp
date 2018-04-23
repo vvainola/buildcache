@@ -23,6 +23,7 @@
 #include "sys_utils.hpp"
 #include "unicode_utils.hpp"
 
+#include <cstdlib>
 #include <stdexcept>
 
 namespace bcache {
@@ -139,8 +140,16 @@ string_list_t msvc_wrapper_t::get_relevant_arguments(const string_list_t& args) 
 }
 
 std::map<std::string, std::string> msvc_wrapper_t::get_relevant_env_vars() {
-  // TODO(m): What environment variables can affect the build result?
+  // According to this: https://msdn.microsoft.com/en-us/library/kezkeayy.aspx
+  // ...the following environment variables are relevant for compilation results: CL, _CL_
+  static const std::string CL_ENV_VARS[] = {"CL", "_CL_"};
   std::map<std::string, std::string> env_vars;
+  for (const auto& key : CL_ENV_VARS) {
+    const auto* value = std::getenv(key.c_str());
+    if (value != nullptr) {
+      env_vars[key] = std::string(value);
+    }
+  }
   return env_vars;
 }
 
