@@ -48,7 +48,7 @@ bool program_wrapper_t::handle_command(const string_list_t& args, int& return_co
 
     // Hash the (filtered) command line flags.
     PERF_START(FILTER_ARGS);
-    hasher.update(filter_arguments(args).join(" ", true));
+    hasher.update(get_relevant_arguments(args).join(" ", true));
     PERF_STOP(FILTER_ARGS);
 
     // Hash the program identification (version string or similar).
@@ -144,7 +144,7 @@ std::string program_wrapper_t::preprocess_source(const string_list_t&) {
   return std::string();
 }
 
-string_list_t program_wrapper_t::filter_arguments(const string_list_t& args) {
+string_list_t program_wrapper_t::get_relevant_arguments(const string_list_t& args) {
   // Default: All arguments are relevant.
   return args;
 }

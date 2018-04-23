@@ -59,7 +59,7 @@ private:
   };
 
   std::string preprocess_source(const string_list_t& args) override;
-  string_list_t filter_arguments(const string_list_t& args) override;
+  string_list_t get_relevant_arguments(const string_list_t& args) override;
   std::string get_program_id(const string_list_t& args) override;
   std::map<std::string, std::string> get_build_files(const string_list_t& args) override;
 

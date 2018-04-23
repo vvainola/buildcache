@@ -247,11 +247,11 @@ std::string lua_wrapper_t::preprocess_source(const string_list_t& args) {
   }
 }
 
-string_list_t lua_wrapper_t::filter_arguments(const string_list_t& args) {
-  if (m_runner.call("filter_arguments", args)) {
+string_list_t lua_wrapper_t::get_relevant_arguments(const string_list_t& args) {
+  if (m_runner.call("get_relevant_arguments", args)) {
     return m_runner.pop_string_list();
   } else {
-    return program_wrapper_t::filter_arguments(args);
+    return program_wrapper_t::get_relevant_arguments(args);
   }
 }
 

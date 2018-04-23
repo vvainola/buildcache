@@ -103,7 +103,7 @@ std::string gcc_wrapper_t::preprocess_source(const string_list_t& args) {
   return preprocessed_source;
 }
 
-string_list_t gcc_wrapper_t::filter_arguments(const string_list_t& args) {
+string_list_t gcc_wrapper_t::get_relevant_arguments(const string_list_t& args) {
   string_list_t filtered_args;
 
   // The first argument is the compiler binary without the path.

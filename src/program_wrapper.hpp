@@ -48,7 +48,7 @@ protected:
   /// @throws runtime_error if the request could not be completed.
   virtual std::string preprocess_source(const string_list_t& args);
 
-  /// @brief Filter command line arguments for hashing.
+  /// @brief Get relevant command line arguments for hashing.
   /// @param args The command line.
   /// @returns filtered command line arguments.
   /// @throws runtime_error if the request could not be completed.
@@ -57,7 +57,7 @@ protected:
   /// hashing (i.e. uniquely identifying) the program options. As such, things like absolute file
   /// paths and compilation defines should be excluded (since they are resolved in the preprocess
   /// step).
-  virtual string_list_t filter_arguments(const string_list_t& args);
+  virtual string_list_t get_relevant_arguments(const string_list_t& args);
 
   /// @brief Get a string that uniquely identifies the program.
   /// @param args The command line.
