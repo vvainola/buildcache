@@ -22,8 +22,6 @@
 
 #include "program_wrapper.hpp"
 
-#include <string>
-
 namespace bcache {
 class msvc_wrapper_t : public program_wrapper_t {
 public:
@@ -34,6 +32,7 @@ public:
 private:
   std::string preprocess_source(const string_list_t& args) override;
   string_list_t get_relevant_arguments(const string_list_t& args) override;
+  std::map<std::string, std::string> get_relevant_env_vars() override;
   std::string get_program_id(const string_list_t& args) override;
   std::map<std::string, std::string> get_build_files(const string_list_t& args) override;
 };

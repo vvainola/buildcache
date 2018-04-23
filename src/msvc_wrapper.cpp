@@ -138,6 +138,12 @@ string_list_t msvc_wrapper_t::get_relevant_arguments(const string_list_t& args) 
   return filtered_args;
 }
 
+std::map<std::string, std::string> msvc_wrapper_t::get_relevant_env_vars() {
+  // TODO(m): What environment variables can affect the build result?
+  std::map<std::string, std::string> env_vars;
+  return env_vars;
+}
+
 std::string msvc_wrapper_t::get_program_id(const string_list_t& args) {
   // TODO(m): Add things like executable file size too.
 

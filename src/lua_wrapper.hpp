@@ -22,8 +22,6 @@
 
 #include "program_wrapper.hpp"
 
-#include <string>
-
 extern "C" {
 typedef struct lua_State lua_State;
 }
@@ -43,6 +41,7 @@ private:
     runner_t(const std::string& script_path);
     ~runner_t();
 
+    bool call(const std::string& func);
     bool call(const std::string& func, const std::string& arg);
     bool call(const std::string& func, const string_list_t& arg);
 
@@ -60,6 +59,7 @@ private:
 
   std::string preprocess_source(const string_list_t& args) override;
   string_list_t get_relevant_arguments(const string_list_t& args) override;
+  std::map<std::string, std::string> get_relevant_env_vars() override;
   std::string get_program_id(const string_list_t& args) override;
   std::map<std::string, std::string> get_build_files(const string_list_t& args) override;
 

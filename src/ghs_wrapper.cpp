@@ -36,6 +36,12 @@ bool ghs_wrapper_t::can_handle_command(const std::string& program_exe) {
          (cmd.find("ccintarm") != std::string::npos) || (cmd.find("cxintarm") != std::string::npos);
 }
 
+std::map<std::string, std::string> ghs_wrapper_t::get_relevant_env_vars() {
+  // TODO(m): What environment variables can affect the build result?
+  std::map<std::string, std::string> env_vars;
+  return env_vars;
+}
+
 std::string ghs_wrapper_t::get_program_id(const string_list_t& args) {
   // Getting a version string from the GHS compiler by passing "--version" is less than trivial. For
   // instance you need to pass valid -bsp and -os_dir arguments, and a dummy source file that does

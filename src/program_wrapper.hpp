@@ -59,6 +59,14 @@ protected:
   /// step).
   virtual string_list_t get_relevant_arguments(const string_list_t& args);
 
+  /// @brief Get relevant environment variables for hashing.
+  /// @returns relevant environment variables and their values.
+  /// @throws runtime_error if the request could not be completed.
+  ///
+  /// @note The purpose of this function is to create a list of environment variables that may
+  /// affect program output.
+  virtual std::map<std::string, std::string> get_relevant_env_vars();
+
   /// @brief Get a string that uniquely identifies the program.
   /// @param args The command line.
   /// @returns a program ID string.

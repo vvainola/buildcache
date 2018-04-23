@@ -124,6 +124,21 @@ lua_wrapper_t::runner_t::~runner_t() {
   }
 }
 
+bool lua_wrapper_t::runner_t::call(const std::string& func) {
+  lua_getglobal(m_state, func.c_str());
+  if (!lua_isfunction(m_state, -1)) {
+    debug::log(debug::ERROR) << "Missing Lua function: " << func;
+    return false;
+  }
+  PERF_START(LUA_RUN);
+  const auto success = (lua_pcall(m_state, 0, 1, 0) == 0);
+  PERF_STOP(LUA_RUN);
+  if (!success) {
+    bail("Lua error");
+  }
+  return true;
+}
+
 bool lua_wrapper_t::runner_t::call(const std::string& func, const std::string& arg) {
   lua_getglobal(m_state, func.c_str());
   if (!lua_isfunction(m_state, -1)) {
@@ -252,6 +267,14 @@ string_list_t lua_wrapper_t::get_relevant_arguments(const string_list_t& args) {
     return m_runner.pop_string_list();
   } else {
     return program_wrapper_t::get_relevant_arguments(args);
+  }
+}
+
+std::map<std::string, std::string> lua_wrapper_t::get_relevant_env_vars() {
+  if (m_runner.call("get_relevant_env_vars")) {
+    return m_runner.pop_map();
+  } else {
+    return program_wrapper_t::get_relevant_env_vars();
   }
 }
 

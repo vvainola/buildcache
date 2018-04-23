@@ -32,6 +32,15 @@ const std::string hasher_t::hash_t::as_string() const {
   return result;
 }
 
+void hasher_t::update(const std::map<std::string, std::string>& data) {
+  // Note: This is guaranteed by the C++ standard to iterate over the elements in ascending key
+  // order, so the hash will always be the same for the same map contents.
+  for (const auto& item : data) {
+    update(item.first);
+    update(item.second);
+  }
+}
+
 void hasher_t::update_from_file(const std::string& path) {
   // TODO(m): Investigate if using buffered input gives better performance (at least it should use
   // less memory, and it should be nicer to the CPU caches).

@@ -91,6 +91,11 @@ function get_relevant_arguments (args)
   return args
 end
 
+function get_relevant_env_vars ()
+  -- There are no environment variables that affect the program result.
+  return {}
+end
+
 function get_compiler_id (args)
   -- We use the full path to the executable as a program identifier.
   return args[0]
@@ -109,6 +114,7 @@ The following methods can be implemented (see [program_wrapper.hpp](src/program_
 | can_handle_command (program_exe) | Can the wrapper handle this program? | - |
 | preprocess_source (args) | The preprocessed source code (e.g. for C/C++) | An empty string |
 | get_relevant_arguments (args) | Arguments that can affect the build output | All arguments |
+| get_relevant_env_vars () | Environment variables that can affect the build output | An empty table |
 | get_program_id (args) | A unique program identification | The MD4 hash of the binary |
 | get_build_files (args) | A table of build result files | An empty table |
 

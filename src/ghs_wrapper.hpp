@@ -22,8 +22,6 @@
 
 #include "gcc_wrapper.hpp"
 
-#include <string>
-
 namespace bcache {
 /// @brief This is a wrapper for the Green Hills Software C/C++ compiler.
 ///
@@ -35,6 +33,7 @@ public:
   static bool can_handle_command(const std::string& program_exe);
 
 private:
+  std::map<std::string, std::string> get_relevant_env_vars() override;
   std::string get_program_id(const string_list_t& args) override;
 };
 }  // namespace bcache

@@ -21,6 +21,7 @@
 #define BUILDCACHE_HASHER_HPP_
 
 #include <cstdint>
+#include <map>
 #include <string>
 
 extern "C" {
@@ -61,6 +62,10 @@ public:
   void update(const std::string& text) {
     MD4_Update(&m_ctx, text.data(), text.size());
   }
+
+  /// @brief Update the hash with more data.
+  /// @param data The data to hash.
+  void update(const std::map<std::string, std::string>& data);
 
   /// @brief Update the hash with more data.
   /// @param path Path to a file that contains the data to hash.

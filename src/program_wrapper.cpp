@@ -46,9 +46,10 @@ bool program_wrapper_t::handle_command(const string_list_t& args, int& return_co
     hasher.update(preprocess_source(args));
     PERF_STOP(PREPROCESS);
 
-    // Hash the (filtered) command line flags.
+    // Hash the (filtered) command line flags and environment variables.
     PERF_START(FILTER_ARGS);
     hasher.update(get_relevant_arguments(args).join(" ", true));
+    hasher.update(get_relevant_env_vars());
     PERF_STOP(FILTER_ARGS);
 
     // Hash the program identification (version string or similar).
@@ -147,6 +148,12 @@ std::string program_wrapper_t::preprocess_source(const string_list_t&) {
 string_list_t program_wrapper_t::get_relevant_arguments(const string_list_t& args) {
   // Default: All arguments are relevant.
   return args;
+}
+
+std::map<std::string, std::string> program_wrapper_t::get_relevant_env_vars() {
+  // Default: There are no relevant environment variables.
+  std::map<std::string, std::string> env_vars;
+  return env_vars;
 }
 
 std::string program_wrapper_t::get_program_id(const string_list_t& args) {
