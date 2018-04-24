@@ -74,33 +74,39 @@ int l_require_std(lua_State* state) {
   return 1;  // Number of results.
 }
 
-void load_default_libs(lua_State* state) {
-  // To minimize startup overhead when loading Lua scripts, we only pre-load a minimal environment.
-  // Standard libraries can be loaded by Lua scripts on an op-in basis using the require_std()
-  // function.
-
-  // Load the basic library.
-  luaL_requiref(state, "_G", luaopen_base, 1);
-  lua_pop(state, 1);
-
-  // We provide a custom function, require_std(), that can be used for loading standard libraries.
-  lua_pushcfunction(state, l_require_std);
-  lua_setglobal(state, "require_std");
+void assert_state_initialized(const lua_State* state) {
+  if (state == nullptr) {
+    throw std::runtime_error("Lua state has not been initialized (should not happen)!");
+  }
 }
 }  // namespace
 
 lua_wrapper_t::runner_t::runner_t(const std::string& script_path) : m_script_path(script_path) {
+}
+
+lua_wrapper_t::runner_t::~runner_t() {
+  if (m_state != nullptr) {
+    lua_close(m_state);
+  }
+}
+
+void lua_wrapper_t::runner_t::init_lua_state() {
+  // As we use lazy initialization of the Lua state, we allow multiple calls to this routine.
+  if (m_state != nullptr) {
+    return;
+  }
+
   // Init Lua.
   PERF_START(LUA_INIT);
   m_state = luaL_newstate();
   (void)lua_atpanic(m_state, panic_handler);
-  load_default_libs(m_state);
+  setup_lua_libs_and_globals();
   PERF_STOP(LUA_INIT);
 
   // Load the program file.
   {
     PERF_START(LUA_LOAD_SCRIPT);
-    const auto success = (luaL_loadfile(m_state, script_path.c_str()) == 0);
+    const auto success = (luaL_loadfile(m_state, m_script_path.c_str()) == 0);
     PERF_STOP(LUA_LOAD_SCRIPT);
     if (!success) {
       bail("Couldn't load file.");
@@ -118,13 +124,30 @@ lua_wrapper_t::runner_t::runner_t(const std::string& script_path) : m_script_pat
   }
 }
 
-lua_wrapper_t::runner_t::~runner_t() {
-  if (m_state != nullptr) {
-    lua_close(m_state);
-  }
+void lua_wrapper_t::runner_t::setup_lua_libs_and_globals() {
+  // To minimize startup overhead when loading Lua scripts, we only pre-load a minimal environment.
+  // Standard libraries can be loaded by Lua scripts on an op-in basis using the require_std()
+  // function.
+
+  // Load the basic library.
+  luaL_requiref(m_state, "_G", luaopen_base, 1);
+  lua_pop(m_state, 1);
+
+  // We provide a custom function, require_std(), that can be used for loading standard libraries.
+  lua_pushcfunction(m_state, l_require_std);
+  lua_setglobal(m_state, "require_std");
+}
+
+[[noreturn]] void lua_wrapper_t::runner_t::bail(const std::string& message) {
+  debug::log(debug::ERROR) << lua_tostring(m_state, -1);
+  lua_close(m_state);
+  m_state = nullptr;
+  throw std::runtime_error(message);
 }
 
 bool lua_wrapper_t::runner_t::call(const std::string& func) {
+  init_lua_state();
+
   lua_getglobal(m_state, func.c_str());
   if (!lua_isfunction(m_state, -1)) {
     debug::log(debug::ERROR) << "Missing Lua function: " << func;
@@ -140,6 +163,8 @@ bool lua_wrapper_t::runner_t::call(const std::string& func) {
 }
 
 bool lua_wrapper_t::runner_t::call(const std::string& func, const std::string& arg) {
+  init_lua_state();
+
   lua_getglobal(m_state, func.c_str());
   if (!lua_isfunction(m_state, -1)) {
     debug::log(debug::ERROR) << "Missing Lua function: " << func;
@@ -156,6 +181,8 @@ bool lua_wrapper_t::runner_t::call(const std::string& func, const std::string& a
 }
 
 bool lua_wrapper_t::runner_t::call(const std::string& func, const string_list_t& args) {
+  init_lua_state();
+
   lua_getglobal(m_state, func.c_str());
   if (!lua_isfunction(m_state, -1)) {
     debug::log(debug::DEBUG) << "Missing Lua function: " << func;
@@ -176,6 +203,7 @@ bool lua_wrapper_t::runner_t::call(const std::string& func, const string_list_t&
 }
 
 bool lua_wrapper_t::runner_t::pop_bool() {
+  assert_state_initialized(m_state);
   if (lua_isboolean(m_state, -1) == 0) {
     throw std::runtime_error("Expected a boolean value on the stack.");
   }
@@ -183,6 +211,7 @@ bool lua_wrapper_t::runner_t::pop_bool() {
 }
 
 std::string lua_wrapper_t::runner_t::pop_string(bool keep_value_on_the_stack) {
+  assert_state_initialized(m_state);
   if (lua_isstring(m_state, -1) == 0) {
     throw std::runtime_error("Expected a string value on the stack.");
   }
@@ -195,6 +224,7 @@ std::string lua_wrapper_t::runner_t::pop_string(bool keep_value_on_the_stack) {
 }
 
 string_list_t lua_wrapper_t::runner_t::pop_string_list(bool keep_value_on_the_stack) {
+  assert_state_initialized(m_state);
   if (lua_istable(m_state, -1) == 0) {
     throw std::runtime_error("Expected a table on the stack.");
   }
@@ -211,6 +241,7 @@ string_list_t lua_wrapper_t::runner_t::pop_string_list(bool keep_value_on_the_st
 }
 
 std::map<std::string, std::string> lua_wrapper_t::runner_t::pop_map(bool keep_value_on_the_stack) {
+  assert_state_initialized(m_state);
   if (lua_istable(m_state, -1) == 0) {
     throw std::runtime_error("Expected a table on the stack.");
   }
@@ -225,13 +256,6 @@ std::map<std::string, std::string> lua_wrapper_t::runner_t::pop_map(bool keep_va
     lua_pop(m_state, 1);
   }
   return result;
-}
-
-[[noreturn]] void lua_wrapper_t::runner_t::bail(const std::string& message) {
-  debug::log(debug::ERROR) << lua_tostring(m_state, -1);
-  lua_close(m_state);
-  m_state = nullptr;
-  throw std::runtime_error(message);
 }
 
 lua_wrapper_t::lua_wrapper_t(const string_list_t& args,

@@ -96,7 +96,7 @@ function get_relevant_env_vars ()
   return {}
 end
 
-function get_compiler_id (args)
+function get_program_id (args)
   -- We use the full path to the executable as a program identifier.
   return args[0]
 end

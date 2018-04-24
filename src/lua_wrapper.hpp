@@ -51,9 +51,11 @@ private:
     std::map<std::string, std::string> pop_map(bool keep_value_on_the_stack = false);
 
   private:
+    void init_lua_state();
+    void setup_lua_libs_and_globals();
     [[noreturn]] void bail(const std::string& message);
 
-    lua_State* m_state;
+    lua_State* m_state = nullptr;
     std::string m_script_path;
   };
 
