@@ -70,6 +70,8 @@ BuildCache first searches for Lua scripts in the paths given in the environment 
 
 **Note:** To use Lua standard libraries (`coroutine`, `debug`, `io`, `math`, `os`, `package`, `string`, `table` or `utf8`), you must first load them by calling `require_std(name)`. For convenience it is possible to load all standard libraries with `require_std("*")`, but beware that it is slower than to load only the libraries that are actually used.
 
+All program arguments are available in the global `ARGS` array (an array of strings).
+
 Here is a minimal Lua example that caches the output of the "echo" command (yes, it's fairly pointless).
 
 **echo.lua**
@@ -81,14 +83,14 @@ function can_handle_command (compiler_exe)
   return compiler_exe:lower():find("echo") ~= nil
 end
 
-function preprocess_source (args)
+function preprocess_source ()
   -- We do not generate a "preprocessed source".
   return ''
 end
 
-function get_relevant_arguments (args)
+function get_relevant_arguments ()
   -- Return the arguments that may affect the result (i.e. all arguments).
-  return args
+  return ARGS
 end
 
 function get_relevant_env_vars ()
@@ -96,12 +98,12 @@ function get_relevant_env_vars ()
   return {}
 end
 
-function get_program_id (args)
+function get_program_id ()
   -- We use the full path to the executable as a program identifier.
-  return args[0]
+  return ARGS[0]
 end
 
-function get_build_files (args)
+function get_build_files ()
   -- This command will not produce any output files to be cached.
   return {}
 end
@@ -112,11 +114,11 @@ The following methods can be implemented (see [program_wrapper.hpp](src/program_
 | Function | Returns | Default |
 | --- | --- | --- |
 | can_handle_command (program_exe) | Can the wrapper handle this program? | - |
-| preprocess_source (args) | The preprocessed source code (e.g. for C/C++) | An empty string |
-| get_relevant_arguments (args) | Arguments that can affect the build output | All arguments |
+| preprocess_source () | The preprocessed source code (e.g. for C/C++) | An empty string |
+| get_relevant_arguments () | Arguments that can affect the build output | All arguments |
 | get_relevant_env_vars () | Environment variables that can affect the build output | An empty table |
-| get_program_id (args) | A unique program identification | The MD4 hash of the binary |
-| get_build_files (args) | A table of build result files | An empty table |
+| get_program_id () | A unique program identification | The MD4 hash of the binary |
+| get_build_files () | A table of build result files | An empty table |
 
 ## Debugging
 

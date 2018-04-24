@@ -81,7 +81,8 @@ void assert_state_initialized(const lua_State* state) {
 }
 }  // namespace
 
-lua_wrapper_t::runner_t::runner_t(const std::string& script_path) : m_script_path(script_path) {
+lua_wrapper_t::runner_t::runner_t(const std::string& script_path, const string_list_t& args)
+    : m_script_path(script_path), m_args(args) {
 }
 
 lua_wrapper_t::runner_t::~runner_t() {
@@ -136,6 +137,15 @@ void lua_wrapper_t::runner_t::setup_lua_libs_and_globals() {
   // We provide a custom function, require_std(), that can be used for loading standard libraries.
   lua_pushcfunction(m_state, l_require_std);
   lua_setglobal(m_state, "require_std");
+
+  // Add a global variable, "ARGS", that contains the program arguments (this mimics the m_args
+  // member of the C++ program_wrapper_t base class).
+  lua_newtable(m_state);
+  for (size_t i = 0; i < m_args.size(); ++i) {
+    (void)lua_pushlstring(m_state, m_args[i].c_str(), m_args[i].size());
+    lua_rawseti(m_state, -2, static_cast<lua_Integer>(i));
+  }
+  lua_setglobal(m_state, "ARGS");
 }
 
 [[noreturn]] void lua_wrapper_t::runner_t::bail(const std::string& message) {
@@ -261,12 +271,12 @@ std::map<std::string, std::string> lua_wrapper_t::runner_t::pop_map(bool keep_va
 lua_wrapper_t::lua_wrapper_t(const string_list_t& args,
                              cache_t& cache,
                              const std::string& lua_script_path)
-    : program_wrapper_t(args, cache), m_runner(lua_script_path) {
+    : program_wrapper_t(args, cache), m_runner(lua_script_path, args) {
 }
 
 bool lua_wrapper_t::can_handle_command(const std::string& program_exe,
                                        const std::string& lua_script_path) {
-  runner_t runner(lua_script_path);
+  runner_t runner(lua_script_path, string_list_t());
   auto result = false;
   try {
     if (runner.call("can_handle_command", program_exe)) {
@@ -281,7 +291,7 @@ bool lua_wrapper_t::can_handle_command(const std::string& program_exe,
 }
 
 std::string lua_wrapper_t::preprocess_source() {
-  if (m_runner.call("preprocess_source", m_args)) {
+  if (m_runner.call("preprocess_source")) {
     return m_runner.pop_string();
   } else {
     return program_wrapper_t::preprocess_source();
@@ -289,7 +299,7 @@ std::string lua_wrapper_t::preprocess_source() {
 }
 
 string_list_t lua_wrapper_t::get_relevant_arguments() {
-  if (m_runner.call("get_relevant_arguments", m_args)) {
+  if (m_runner.call("get_relevant_arguments")) {
     return m_runner.pop_string_list();
   } else {
     return program_wrapper_t::get_relevant_arguments();
@@ -305,7 +315,7 @@ std::map<std::string, std::string> lua_wrapper_t::get_relevant_env_vars() {
 }
 
 std::string lua_wrapper_t::get_program_id() {
-  if (m_runner.call("get_program_id", m_args)) {
+  if (m_runner.call("get_program_id")) {
     return m_runner.pop_string();
   } else {
     return program_wrapper_t::get_program_id();
@@ -313,7 +323,7 @@ std::string lua_wrapper_t::get_program_id() {
 }
 
 std::map<std::string, std::string> lua_wrapper_t::get_build_files() {
-  if (m_runner.call("get_build_files", m_args)) {
+  if (m_runner.call("get_build_files")) {
     return m_runner.pop_map();
   } else {
     return program_wrapper_t::get_build_files();
