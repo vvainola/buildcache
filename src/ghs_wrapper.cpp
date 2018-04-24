@@ -25,7 +25,8 @@
 #include <stdexcept>
 
 namespace bcache {
-ghs_wrapper_t::ghs_wrapper_t(cache_t& cache) : gcc_wrapper_t(cache) {
+ghs_wrapper_t::ghs_wrapper_t(const string_list_t& args, cache_t& cache)
+    : gcc_wrapper_t(args, cache) {
 }
 
 bool ghs_wrapper_t::can_handle_command(const std::string& program_exe) {
@@ -42,13 +43,13 @@ std::map<std::string, std::string> ghs_wrapper_t::get_relevant_env_vars() {
   return env_vars;
 }
 
-std::string ghs_wrapper_t::get_program_id(const string_list_t& args) {
+std::string ghs_wrapper_t::get_program_id() {
   // Getting a version string from the GHS compiler by passing "--version" is less than trivial. For
   // instance you need to pass valid -bsp and -os_dir arguments, and a dummy source file that does
   // not exist (otherwise it will fail or actually perform the compilation), and then the output is
   // sent to stderr instead of stdout.
 
   // Instead, we fall back to the default program ID logic.
-  return program_wrapper_t::get_program_id(args);
+  return program_wrapper_t::get_program_id();
 }
 }  // namespace bcache

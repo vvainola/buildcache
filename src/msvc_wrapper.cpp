@@ -70,7 +70,8 @@ string_list_t make_preprocessor_cmd(const string_list_t& args) {
 }
 }  // namespace
 
-msvc_wrapper_t::msvc_wrapper_t(cache_t& cache) : program_wrapper_t(cache) {
+msvc_wrapper_t::msvc_wrapper_t(const string_list_t& args, cache_t& cache)
+    : program_wrapper_t(args, cache) {
 }
 
 bool msvc_wrapper_t::can_handle_command(const std::string& program_exe) {
@@ -79,11 +80,11 @@ bool msvc_wrapper_t::can_handle_command(const std::string& program_exe) {
   return (cmd == "cl");
 }
 
-std::string msvc_wrapper_t::preprocess_source(const string_list_t& args) {
+std::string msvc_wrapper_t::preprocess_source() {
   // Check if this is a compilation command that we support.
   auto is_object_compilation = false;
   auto has_object_output = false;
-  for (const auto& arg : args) {
+  for (const auto& arg : m_args) {
     if (arg_equals(arg, "c")) {
       is_object_compilation = true;
     } else if (arg_starts_with(arg, "Fo") && (file::get_extension(arg) == ".obj")) {
@@ -99,7 +100,7 @@ std::string msvc_wrapper_t::preprocess_source(const string_list_t& args) {
   }
 
   // Run the preprocessor step.
-  const auto preprocessor_args = make_preprocessor_cmd(args);
+  const auto preprocessor_args = make_preprocessor_cmd(m_args);
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
     throw std::runtime_error("Preprocessing command was unsuccessful.");
@@ -109,15 +110,15 @@ std::string msvc_wrapper_t::preprocess_source(const string_list_t& args) {
   return result.std_out;
 }
 
-string_list_t msvc_wrapper_t::get_relevant_arguments(const string_list_t& args) {
+string_list_t msvc_wrapper_t::get_relevant_arguments() {
   string_list_t filtered_args;
 
   // The first argument is the compiler binary without the path.
-  filtered_args += file::get_file_part(args[0]);
+  filtered_args += file::get_file_part(m_args[0]);
 
   // Note: We always skip the first arg since we have handled it already.
   bool skip_next_arg = true;
-  for (const auto& arg : args) {
+  for (const auto& arg : m_args) {
     if (!skip_next_arg) {
       // Generally unwanted argument (things that will not change how we go from preprocessed code
       // to binary object files)?
@@ -153,12 +154,12 @@ std::map<std::string, std::string> msvc_wrapper_t::get_relevant_env_vars() {
   return env_vars;
 }
 
-std::string msvc_wrapper_t::get_program_id(const string_list_t& args) {
+std::string msvc_wrapper_t::get_program_id() {
   // TODO(m): Add things like executable file size too.
 
   // Get the version string for the compiler.
   string_list_t version_args;
-  version_args += args[0];
+  version_args += m_args[0];
   version_args += "2>&1";  // The version information is given on stderr.
   const auto result = sys::run(version_args);
   if (result.std_out.empty()) {
@@ -168,10 +169,10 @@ std::string msvc_wrapper_t::get_program_id(const string_list_t& args) {
   return result.std_out;
 }
 
-std::map<std::string, std::string> msvc_wrapper_t::get_build_files(const string_list_t& args) {
+std::map<std::string, std::string> msvc_wrapper_t::get_build_files() {
   std::map<std::string, std::string> files;
   auto found_object_file = false;
-  for (const auto& arg : args) {
+  for (const auto& arg : m_args) {
     if (arg_starts_with(arg, "Fo") && (file::get_extension(arg) == ".obj")) {
       if (found_object_file) {
         throw std::runtime_error("Only a single target object file can be specified.");

@@ -63,8 +63,10 @@ bool is_lua_script(const std::string& script_path) {
   return (bcache::lower_case(bcache::file::get_extension(script_path)) == ".lua");
 }
 
-std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(bcache::cache_t& cache,
-                                                                 const std::string& true_exe_path) {
+std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::string_list_t& args,
+                                                                 bcache::cache_t& cache) {
+  const auto& true_exe_path = args[0];
+
   std::unique_ptr<bcache::program_wrapper_t> wrapper;
 
   // Try Lua wrappers first (so you can override internal wrappers).
@@ -80,7 +82,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(bcache::cache_t
           if (bcache::lua_wrapper_t::can_handle_command(true_exe_path, script_path)) {
             bcache::debug::log(bcache::debug::DEBUG)
                 << "Found matching Lua wrapper for " << true_exe_path << ": " << script_path;
-            wrapper.reset(new bcache::lua_wrapper_t(cache, script_path));
+            wrapper.reset(new bcache::lua_wrapper_t(args, cache, script_path));
             break;
           }
         }
@@ -94,11 +96,11 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(bcache::cache_t
   // If no Lua wrappers were found, try built in wrappers.
   if (!wrapper) {
     if (bcache::gcc_wrapper_t::can_handle_command(true_exe_path)) {
-      wrapper.reset(new bcache::gcc_wrapper_t(cache));
+      wrapper.reset(new bcache::gcc_wrapper_t(args, cache));
     } else if (bcache::ghs_wrapper_t::can_handle_command(true_exe_path)) {
-      wrapper.reset(new bcache::ghs_wrapper_t(cache));
+      wrapper.reset(new bcache::ghs_wrapper_t(args, cache));
     } else if (bcache::msvc_wrapper_t::can_handle_command(true_exe_path)) {
-      wrapper.reset(new bcache::msvc_wrapper_t(cache));
+      wrapper.reset(new bcache::msvc_wrapper_t(args, cache));
     }
   }
 
@@ -190,12 +192,12 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(bcache::cache_t
 
       // Select a matching compiler wrapper.
       PERF_START(FIND_WRAPPER);
-      auto wrapper = find_suitable_wrapper(cache, true_exe_path);
+      auto wrapper = find_suitable_wrapper(args, cache);
       PERF_STOP(FIND_WRAPPER);
 
       // Run the wrapper, if any.
       if (wrapper) {
-        was_wrapped = wrapper->handle_command(args, return_code);
+        was_wrapped = wrapper->handle_command(return_code);
       } else {
         bcache::debug::log(bcache::debug::INFO) << "No suitable wrapper for " << true_exe_path;
       }

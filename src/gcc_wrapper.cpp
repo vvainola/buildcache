@@ -63,7 +63,8 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 }
 }  // namespace
 
-gcc_wrapper_t::gcc_wrapper_t(cache_t& cache) : program_wrapper_t(cache) {
+gcc_wrapper_t::gcc_wrapper_t(const string_list_t& args, cache_t& cache)
+    : program_wrapper_t(args, cache) {
 }
 
 bool gcc_wrapper_t::can_handle_command(const std::string& program_exe) {
@@ -73,11 +74,11 @@ bool gcc_wrapper_t::can_handle_command(const std::string& program_exe) {
          (cmd.find("clang++") != std::string::npos) || (cmd == "clang");
 }
 
-std::string gcc_wrapper_t::preprocess_source(const string_list_t& args) {
+std::string gcc_wrapper_t::preprocess_source() {
   // Check if this is a compilation command that we support.
   auto is_object_compilation = false;
   auto has_object_output = false;
-  for (auto arg : args) {
+  for (auto arg : m_args) {
     if (arg == "-c") {
       is_object_compilation = true;
     } else if (arg == "-o") {
@@ -92,7 +93,7 @@ std::string gcc_wrapper_t::preprocess_source(const string_list_t& args) {
 
   // Run the preprocessor step.
   const auto preprocessed_file = m_cache.get_temp_file(".i");
-  const auto preprocessor_args = make_preprocessor_cmd(args, preprocessed_file.path());
+  const auto preprocessor_args = make_preprocessor_cmd(m_args, preprocessed_file.path());
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
     throw std::runtime_error("Preprocessing command was unsuccessful.");
@@ -103,15 +104,15 @@ std::string gcc_wrapper_t::preprocess_source(const string_list_t& args) {
   return preprocessed_source;
 }
 
-string_list_t gcc_wrapper_t::get_relevant_arguments(const string_list_t& args) {
+string_list_t gcc_wrapper_t::get_relevant_arguments() {
   string_list_t filtered_args;
 
   // The first argument is the compiler binary without the path.
-  filtered_args += file::get_file_part(args[0]);
+  filtered_args += file::get_file_part(m_args[0]);
 
   // Note: We always skip the first arg since we have handled it already.
   bool skip_next_arg = true;
-  for (auto arg : args) {
+  for (auto arg : m_args) {
     if (!skip_next_arg) {
       // Does this argument specify a file (we don't want to hash those).
       const bool is_arg_plus_file_name =
@@ -144,12 +145,12 @@ std::map<std::string, std::string> gcc_wrapper_t::get_relevant_env_vars() {
   return env_vars;
 }
 
-std::string gcc_wrapper_t::get_program_id(const string_list_t& args) {
+std::string gcc_wrapper_t::get_program_id() {
   // TODO(m): Add things like executable file size too.
 
   // Get the version string for the compiler.
   string_list_t version_args;
-  version_args += args[0];
+  version_args += m_args[0];
   version_args += "--version";
   const auto result = sys::run(version_args);
   if (result.return_code != 0) {
@@ -159,16 +160,16 @@ std::string gcc_wrapper_t::get_program_id(const string_list_t& args) {
   return result.std_out;
 }
 
-std::map<std::string, std::string> gcc_wrapper_t::get_build_files(const string_list_t& args) {
+std::map<std::string, std::string> gcc_wrapper_t::get_build_files() {
   std::map<std::string, std::string> files;
   auto found_object_file = false;
-  for (size_t i = 0u; i < args.size(); ++i) {
+  for (size_t i = 0u; i < m_args.size(); ++i) {
     const auto next_idx = i + 1u;
-    if ((args[i] == "-o") && (next_idx < args.size())) {
+    if ((m_args[i] == "-o") && (next_idx < m_args.size())) {
       if (found_object_file) {
         throw std::runtime_error("Only a single target object file can be specified.");
       }
-      files["object"] = args[next_idx];
+      files["object"] = m_args[next_idx];
       found_object_file = true;
     }
   }

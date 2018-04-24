@@ -25,16 +25,16 @@
 namespace bcache {
 class gcc_wrapper_t : public program_wrapper_t {
 public:
-  gcc_wrapper_t(cache_t& cache);
+  gcc_wrapper_t(const string_list_t& args, cache_t& cache);
 
   static bool can_handle_command(const std::string& program_exe);
 
 private:
-  std::string preprocess_source(const string_list_t& args) override;
-  string_list_t get_relevant_arguments(const string_list_t& args) override;
+  std::string preprocess_source() override;
+  string_list_t get_relevant_arguments() override;
   std::map<std::string, std::string> get_relevant_env_vars() override;
-  std::string get_program_id(const string_list_t& args) override;
-  std::map<std::string, std::string> get_build_files(const string_list_t& args) override;
+  std::string get_program_id() override;
+  std::map<std::string, std::string> get_build_files() override;
 };
 }  // namespace bcache
 #endif  // BUILDCACHE_GCC_WRAPPER_HPP_

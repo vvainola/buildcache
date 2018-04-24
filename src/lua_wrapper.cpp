@@ -234,8 +234,10 @@ std::map<std::string, std::string> lua_wrapper_t::runner_t::pop_map(bool keep_va
   throw std::runtime_error(message);
 }
 
-lua_wrapper_t::lua_wrapper_t(cache_t& cache, const std::string& lua_script_path)
-    : program_wrapper_t(cache), m_runner(lua_script_path) {
+lua_wrapper_t::lua_wrapper_t(const string_list_t& args,
+                             cache_t& cache,
+                             const std::string& lua_script_path)
+    : program_wrapper_t(args, cache), m_runner(lua_script_path) {
 }
 
 bool lua_wrapper_t::can_handle_command(const std::string& program_exe,
@@ -254,19 +256,19 @@ bool lua_wrapper_t::can_handle_command(const std::string& program_exe,
   return result;
 }
 
-std::string lua_wrapper_t::preprocess_source(const string_list_t& args) {
-  if (m_runner.call("preprocess_source", args)) {
+std::string lua_wrapper_t::preprocess_source() {
+  if (m_runner.call("preprocess_source", m_args)) {
     return m_runner.pop_string();
   } else {
-    return program_wrapper_t::preprocess_source(args);
+    return program_wrapper_t::preprocess_source();
   }
 }
 
-string_list_t lua_wrapper_t::get_relevant_arguments(const string_list_t& args) {
-  if (m_runner.call("get_relevant_arguments", args)) {
+string_list_t lua_wrapper_t::get_relevant_arguments() {
+  if (m_runner.call("get_relevant_arguments", m_args)) {
     return m_runner.pop_string_list();
   } else {
-    return program_wrapper_t::get_relevant_arguments(args);
+    return program_wrapper_t::get_relevant_arguments();
   }
 }
 
@@ -278,19 +280,19 @@ std::map<std::string, std::string> lua_wrapper_t::get_relevant_env_vars() {
   }
 }
 
-std::string lua_wrapper_t::get_program_id(const string_list_t& args) {
-  if (m_runner.call("get_program_id", args)) {
+std::string lua_wrapper_t::get_program_id() {
+  if (m_runner.call("get_program_id", m_args)) {
     return m_runner.pop_string();
   } else {
-    return program_wrapper_t::get_program_id(args);
+    return program_wrapper_t::get_program_id();
   }
 }
 
-std::map<std::string, std::string> lua_wrapper_t::get_build_files(const string_list_t& args) {
-  if (m_runner.call("get_build_files", args)) {
+std::map<std::string, std::string> lua_wrapper_t::get_build_files() {
+  if (m_runner.call("get_build_files", m_args)) {
     return m_runner.pop_map();
   } else {
-    return program_wrapper_t::get_build_files(args);
+    return program_wrapper_t::get_build_files();
   }
 }
 }  // namespace bcache

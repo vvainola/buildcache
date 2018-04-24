@@ -29,7 +29,7 @@ typedef struct lua_State lua_State;
 namespace bcache {
 class lua_wrapper_t : public program_wrapper_t {
 public:
-  lua_wrapper_t(cache_t& cache, const std::string& lua_script_path);
+  lua_wrapper_t(const string_list_t& args, cache_t& cache, const std::string& lua_script_path);
 
   static bool can_handle_command(const std::string& program_exe,
                                  const std::string& lua_script_path);
@@ -57,11 +57,11 @@ private:
     std::string m_script_path;
   };
 
-  std::string preprocess_source(const string_list_t& args) override;
-  string_list_t get_relevant_arguments(const string_list_t& args) override;
+  std::string preprocess_source() override;
+  string_list_t get_relevant_arguments() override;
   std::map<std::string, std::string> get_relevant_env_vars() override;
-  std::string get_program_id(const string_list_t& args) override;
-  std::map<std::string, std::string> get_build_files(const string_list_t& args) override;
+  std::string get_program_id() override;
+  std::map<std::string, std::string> get_build_files() override;
 
   runner_t m_runner;
 };
