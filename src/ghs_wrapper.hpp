@@ -30,7 +30,7 @@ class ghs_wrapper_t : public gcc_wrapper_t {
 public:
   ghs_wrapper_t(const string_list_t& args, cache_t& cache);
 
-  static bool can_handle_command(const std::string& program_exe);
+  bool can_handle_command() override;
 
 private:
   std::map<std::string, std::string> get_relevant_env_vars() override;

@@ -172,46 +172,6 @@ bool lua_wrapper_t::runner_t::call(const std::string& func) {
   return true;
 }
 
-bool lua_wrapper_t::runner_t::call(const std::string& func, const std::string& arg) {
-  init_lua_state();
-
-  lua_getglobal(m_state, func.c_str());
-  if (!lua_isfunction(m_state, -1)) {
-    debug::log(debug::ERROR) << "Missing Lua function: " << func;
-    return false;
-  }
-  (void)lua_pushlstring(m_state, arg.c_str(), arg.size());
-  PERF_START(LUA_RUN);
-  const auto success = (lua_pcall(m_state, 1, 1, 0) == 0);
-  PERF_STOP(LUA_RUN);
-  if (!success) {
-    bail("Lua error");
-  }
-  return true;
-}
-
-bool lua_wrapper_t::runner_t::call(const std::string& func, const string_list_t& args) {
-  init_lua_state();
-
-  lua_getglobal(m_state, func.c_str());
-  if (!lua_isfunction(m_state, -1)) {
-    debug::log(debug::DEBUG) << "Missing Lua function: " << func;
-    return false;
-  }
-  lua_newtable(m_state);
-  for (size_t i = 0; i < args.size(); ++i) {
-    (void)lua_pushlstring(m_state, args[i].c_str(), args[i].size());
-    lua_rawseti(m_state, -2, static_cast<lua_Integer>(i));
-  }
-  PERF_START(LUA_RUN);
-  const auto success = (lua_pcall(m_state, 1, 1, 0) == 0);
-  PERF_STOP(LUA_RUN);
-  if (!success) {
-    bail("Lua error");
-  }
-  return true;
-}
-
 bool lua_wrapper_t::runner_t::pop_bool() {
   assert_state_initialized(m_state);
   if (lua_isboolean(m_state, -1) == 0) {
@@ -274,13 +234,11 @@ lua_wrapper_t::lua_wrapper_t(const string_list_t& args,
     : program_wrapper_t(args, cache), m_runner(lua_script_path, args) {
 }
 
-bool lua_wrapper_t::can_handle_command(const std::string& program_exe,
-                                       const std::string& lua_script_path) {
-  runner_t runner(lua_script_path, string_list_t());
+bool lua_wrapper_t::can_handle_command() {
   auto result = false;
   try {
-    if (runner.call("can_handle_command", program_exe)) {
-      result = runner.pop_bool();
+    if (m_runner.call("can_handle_command")) {
+      result = m_runner.pop_bool();
     }
   } catch (...) {
     // If anything went wrong when running this function, we can not be trusted to handle this

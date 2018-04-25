@@ -79,12 +79,15 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
         const auto script_path = file_info.path();
         if ((!file_info.is_dir()) && is_lua_script(script_path)) {
           // Check if the given wrapper can handle this command (first match wins).
-          if (bcache::lua_wrapper_t::can_handle_command(true_exe_path, script_path)) {
+          wrapper.reset(new bcache::lua_wrapper_t(args, cache, script_path));
+          if (wrapper->can_handle_command()) {
             bcache::debug::log(bcache::debug::DEBUG)
                 << "Found matching Lua wrapper for " << true_exe_path << ": " << script_path;
-            wrapper.reset(new bcache::lua_wrapper_t(args, cache, script_path));
             break;
+          } else {
+            wrapper = nullptr;
           }
+
         }
       }
     }
@@ -95,12 +98,15 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
 
   // If no Lua wrappers were found, try built in wrappers.
   if (!wrapper) {
-    if (bcache::gcc_wrapper_t::can_handle_command(true_exe_path)) {
-      wrapper.reset(new bcache::gcc_wrapper_t(args, cache));
-    } else if (bcache::ghs_wrapper_t::can_handle_command(true_exe_path)) {
+    wrapper.reset(new bcache::gcc_wrapper_t(args, cache));
+    if (!wrapper->can_handle_command()) {
       wrapper.reset(new bcache::ghs_wrapper_t(args, cache));
-    } else if (bcache::msvc_wrapper_t::can_handle_command(true_exe_path)) {
-      wrapper.reset(new bcache::msvc_wrapper_t(args, cache));
+      if (!wrapper->can_handle_command()) {
+        wrapper.reset(new bcache::msvc_wrapper_t(args, cache));
+        if (!wrapper->can_handle_command()) {
+          wrapper = nullptr;
+        }
+      }
     }
   }
 

@@ -29,9 +29,9 @@ ghs_wrapper_t::ghs_wrapper_t(const string_list_t& args, cache_t& cache)
     : gcc_wrapper_t(args, cache) {
 }
 
-bool ghs_wrapper_t::can_handle_command(const std::string& program_exe) {
+bool ghs_wrapper_t::can_handle_command() {
   // Is this the right compiler?
-  const auto cmd = lower_case(file::get_file_part(program_exe, false));
+  const auto cmd = lower_case(file::get_file_part(m_args[0], false));
   return (cmd.find("ccarm") != std::string::npos) || (cmd.find("cxarm") != std::string::npos) ||
          (cmd.find("ccthumb") != std::string::npos) || (cmd.find("cxthumb") != std::string::npos) ||
          (cmd.find("ccintarm") != std::string::npos) || (cmd.find("cxintarm") != std::string::npos);

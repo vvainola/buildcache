@@ -31,9 +31,7 @@ class lua_wrapper_t : public program_wrapper_t {
 public:
   lua_wrapper_t(const string_list_t& args, cache_t& cache, const std::string& lua_script_path);
 
-  // TODO(m): Make this a non-static member to avoid initializing/loading the Lua script twice.
-  static bool can_handle_command(const std::string& program_exe,
-                                 const std::string& lua_script_path);
+  bool can_handle_command() override;
 
 private:
   // A helper class for managing the Lua state.
@@ -43,8 +41,6 @@ private:
     ~runner_t();
 
     bool call(const std::string& func);
-    bool call(const std::string& func, const std::string& arg);
-    bool call(const std::string& func, const string_list_t& arg);
 
     bool pop_bool();
     std::string pop_string(bool keep_value_on_the_stack = false);

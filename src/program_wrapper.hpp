@@ -36,6 +36,10 @@ public:
   /// @returns true if the command was recognized and handled.
   bool handle_command(int& return_code);
 
+  /// @brief Check if this class implements a wrapper for the given command.
+  /// @returns true if this wrapper can handle the command.
+  virtual bool can_handle_command() = 0;
+
 protected:
   // This constructor is called by derived classes.
   program_wrapper_t(const string_list_t &args, cache_t& cache);

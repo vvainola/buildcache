@@ -78,9 +78,9 @@ Here is a minimal Lua example that caches the output of the "echo" command (yes,
 ```lua
 require_std("string")
 
-function can_handle_command (compiler_exe)
+function can_handle_command ()
   -- Is the "echo" command being invoked?
-  return compiler_exe:lower():find("echo") ~= nil
+  return ARGS[0]:lower():find("echo") ~= nil
 end
 
 function preprocess_source ()
@@ -113,7 +113,7 @@ The following methods can be implemented (see [program_wrapper.hpp](src/program_
 
 | Function | Returns | Default |
 | --- | --- | --- |
-| can_handle_command (program_exe) | Can the wrapper handle this program? | - |
+| can_handle_command () | Can the wrapper handle this program? | - |
 | preprocess_source () | The preprocessed source code (e.g. for C/C++) | An empty string |
 | get_relevant_arguments () | Arguments that can affect the build output | All arguments |
 | get_relevant_env_vars () | Environment variables that can affect the build output | An empty table |

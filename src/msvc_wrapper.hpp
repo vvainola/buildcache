@@ -27,7 +27,7 @@ class msvc_wrapper_t : public program_wrapper_t {
 public:
   msvc_wrapper_t(const string_list_t& args, cache_t& cache);
 
-  static bool can_handle_command(const std::string& program_exe);
+  bool can_handle_command() override;
 
 private:
   std::string preprocess_source() override;
