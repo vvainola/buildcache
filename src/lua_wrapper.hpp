@@ -47,6 +47,10 @@ private:
     string_list_t pop_string_list(bool keep_value_on_the_stack = false);
     std::map<std::string, std::string> pop_map(bool keep_value_on_the_stack = false);
 
+    const std::string& script() const {
+      return m_script;
+    }
+
   private:
     void init_lua_state();
     void setup_lua_libs_and_globals();
@@ -55,6 +59,7 @@ private:
     lua_State* m_state = nullptr;
     const std::string m_script_path;
     const string_list_t m_args;
+    std::string m_script;
   };
 
   std::string preprocess_source() override;

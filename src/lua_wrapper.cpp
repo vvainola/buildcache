@@ -28,6 +28,7 @@ extern "C" {
 #include <lualib.h>
 }
 
+#include <regex>
 #include <stdexcept>
 
 namespace bcache {
@@ -79,10 +80,38 @@ void assert_state_initialized(const lua_State* state) {
     throw std::runtime_error("Lua state has not been initialized (should not happen)!");
   }
 }
+
+bool is_failed_prgmatch(const std::string& script_str, const std::string& program_path) {
+  // Extract the prgmatch statement (if any).
+  if (script_str.substr(0, 9) != "-- match(") {
+    return false;
+  }
+  const auto end_expr_pos = script_str.find_last_of(')', script_str.find('\n'));
+  if (end_expr_pos == std::string::npos) {
+    return false;
+  }
+  const auto expr = script_str.substr(9, end_expr_pos - 9);
+
+  // Do a regular expression match.
+  const auto program_exe = file::get_file_part(program_path, false);
+  const std::regex expr_regex(expr);
+  const auto match = std::regex_match(program_exe, expr_regex);
+
+  debug::log(debug::DEBUG) << "Evaluating regex \"" << expr << "\": " << (!match ? "no " : "")
+                           << "match";
+
+  return !match;
+}
 }  // namespace
 
 lua_wrapper_t::runner_t::runner_t(const std::string& script_path, const string_list_t& args)
     : m_script_path(script_path), m_args(args) {
+  try {
+    m_script = file::read(m_script_path);
+  } catch(...) {
+    // We'll leave m_script empty and throw an exception later (we don't want to throw in the
+    // constructor).
+  }
 }
 
 lua_wrapper_t::runner_t::~runner_t() {
@@ -97,6 +126,11 @@ void lua_wrapper_t::runner_t::init_lua_state() {
     return;
   }
 
+  // If the script file failed to load, we can't execute.
+  if (m_script.empty()) {
+    throw std::runtime_error("Missing script file.");
+  }
+
   // Init Lua.
   PERF_START(LUA_INIT);
   m_state = luaL_newstate();
@@ -104,10 +138,10 @@ void lua_wrapper_t::runner_t::init_lua_state() {
   setup_lua_libs_and_globals();
   PERF_STOP(LUA_INIT);
 
-  // Load the program file.
+  // Load the script.
   {
     PERF_START(LUA_LOAD_SCRIPT);
-    const auto success = (luaL_loadfile(m_state, m_script_path.c_str()) == 0);
+    const auto success = (luaL_loadstring(m_state, m_script.c_str()) == 0);
     PERF_STOP(LUA_LOAD_SCRIPT);
     if (!success) {
       bail("Couldn't load file.");
@@ -149,7 +183,7 @@ void lua_wrapper_t::runner_t::setup_lua_libs_and_globals() {
 }
 
 [[noreturn]] void lua_wrapper_t::runner_t::bail(const std::string& message) {
-  debug::log(debug::ERROR) << lua_tostring(m_state, -1);
+  debug::log(debug::ERROR) << m_script_path << " " << lua_tostring(m_state, -1);
   lua_close(m_state);
   m_state = nullptr;
   throw std::runtime_error(message);
@@ -160,9 +194,9 @@ bool lua_wrapper_t::runner_t::call(const std::string& func) {
 
   lua_getglobal(m_state, func.c_str());
   if (!lua_isfunction(m_state, -1)) {
-    debug::log(debug::ERROR) << "Missing Lua function: " << func;
     return false;
   }
+  debug::log(debug::DEBUG) << "Calling Lua function: " << func;
   PERF_START(LUA_RUN);
   const auto success = (lua_pcall(m_state, 0, 1, 0) == 0);
   PERF_STOP(LUA_RUN);
@@ -237,8 +271,14 @@ lua_wrapper_t::lua_wrapper_t(const string_list_t& args,
 bool lua_wrapper_t::can_handle_command() {
   auto result = false;
   try {
-    if (m_runner.call("can_handle_command")) {
-      result = m_runner.pop_bool();
+    // First check: regex match against program name.
+    if (!is_failed_prgmatch(m_runner.script(), m_args[0])) {
+      // Second check: Call can_handle_command() if is defined.
+      if (m_runner.call("can_handle_command")) {
+        result = m_runner.pop_bool();
+      } else {
+        result = true;
+      }
     }
   } catch (...) {
     // If anything went wrong when running this function, we can not be trusted to handle this
