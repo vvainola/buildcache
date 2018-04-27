@@ -27,6 +27,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -202,14 +203,25 @@ run_result_t run(const string_list_t& args, const bool quiet) {
   auto* fp = _wpopen(utf8_to_ucs2(extra_quoted_cmd).c_str(), L"r");
   if (fp != nullptr) {
     // Collect stdout until the pipe is closed.
-    char buf[1000];
-    while (fgets(buf, sizeof(buf), fp)) {
-      if (!quiet) {
-        std::cout << buf;
+    const size_t BUF_SIZE = 2048;
+    std::vector<char> buf(BUF_SIZE);
+    while (feof(fp) == 0) {
+      const auto bytes_read = fread(buf.data(), 1, buf.size(), fp);
+      if (bytes_read > 0u) {
+        if (!quiet) {
+          std::cout.write(buf.data(), static_cast<std::streamsize>(bytes_read));
+        }
+        result.std_out += std::string(buf.data(), bytes_read);
       }
-      result.std_out += std::string(buf);
     }
-    result.return_code = _pclose(fp);
+
+    // Close the pipe and get the exit status.
+    const auto status = _pclose(fp);
+    if (status != -1) {
+      result.return_code = status;
+    } else {
+      result.return_code = 1;
+    }
     successfully_launched_program = true;
   }
 #endif
@@ -218,14 +230,27 @@ run_result_t run(const string_list_t& args, const bool quiet) {
   auto* fp = popen(cmd.c_str(), "r");
   if (fp != nullptr) {
     // Collect stdout until the pipe is closed.
-    char buf[1000];
-    while (fgets(buf, sizeof(buf), fp)) {
-      if (!quiet) {
-        std::cout << buf;
+    const size_t BUF_SIZE = 2048;
+    std::vector<char> buf(BUF_SIZE);
+    while (feof(fp) == 0) {
+      const auto bytes_read = fread(buf.data(), 1, buf.size(), fp);
+      if (bytes_read > 0u) {
+        if (!quiet) {
+          std::cout.write(buf.data(), static_cast<std::streamsize>(bytes_read));
+        }
+        result.std_out += std::string(buf.data(), bytes_read);
       }
-      result.std_out += std::string(buf);
     }
-    result.return_code = pclose(fp);
+
+    // Close the pipe and get the exit status.
+    const auto status = pclose(fp);
+    if (WIFEXITED(status)) {
+      result.return_code = WEXITSTATUS(status);
+    } else if (WIFSIGNALED(status)) {
+      result.return_code = WTERMSIG(status);
+    } else {
+      result.return_code = 1;
+    }
     successfully_launched_program = true;
   }
 #endif
