@@ -74,7 +74,7 @@ All program arguments are available in the global `ARGS` array (an array of stri
 
 Here is a minimal Lua example that caches the output of the "echo" command (yes, it's fairly pointless).
 
-**echo.lua**
+**echo_wrapper.lua**
 ```lua
 require_std("string")
 
@@ -109,11 +109,13 @@ function get_build_files ()
 end
 ```
 
+See [lua-examples](lua-examples/) for more examples.
+
 The following methods can be implemented (see [program_wrapper.hpp](src/program_wrapper.hpp) for a more detailed documentation):
 
 | Function | Returns | Default |
 | --- | --- | --- |
-| can_handle_command () | Can the wrapper handle this program? | - |
+| can_handle_command () | Can the wrapper handle this program? | true |
 | preprocess_source () | The preprocessed source code (e.g. for C/C++) | An empty string |
 | get_relevant_arguments () | Arguments that can affect the build output | All arguments |
 | get_relevant_env_vars () | Environment variables that can affect the build output | An empty table |
