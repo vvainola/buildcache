@@ -177,7 +177,7 @@ void lua_wrapper_t::runner_t::setup_lua_libs_and_globals() {
   lua_newtable(m_state);
   for (size_t i = 0; i < m_args.size(); ++i) {
     (void)lua_pushlstring(m_state, m_args[i].c_str(), m_args[i].size());
-    lua_rawseti(m_state, -2, static_cast<lua_Integer>(i));
+    lua_rawseti(m_state, -2, static_cast<lua_Integer>(i + 1));
   }
   lua_setglobal(m_state, "ARGS");
 }

@@ -65,3 +65,12 @@ add_library(lua
   )
 target_include_directories(lua PUBLIC ${LUA_DIR}/src)
 
+if(WIN32)
+  target_compile_definitions(lua PRIVATE LUA_USE_WINDOWS)
+elseif(APPLE)
+  target_compile_definitions(lua PRIVATE LUA_USE_MACOSX)
+  target_link_libraries(lua ${CMAKE_DL_LIBS})
+elseif(UNIX)
+  target_compile_definitions(lua PRIVATE LUA_USE_LINUX)
+  target_link_libraries(lua ${CMAKE_DL_LIBS})
+endif()
