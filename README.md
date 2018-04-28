@@ -7,7 +7,8 @@ It is similar in spirit to [ccache](https://ccache.samba.org/).
 
 ## Building
 
-Use [CMake](https://cmake.org/) and your favorite C++ compiler to build the BuildCache program:
+Use [CMake](https://cmake.org/) and your favorite C++ compiler to build the
+BuildCache program:
 
 ```bash
 $ mkdir build
@@ -46,8 +47,9 @@ distributed compilation. To use icecream you can set the environment variable
 $ BUILDCACHE_PREFIX=/usr/bin/icecc buildcache g++ -c -O2 hello.cpp -o hello.o
 ```
 
-Note: At the time of writing there is a [bug](https://github.com/icecc/icecream/issues/390)
-in ICECC that may disable distributed compilation when ICECC is invoked via BuildCache.
+Note: At the time of writing there is a
+[bug](https://github.com/icecc/icecream/issues/390) in ICECC that may disable
+distributed compilation when ICECC is invoked via BuildCache.
 
 ## Supported compilers and languages
 
@@ -64,54 +66,28 @@ New backends are relatively easy to add, both in C++ and in Lua (see below).
 
 ## Using custom Lua plugins
 
-It is possible to extend the capabilities of BuildCache with [Lua](https://www.lua.org/).
+It is possible to extend the capabilities of BuildCache with
+[Lua](https://www.lua.org/). See [lua-examples](lua-examples/) for some examples
+of Lua wrappers.
 
-BuildCache first searches for Lua scripts in the paths given in the environment variable `BUILDCACHE_LUA_PATH` (colon separated on POSIX systems, and semicolon separated on Windows), and then continues searching in `$BUILDCACHE_DIR/lua`. If no matching script file was found, BuildCache falls back to the built in compiler wrappers (as listed above).
+BuildCache first searches for Lua scripts in the paths given in the environment
+variable `BUILDCACHE_LUA_PATH` (colon separated on POSIX systems, and semicolon
+separated on Windows), and then continues searching in `$BUILDCACHE_DIR/lua`.
+If no matching script file was found, BuildCache falls back to the built in
+compiler wrappers (as listed above).
 
-**Note:** To use Lua standard libraries (`coroutine`, `debug`, `io`, `math`, `os`, `package`, `string`, `table` or `utf8`), you must first load them by calling `require_std(name)`. For convenience it is possible to load all standard libraries with `require_std("*")`, but beware that it is slower than to load only the libraries that are actually used.
+**Note:** To use Lua standard libraries (`coroutine`, `debug`, `io`, `math`,
+`os`, `package`, `string`, `table` or `utf8`), you must first load them by
+calling `require_std(name)`. For convenience it is possible to load all standard
+libraries with `require_std("*")`, but beware that it is slower than to load
+only the libraries that are actually used.
 
-All program arguments are available in the global `ARGS` array (an array of strings).
+All program arguments are available in the global `ARGS` array (an array of
+strings).
 
-Here is a minimal Lua example that caches the output of the "echo" command (yes, it's fairly pointless).
-
-**echo_wrapper.lua**
-```lua
-require_std("string")
-
-function can_handle_command ()
-  -- Is the "echo" command being invoked?
-  return ARGS[0]:lower():find("echo") ~= nil
-end
-
-function preprocess_source ()
-  -- We do not generate a "preprocessed source".
-  return ''
-end
-
-function get_relevant_arguments ()
-  -- Return the arguments that may affect the result (i.e. all arguments).
-  return ARGS
-end
-
-function get_relevant_env_vars ()
-  -- There are no environment variables that affect the program result.
-  return {}
-end
-
-function get_program_id ()
-  -- We use the full path to the executable as a program identifier.
-  return ARGS[0]
-end
-
-function get_build_files ()
-  -- This command will not produce any output files to be cached.
-  return {}
-end
-```
-
-See [lua-examples](lua-examples/) for more examples.
-
-The following methods can be implemented (see [program_wrapper.hpp](src/program_wrapper.hpp) for a more detailed documentation):
+The following methods can be implemented (see
+[program_wrapper.hpp](src/program_wrapper.hpp) for a more detailed
+documentation):
 
 | Function | Returns | Default |
 | --- | --- | --- |
