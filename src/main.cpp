@@ -144,7 +144,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
 }
 
 [[noreturn]] void print_version_and_exit() {
-  std::cout << "BuildCache version 0.1-dev\n";
+  std::cout << "BuildCache version 0.2-dev\n";
   std::exit(0);
 }
 
