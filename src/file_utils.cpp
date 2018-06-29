@@ -179,7 +179,26 @@ std::string append_path(const std::string& path, const char* append) {
 
 std::string get_extension(const std::string& path) {
   const auto pos = path.rfind(".");
+
+  // Check that we did not pick up an extension before the last path separator.
+  const auto sep_pos = get_last_path_separator_pos(path);
+  if ((pos != std::string::npos) && (sep_pos != std::string::npos) && (pos < sep_pos)) {
+    return std::string();
+  }
+
   return (pos != std::string::npos) ? path.substr(pos) : std::string();
+}
+
+std::string change_extension(const std::string& path, const std::string& new_ext) {
+  const auto pos = path.rfind(".");
+
+  // Check that we did not pick up an extension before the last path separator.
+  const auto sep_pos = get_last_path_separator_pos(path);
+  if ((pos != std::string::npos) && (sep_pos != std::string::npos) && (pos < sep_pos)) {
+    return path;
+  }
+
+  return (pos != std::string::npos) ? (path.substr(0, pos) + new_ext) : path;
 }
 
 std::string get_file_part(const std::string& path, const bool include_ext) {

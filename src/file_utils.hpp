@@ -111,6 +111,12 @@ std::string append_path(const std::string& path, const char* append);
 /// the file does not have an extension.
 std::string get_extension(const std::string& path);
 
+/// @brief Change the file extension of a path.
+/// @param path The path to a file.
+/// @param new_ext The new file extension (including the leading period) for the file.
+/// @returns The path to the file that has the new file extension.
+std::string change_extension(const std::string& path, const std::string& new_ext);
+
 /// @brief Get the file name part of a path.
 /// @param path The path to a file.
 /// @param include_ext Include the file extension in the file name.
