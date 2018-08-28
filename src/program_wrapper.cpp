@@ -39,6 +39,9 @@ bool program_wrapper_t::handle_command(int& return_code) {
   return_code = 1;
 
   try {
+    // Begin by resolving any response files.
+    resolve_args();
+
     // Start a hash.
     hasher_t hasher;
 
@@ -140,6 +143,10 @@ bool program_wrapper_t::handle_command(int& return_code) {
 // Default wrapper interface implementation. Wrappers are expected to override the parts that are
 // relevant.
 //--------------------------------------------------------------------------------------------------
+
+void program_wrapper_t::resolve_args() {
+  // Default: Do nothing.
+}
 
 std::string program_wrapper_t::preprocess_source() {
   // Default: There is no prepocessing step.

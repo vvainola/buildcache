@@ -92,6 +92,7 @@ documentation):
 | Function | Returns | Default |
 | --- | --- | --- |
 | can_handle_command () | Can the wrapper handle this program? | true |
+| resolve_response_files () | | |
 | preprocess_source () | The preprocessed source code (e.g. for C/C++) | An empty string |
 | get_relevant_arguments () | Arguments that can affect the build output | All arguments |
 | get_relevant_env_vars () | Environment variables that can affect the build output | An empty table |

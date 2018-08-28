@@ -288,6 +288,12 @@ bool lua_wrapper_t::can_handle_command() {
   return result;
 }
 
+void lua_wrapper_t::resolve_args() {
+  if (!m_runner.call("resolve_args")) {
+    program_wrapper_t::resolve_args();
+  }
+}
+
 std::string lua_wrapper_t::preprocess_source() {
   if (m_runner.call("preprocess_source")) {
     return m_runner.pop_string();

@@ -44,6 +44,19 @@ protected:
   // This constructor is called by derived classes.
   program_wrapper_t(const string_list_t &args, cache_t& cache);
 
+  /// @brief Resolve arguments on the command line.
+  ///
+  /// This method is called after @c can_handle_command, but before calling other methods that rely
+  /// on the command line arguments. This gives a wrapper the opportunity to resolve special
+  /// arguments so that they can be properly interpretade by later steps.
+  ///
+  /// The primary use case of this method is to implement support for so called response files,
+  /// which contain further command line arguments (this is common on Windows to work around the
+  /// relativlely small command line length limit).
+  ///
+  /// @throws runtime_error if the request could not be completed.
+  virtual void resolve_args();
+
   /// @brief Generate the preprocessed source text.
   /// @returns the preprocessed source code file as a string, or an empty string if the operation
   /// failed.
