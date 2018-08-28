@@ -59,6 +59,64 @@ local function starts_with (s, substr)
   return s:sub(1, #substr) == substr
 end
 
+local function unescape_arg (arg)
+  if (arg:len() > 1) and (arg[1] == "\"") and (arg[arg:len()] == "\"") then
+    arg = arg:sub(2, -1)
+  end
+  return arg:gsub("\\\"", "\"")
+end
+
+-- TODO(m): Move this to C++ and expose it to both C++ and Lua.
+local function extract_args (cmd)
+  -- Convert the escaped command string to an argument list.
+  cmd = cmd:gsub("\n", " ")
+  local args = {}
+  local arg
+  local is_inside_quote = false
+  local last_char
+  for i = 1, #cmd do
+    local char = cmd:sub(i, i)
+    local is_space = (char == " ")
+    local is_quote = (char == "\"") and (last_char ~= "\\")
+
+    if is_quote then
+      is_inside_quote = not is_inside_quote
+    end
+
+    local arg_ended = false
+    if arg == nil then
+      -- Start of new argument?
+      if not is_space then
+        arg = char
+      end
+    else
+      if (is_inside_quote or (not is_space)) and (not is_quote) then
+        arg = arg .. char
+      end
+
+      -- End of argument?
+      if is_space and (not is_inside_quote) then
+        arg_ended = true
+      end
+    end
+
+    if arg_ended then
+      arg = unescape_arg(arg)
+      table.insert(args, arg)
+      arg = nil
+    end
+
+    last_char = char
+  end
+
+  if arg ~= nil then
+    arg = unescape_arg(arg)
+    table.insert(args, arg)
+  end
+
+  return args
+end
+
 local function make_preprocessor_cmd (args, preprocessed_file)
   local preprocess_args = {}
 
@@ -86,9 +144,45 @@ local function make_preprocessor_cmd (args, preprocessed_file)
 end
 
 
+local function append_response_file (args, file_name)
+  -- Load the response file into a string.
+  local f = assert(io.open(file_name, "rb"))
+  local args_string = f:read("*all")
+  f:close()
+
+  -- Split the arguments.
+  local new_args = extract_args(args_string)
+  for i, arg in ipairs(new_args) do
+    table.insert(args, arg)
+  end
+
+  return args
+end
+
 -------------------------------------------------------------------------------
 -- Wrapper interface implementation.
 -------------------------------------------------------------------------------
+
+function resolve_args ()
+  -- Iterate over all args and load any response files that we encounter.
+  local new_args = {}
+  for i, arg in ipairs(ARGS) do
+    local response_file
+    if starts_with(arg, "--cmd_file=") then
+      response_file = arg:sub(12)
+    elseif starts_with(arg, "-@") then
+      response_file = arg:sub(3)
+    end
+    if response_file ~= nil then
+      new_args = append_response_file(new_args, response_file)
+    else
+      table.insert(new_args, arg)
+    end
+  end
+
+  -- Replace the old args with the new args.
+  ARGS = new_args
+end
 
 function preprocess_source ()
   -- Check if this is a compilation command that we support.
