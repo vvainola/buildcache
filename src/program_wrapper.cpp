@@ -40,7 +40,9 @@ bool program_wrapper_t::handle_command(int& return_code) {
 
   try {
     // Begin by resolving any response files.
+    PERF_START(RESOLVE_ARGS);
     resolve_args();
+    PERF_STOP(RESOLVE_ARGS);
 
     // Start a hash.
     hasher_t hasher;
