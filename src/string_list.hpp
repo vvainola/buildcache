@@ -133,11 +133,12 @@ private:
   static std::string escape_arg(const std::string& arg) {
     std::string escaped_arg;
 
-    // Replace all occurances of " with \".
     auto has_space = false;
     for (auto c : arg) {
       if (c == '"') {
         escaped_arg += "\\\"";
+      } else if (c == '\\') {
+        escaped_arg += "\\\\";
       } else {
         if (c == ' ') {
           has_space = true;
