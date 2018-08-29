@@ -8,47 +8,7 @@ require_std("io")
 require_std("os")
 require_std("string")
 require_std("table")
-
-
--------------------------------------------------------------------------------
--- General helper functions (the corresponding C++ functions in BuildCache
--- should probably be exposed to Lua instead of re-implementing them in Lua).
--------------------------------------------------------------------------------
-
-local function make_escaped_cmd (args)
-  -- Convert the argument list to a command string with each argument escaped.
-  local cmd = ""
-  for i, arg in ipairs(args) do
-    arg = arg:gsub("\"", "\\\"")
-    if arg:find(" ") then
-      arg = "\"" .. arg .. "\""
-    end
-    if cmd:len() > 0 then
-      cmd = cmd .. " "
-    end
-    cmd = cmd .. arg
-  end
-  return cmd
-end
-
-local function run (args)
-  -- Run the command.
-  local file = assert(io.popen(make_escaped_cmd(args), "r"))
-  local result = {}
-  result.std_out = file:read("*all")
-  result.std_err = ""
-  local close_result = {file:close()}
-  result.return_code = close_result[3]
-  return result
-end
-
-local function get_file_part (path)
-  local pos = path:find("/[^/]*$")
-  if pos == nil then
-    pos = path:find("\\[^\\]*$")
-  end
-  return pos ~= nil and path:sub(pos + 1) or path
-end
+require_std("bcache")
 
 
 -------------------------------------------------------------------------------
@@ -57,64 +17,6 @@ end
 
 local function starts_with (s, substr)
   return s:sub(1, #substr) == substr
-end
-
-local function unescape_arg (arg)
-  if (arg:len() > 1) and (arg[1] == "\"") and (arg[arg:len()] == "\"") then
-    arg = arg:sub(2, -1)
-  end
-  return arg:gsub("\\\"", "\"")
-end
-
--- TODO(m): Move this to C++ and expose it to both C++ and Lua.
-local function extract_args (cmd)
-  -- Convert the escaped command string to an argument list.
-  cmd = cmd:gsub("\n", " ")
-  local args = {}
-  local arg
-  local is_inside_quote = false
-  local last_char
-  for i = 1, #cmd do
-    local char = cmd:sub(i, i)
-    local is_space = (char == " ")
-    local is_quote = (char == "\"") and (last_char ~= "\\")
-
-    if is_quote then
-      is_inside_quote = not is_inside_quote
-    end
-
-    local arg_ended = false
-    if arg == nil then
-      -- Start of new argument?
-      if not is_space then
-        arg = char
-      end
-    else
-      if (is_inside_quote or (not is_space)) and (not is_quote) then
-        arg = arg .. char
-      end
-
-      -- End of argument?
-      if is_space and (not is_inside_quote) then
-        arg_ended = true
-      end
-    end
-
-    if arg_ended then
-      arg = unescape_arg(arg)
-      table.insert(args, arg)
-      arg = nil
-    end
-
-    last_char = char
-  end
-
-  if arg ~= nil then
-    arg = unescape_arg(arg)
-    table.insert(args, arg)
-  end
-
-  return args
 end
 
 local function make_preprocessor_cmd (args, preprocessed_file)
@@ -143,21 +45,22 @@ local function make_preprocessor_cmd (args, preprocessed_file)
   return preprocess_args
 end
 
-
 local function append_response_file (args, file_name)
   -- Load the response file into a string.
   local f = assert(io.open(file_name, "rb"))
   local args_string = f:read("*all")
   f:close()
+  args_string = args_string:gsub("\n", " ")
 
   -- Split the arguments.
-  local new_args = extract_args(args_string)
+  local new_args = bcache.split_args(args_string)
   for i, arg in ipairs(new_args) do
     table.insert(args, arg)
   end
 
   return args
 end
+
 
 -------------------------------------------------------------------------------
 -- Wrapper interface implementation.
@@ -204,7 +107,7 @@ function preprocess_source ()
   -- Run the preprocessor step.
   local preprocessed_file = os.tmpname()
   local preprocessor_args = make_preprocessor_cmd(ARGS, preprocessed_file)
-  local result = run(preprocessor_args)
+  local result = bcache.run(preprocessor_args)
   if result.return_code ~= 0 then
     os.remove(preprocessed_file)
     error("Preprocessing command was unsuccessful.")
@@ -223,7 +126,7 @@ function get_relevant_arguments ()
   local filtered_args = {}
 
   -- The first argument is the compiler binary without the path.
-  table.insert(filtered_args, get_file_part(ARGS[1]))
+  table.insert(filtered_args, bcache.get_file_part(ARGS[1]))
 
   -- Note: We always skip the first arg since we have handled it already.
   local skip_next_arg = true
@@ -256,7 +159,7 @@ function get_program_id ()
   -- TODO(m): Add things like executable file size too.
 
   -- Get the help string from the compiler (it includes the version string).
-  local result = run({ARGS[1], "--help"})
+  local result = bcache.run({ARGS[1], "--help"})
   if result.return_code ~= 0 then
     error("Unable to get the compiler version information string.")
   end
