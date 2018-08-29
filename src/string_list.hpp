@@ -62,6 +62,52 @@ public:
     }
   }
 
+  /// @brief Construct a list of arguments from a string with a shell-like format.
+  /// @param str The string.
+  /// @note As far as possible this routine mimics the standard shell behaviour, e.g. w.r.t.
+  /// escaping and quotation.
+  static string_list_t split_args(const std::string& cmd) {
+    string_list_t args;
+
+    std::string arg;
+    auto is_inside_quote = false;
+    auto has_arg = false;
+    char last_char = 0;
+    for (auto& chr : cmd) {
+      const auto is_space = (chr == ' ');
+      const auto is_quote = (chr == '\"') && (last_char != '\\');
+
+      if (is_quote) {
+        is_inside_quote = !is_inside_quote;
+      }
+
+      // Start of a new argument?
+      if ((!has_arg) && (!is_space)) {
+        has_arg = true;
+      }
+
+      // Append this char to the argument string?
+      if ((is_inside_quote || !is_space) && !is_quote) {
+        arg += chr;
+      }
+
+      // End of argument?
+      if (has_arg && is_space && !is_inside_quote) {
+        args += unescape_arg(arg);
+        arg.clear();
+        has_arg = false;
+      }
+
+      last_char = chr;
+    }
+
+    if (has_arg) {
+      args += unescape_arg(arg);
+    }
+
+    return args;
+  }
+
   /// @brief Join all elements into a single string.
   /// @param separator The separator to use between strings (e.g. " ").
   /// @param escape Set this to true to escape each string.
@@ -133,11 +179,12 @@ private:
   static std::string escape_arg(const std::string& arg) {
     std::string escaped_arg;
 
-    // Replace all occurances of " with \".
     auto has_space = false;
     for (auto c : arg) {
       if (c == '"') {
         escaped_arg += "\\\"";
+      } else if (c == '\\') {
+        escaped_arg += "\\\\";
       } else {
         if (c == ' ') {
           has_space = true;
@@ -152,6 +199,24 @@ private:
     }
 
     return escaped_arg;
+  }
+
+  static std::string unescape_arg(const std::string& arg) {
+    std::string unescaped_arg;
+
+    auto is_escaped = false;
+    for (auto c : arg) {
+      if ((c == '\\') && !is_escaped) {
+        is_escaped = true;
+      } else {
+        // TODO(m): We should handle different escape codes. The current solution at least works for
+        // converting \\ -> \ and \" -> ".
+        unescaped_arg += c;
+        is_escaped = false;
+      }
+    }
+
+    return unescaped_arg;
   }
 
   std::vector<std::string> m_args;

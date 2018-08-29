@@ -42,13 +42,12 @@ private:
 
     bool call(const std::string& func);
 
-    bool pop_bool();
-    std::string pop_string(bool keep_value_on_the_stack = false);
-    string_list_t pop_string_list(bool keep_value_on_the_stack = false);
-    std::map<std::string, std::string> pop_map(bool keep_value_on_the_stack = false);
-
     const std::string& script() const {
       return m_script;
+    }
+
+    lua_State* state() {
+      return m_state;
     }
 
   private:

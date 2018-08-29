@@ -8,52 +8,7 @@ require_std("io")
 require_std("os")
 require_std("string")
 require_std("table")
-
-
--------------------------------------------------------------------------------
--- General helper functions (the corresponding C++ functions in BuildCache
--- should probably be exposed to Lua instead of re-implementing them in Lua).
--------------------------------------------------------------------------------
-
-local function make_escaped_cmd (args)
-  -- Convert the argument list to a command string with each argument escaped.
-  local cmd = ""
-  for i, arg in ipairs(args) do
-    arg = arg:gsub("\"", "\\\"")
-    if arg:find(" ") then
-      arg = "\"" .. arg .. "\""
-    end
-    if cmd:len() > 0 then
-      cmd = cmd .. " "
-    end
-    cmd = cmd .. arg
-  end
-  return cmd
-end
-
-local function run (args)
-  -- Run the command.
-  local file = assert(io.popen(make_escaped_cmd(args), "r"))
-  local result = {}
-  result.std_out = file:read("*all")
-  result.std_err = ""
-  local close_result = {file:close()}
-  result.return_code = close_result[3]
-  return result
-end
-
-local function get_file_part (path)
-  local pos = path:find("/[^/]*$")
-  if pos == nil then
-    pos = path:find("\\[^\\]*$")
-  end
-  return pos ~= nil and path:sub(pos + 1) or path
-end
-
-local function get_extension (path)
-  local pos = path:find(".", 1, true)
-  return pos ~= nil and path:sub(pos) or ""
-end
+require_std("bcache")
 
 
 -------------------------------------------------------------------------------
@@ -89,7 +44,7 @@ local function make_preprocessor_cmd (args, preprocessed_file)
 end
 
 local function is_source_file (path)
-  local ext = get_extension(path):lower()
+  local ext = bcache.get_extension(path):lower()
   return (ext == ".cpp") or (ext == ".cc") or (ext == ".cxx") or (ext == ".c")
 end
 
@@ -118,7 +73,7 @@ function preprocess_source ()
   -- Run the preprocessor step.
   local preprocessed_file = os.tmpname()
   local preprocessor_args = make_preprocessor_cmd(ARGS, preprocessed_file)
-  local result = run(preprocessor_args)
+  local result = bcache.run(preprocessor_args)
   if result.return_code ~= 0 then
     os.remove(preprocessed_file)
     error("Preprocessing command was unsuccessful.")
@@ -137,7 +92,7 @@ function get_relevant_arguments ()
   local filtered_args = {}
 
   -- The first argument is the compiler binary without the path.
-  table.insert(filtered_args, get_file_part(ARGS[1]))
+  table.insert(filtered_args, bcache.get_file_part(ARGS[1]))
 
   -- Note: We always skip the first arg since we have handled it already.
   local skip_next_arg = true
@@ -173,7 +128,7 @@ function get_program_id ()
   -- TODO(m): Add things like executable file size too.
 
   -- Get the version string for the compiler.
-  local result = run({ARGS[1], "--version"})
+  local result = bcache.run({ARGS[1], "--version"})
   if result.return_code ~= 0 then
     error("Unable to get the compiler version information string.")
   end

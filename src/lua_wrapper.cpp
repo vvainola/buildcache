@@ -20,7 +20,9 @@
 #include "lua_wrapper.hpp"
 
 #include "debug_utils.hpp"
+#include "file_utils.hpp"
 #include "perf_utils.hpp"
+#include "sys_utils.hpp"
 
 extern "C" {
 #include <lauxlib.h>
@@ -28,6 +30,7 @@ extern "C" {
 #include <lualib.h>
 }
 
+#include <map>
 #include <regex>
 #include <stdexcept>
 
@@ -39,11 +42,156 @@ int panic_handler(lua_State* state) {
   return 0;  // Return to Lua to abort.
 }
 
+void assert_state_initialized(const lua_State* state) {
+  if (state == nullptr) {
+    throw std::runtime_error("Lua state has not been initialized (should not happen)!");
+  }
+}
+
+bool pop_bool(lua_State* state) {
+  assert_state_initialized(state);
+  if (lua_isboolean(state, -1) == 0) {
+    throw std::runtime_error("Expected a boolean value on the stack.");
+  }
+  return (lua_toboolean(state, -1) != 0);
+}
+
+std::string pop_string(lua_State* state, bool keep_value_on_the_stack = false) {
+  assert_state_initialized(state);
+  if (lua_isstring(state, -1) == 0) {
+    throw std::runtime_error("Expected a string value on the stack.");
+  }
+  size_t str_size;
+  const auto* str = lua_tolstring(state, -1, &str_size);
+  if (!keep_value_on_the_stack) {
+    lua_pop(state, 1);
+  }
+  return std::string(str, str_size);
+}
+
+string_list_t pop_string_list(lua_State* state, bool keep_value_on_the_stack = false) {
+  assert_state_initialized(state);
+  if (lua_istable(state, -1) == 0) {
+    throw std::runtime_error("Expected a table on the stack.");
+  }
+  string_list_t result;
+  const auto len = static_cast<lua_Integer>(lua_rawlen(state, -1));
+  for (lua_Integer i = 1; i <= len; ++i) {
+    lua_rawgeti(state, -1, i);
+    result += pop_string(state);
+  }
+  if (!keep_value_on_the_stack) {
+    lua_pop(state, 1);
+  }
+  return result;
+}
+
+std::map<std::string, std::string> pop_map(lua_State* state, bool keep_value_on_the_stack = false) {
+  assert_state_initialized(state);
+  if (lua_istable(state, -1) == 0) {
+    throw std::runtime_error("Expected a table on the stack.");
+  }
+  std::map<std::string, std::string> result;
+  lua_pushnil(state);  // Make sure lua_next starts at beginning.
+  while (lua_next(state, -2) != 0) {
+    const auto value = pop_string(state);
+    const auto key = pop_string(state, true);
+    result[key] = value;
+  }
+  if (!keep_value_on_the_stack) {
+    lua_pop(state, 1);
+  }
+  return result;
+}
+
+void push(lua_State* state, const std::string& data) {
+  assert_state_initialized(state);
+  lua_pushlstring(state, data.c_str(), data.size());
+}
+
+void push(lua_State* state, const string_list_t& data) {
+  // Push the data as an array of strings.
+  assert_state_initialized(state);
+  lua_createtable(state, 0, static_cast<int>(data.size()));
+  lua_Integer key = 1;
+  for (const auto& arg : data) {
+    lua_pushlstring(state, arg.c_str(), arg.size());
+    lua_rawseti(state, -2, key);
+    ++key;
+  }
+}
+
+void push(lua_State* state, const sys::run_result_t& data) {
+  // Push the result as a string-indexed table (i.e. a map).
+  assert_state_initialized(state);
+  lua_createtable(state, 0, 3);
+  lua_pushlstring(state, data.std_out.c_str(), data.std_out.size());
+  lua_setfield(state, -2, "std_out");
+  lua_pushlstring(state, data.std_err.c_str(), data.std_err.size());
+  lua_setfield(state, -2, "std_err");
+  lua_pushinteger(state, data.return_code);
+  lua_setfield(state, -2, "return_code");
+}
+
+//--------------------------------------------------------------------------------------------------
+// Begin: The Lua side "bcache" library.
+//--------------------------------------------------------------------------------------------------
+
+int l_split_args(lua_State* state) {
+  push(state, string_list_t::split_args(pop_string(state)));
+  return 1;
+}
+
+int l_run(lua_State* state) {
+  // Get arguments.
+  const auto cmd = pop_string_list(state);
+  auto quiet = true;
+  if (lua_gettop(state) > 0) {
+    quiet = pop_bool(state);
+  }
+
+  // Call the C++ function and push the result.
+  push(state, sys::run(cmd, quiet));
+  return 1;
+}
+
+int l_get_file_part(lua_State* state) {
+  // Get arguments.
+  const auto path = pop_string(state);
+  auto include_ext = true;
+  if (lua_gettop(state) > 0) {
+    include_ext = pop_bool(state);
+  }
+
+  // Call the C++ function and push the result.
+  push(state, file::get_file_part(path, include_ext));
+  return 1;
+}
+
+int l_get_extension(lua_State* state) {
+  push(state, file::get_extension(pop_string(state)));
+  return 1;
+}
+
+static const luaL_Reg BCACHE_LIB_FUNCS[] = {{"split_args", l_split_args},
+                                            {"run", l_run},
+                                            {"get_file_part", l_get_file_part},
+                                            {"get_extension", l_get_extension},
+                                            {NULL, NULL}};
+
+int luaopen_bcache(lua_State* state) {
+  luaL_newlib(state, BCACHE_LIB_FUNCS);
+  return 1;
+}
+
+//--------------------------------------------------------------------------------------------------
+// End: The Lua side "bcache" library.
+//--------------------------------------------------------------------------------------------------
+
 int l_require_std(lua_State* state) {
   // Get the module name from the stack.
-  luaL_checkstring(state, 1);
   size_t arg_len;
-  const auto* arg = lua_tolstring(state, 1, &arg_len);
+  const auto* arg = luaL_checklstring(state, 1, &arg_len);
   const auto module_name = std::string(arg, arg_len);
 
   // Load the selected standard library module.
@@ -65,20 +213,22 @@ int l_require_std(lua_State* state) {
     luaL_requiref(state, module_name.c_str(), luaopen_utf8, 1);
   } else if (module_name == "debug") {
     luaL_requiref(state, module_name.c_str(), luaopen_debug, 1);
+  } else if (module_name == "bcache") {
+    luaL_requiref(state, module_name.c_str(), luaopen_bcache, 1);
   } else if (module_name == "*") {
+    // Load all standard libraries.
     luaL_openlibs(state);
+
+    // Load the "bcache" library.
+    luaL_requiref(state, "bcache", luaopen_bcache, 1);
+    lua_pop(state, 1);  // Remove lib.
+
     return 0;
   } else {
     return luaL_error(state, "Invalid standard library: \"%s\".", module_name.c_str());
   }
 
   return 1;  // Number of results.
-}
-
-void assert_state_initialized(const lua_State* state) {
-  if (state == nullptr) {
-    throw std::runtime_error("Lua state has not been initialized (should not happen)!");
-  }
 }
 
 bool is_failed_prgmatch(const std::string& script_str, const std::string& program_path) {
@@ -108,7 +258,7 @@ lua_wrapper_t::runner_t::runner_t(const std::string& script_path, const string_l
     : m_script_path(script_path), m_args(args) {
   try {
     m_script = file::read(m_script_path);
-  } catch(...) {
+  } catch (...) {
     // We'll leave m_script empty and throw an exception later (we don't want to throw in the
     // constructor).
   }
@@ -206,62 +356,6 @@ bool lua_wrapper_t::runner_t::call(const std::string& func) {
   return true;
 }
 
-bool lua_wrapper_t::runner_t::pop_bool() {
-  assert_state_initialized(m_state);
-  if (lua_isboolean(m_state, -1) == 0) {
-    throw std::runtime_error("Expected a boolean value on the stack.");
-  }
-  return (lua_toboolean(m_state, -1) != 0);
-}
-
-std::string lua_wrapper_t::runner_t::pop_string(bool keep_value_on_the_stack) {
-  assert_state_initialized(m_state);
-  if (lua_isstring(m_state, -1) == 0) {
-    throw std::runtime_error("Expected a string value on the stack.");
-  }
-  size_t str_size;
-  const auto* str = lua_tolstring(m_state, -1, &str_size);
-  if (!keep_value_on_the_stack) {
-    lua_pop(m_state, 1);
-  }
-  return std::string(str, str_size);
-}
-
-string_list_t lua_wrapper_t::runner_t::pop_string_list(bool keep_value_on_the_stack) {
-  assert_state_initialized(m_state);
-  if (lua_istable(m_state, -1) == 0) {
-    throw std::runtime_error("Expected a table on the stack.");
-  }
-  string_list_t result;
-  const auto len = lua_rawlen(m_state, -1);
-  for (size_t i = 0; i < len; ++i) {
-    lua_rawgeti(m_state, -1, static_cast<int>(i) + 1);
-    result += pop_string();
-  }
-  if (!keep_value_on_the_stack) {
-    lua_pop(m_state, 1);
-  }
-  return result;
-}
-
-std::map<std::string, std::string> lua_wrapper_t::runner_t::pop_map(bool keep_value_on_the_stack) {
-  assert_state_initialized(m_state);
-  if (lua_istable(m_state, -1) == 0) {
-    throw std::runtime_error("Expected a table on the stack.");
-  }
-  std::map<std::string, std::string> result;
-  lua_pushnil(m_state);  // Make sure lua_next starts at beginning.
-  while (lua_next(m_state, -2) != 0) {
-    const auto value = pop_string();
-    const auto key = pop_string(true);
-    result[key] = value;
-  }
-  if (!keep_value_on_the_stack) {
-    lua_pop(m_state, 1);
-  }
-  return result;
-}
-
 lua_wrapper_t::lua_wrapper_t(const string_list_t& args,
                              cache_t& cache,
                              const std::string& lua_script_path)
@@ -275,7 +369,7 @@ bool lua_wrapper_t::can_handle_command() {
     if (!is_failed_prgmatch(m_runner.script(), m_args[0])) {
       // Second check: Call can_handle_command() if is defined.
       if (m_runner.call("can_handle_command")) {
-        result = m_runner.pop_bool();
+        result = pop_bool(m_runner.state());
       } else {
         result = true;
       }
@@ -296,7 +390,7 @@ void lua_wrapper_t::resolve_args() {
 
 std::string lua_wrapper_t::preprocess_source() {
   if (m_runner.call("preprocess_source")) {
-    return m_runner.pop_string();
+    return pop_string(m_runner.state());
   } else {
     return program_wrapper_t::preprocess_source();
   }
@@ -304,7 +398,7 @@ std::string lua_wrapper_t::preprocess_source() {
 
 string_list_t lua_wrapper_t::get_relevant_arguments() {
   if (m_runner.call("get_relevant_arguments")) {
-    return m_runner.pop_string_list();
+    return pop_string_list(m_runner.state());
   } else {
     return program_wrapper_t::get_relevant_arguments();
   }
@@ -312,7 +406,7 @@ string_list_t lua_wrapper_t::get_relevant_arguments() {
 
 std::map<std::string, std::string> lua_wrapper_t::get_relevant_env_vars() {
   if (m_runner.call("get_relevant_env_vars")) {
-    return m_runner.pop_map();
+    return pop_map(m_runner.state());
   } else {
     return program_wrapper_t::get_relevant_env_vars();
   }
@@ -320,7 +414,7 @@ std::map<std::string, std::string> lua_wrapper_t::get_relevant_env_vars() {
 
 std::string lua_wrapper_t::get_program_id() {
   if (m_runner.call("get_program_id")) {
-    return m_runner.pop_string();
+    return pop_string(m_runner.state());
   } else {
     return program_wrapper_t::get_program_id();
   }
@@ -328,7 +422,7 @@ std::string lua_wrapper_t::get_program_id() {
 
 std::map<std::string, std::string> lua_wrapper_t::get_build_files() {
   if (m_runner.call("get_build_files")) {
-    return m_runner.pop_map();
+    return pop_map(m_runner.state());
   } else {
     return program_wrapper_t::get_build_files();
   }
