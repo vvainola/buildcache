@@ -117,6 +117,18 @@ For instance:
 $ BUILDCACHE_DEBUG=2 buildcache g++ -c -O2 hello.cpp -o hello.o
 ```
 
+## Configuration options
+
+The following environment variables control the behavior of BuildCache:
+
+| Option | Description | Default |
+| --- | --- | --- |
+| `BUILDCACHE_DIR` | The cache root directory | `$HOME/.buildcache` |
+| `BUILDCACHE_PREFIX` | Prefix command for cache misses | None |
+| `BUILDCACHE_LUA_PATH` | Path(s) to Lua wrappers | None |
+| `BUILDCACHE_DEBUG` | Debug level | None |
+| `BUILDCACHE_PERF` | Enable performance logging | Disabled |
+
 ## Status
 
 **NOTE:** BuildCache is still in early development and should not be considered
