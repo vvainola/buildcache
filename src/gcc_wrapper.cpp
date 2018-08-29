@@ -28,7 +28,7 @@
 namespace bcache {
 namespace {
 // Tick this to a new number if the format has changed in a non-backwards-compatible way.
-const std::string HASH_VERSION = "2";
+const std::string HASH_VERSION = "3";
 
 bool is_source_file(const std::string& arg) {
   const auto ext = lower_case(file::get_extension(arg));
@@ -169,7 +169,6 @@ std::string gcc_wrapper_t::get_program_id() {
 std::map<std::string, std::string> gcc_wrapper_t::get_build_files() {
   std::map<std::string, std::string> files;
   auto found_object_file = false;
-  auto test_coverage_enabled = false;
   for (size_t i = 0u; i < m_args.size(); ++i) {
     const auto next_idx = i + 1u;
     if ((m_args[i] == "-o") && (next_idx < m_args.size())) {
@@ -179,14 +178,11 @@ std::map<std::string, std::string> gcc_wrapper_t::get_build_files() {
       files["object"] = m_args[next_idx];
       found_object_file = true;
     } else if (m_args[i] == "-ftest-coverage") {
-      test_coverage_enabled = true;
+      throw std::runtime_error("Code coverage data is currently not supported.");
     }
   }
   if (!found_object_file) {
     throw std::runtime_error("Unable to get the target object file.");
-  }
-  if (test_coverage_enabled) {
-    files["gcno"] = file::change_extension(files["object"], ".gcno");
   }
   return files;
 }
