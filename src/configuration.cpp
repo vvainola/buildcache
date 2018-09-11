@@ -21,14 +21,17 @@
 
 #include "file_utils.hpp"
 
+#include <cjson/cJSON.h>
+
 #include <algorithm>
+#include <sstream>
 #include <stdexcept>
 
 namespace bcache {
 namespace {
 // Various constants.
 const std::string ROOT_FOLDER_NAME = ".buildcache";
-const std::string CONFIGURATION_FILE_NAME = "buildcache.conf";
+const std::string CONFIGURATION_FILE_NAME = "config.json";
 const int64_t DEFAULT_MAX_CACHE_SIZE = 5368709120L;  // 5 GB
 
 // Configuration options.
@@ -65,11 +68,11 @@ public:
     return m_value;
   }
 
-  const int64_t as_int64() const {
+  int64_t as_int64() const {
     return std::stoll(m_value);
   }
 
-  const bool as_bool() const {
+  bool as_bool() const {
     const auto value_lower = to_lower(m_value);
     return m_defined && (!m_value.empty()) && (value_lower != "false") && (value_lower != "no") &&
            (value_lower != "off") && (value_lower != "0");
@@ -102,27 +105,80 @@ std::string get_dir() {
   throw std::runtime_error("Unable to determine a home directory for BuildCache.");
 }
 
-string_list_t get_lua_paths(const std::string& dir) {
-  string_list_t paths;
+void load_from_file(const std::string& file_name) {
+  // Load the configuration file.
+  if (!file::file_exists(file_name)) {
+    // Nothing to do.
+    return;
+  }
+  const auto data = file::read(file_name);
 
-  // The BUILDCACHE_LUA_PATH env variable can contain a colon-separated list of paths.
+  // Parse the JSON data.
+  auto* root = cJSON_Parse(data.data());
+  if (root == nullptr) {
+    std::ostringstream ss;
+    ss << "Configuration file JSON parse error before:\n";
+    const auto* json_error = cJSON_GetErrorPtr();
+    if (json_error != nullptr) {
+      ss << json_error;
+    } else {
+      ss << "(N/A)";
+    }
+    throw std::runtime_error(ss.str());
+  }
+
+  // Get "lua_paths".
   {
-    const env_var_t lua_path_env("BUILDCACHE_LUA_PATH");
-    if (lua_path_env) {
-#ifdef _WIN32
-      paths += string_list_t(lua_path_env.as_string(), ";");
-#else
-      paths += string_list_t(lua_path_env.as_string(), ":");
-#endif
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "lua_paths");
+    cJSON* child_node;
+    cJSON_ArrayForEach(child_node, node) {
+      const auto str = std::string(child_node->valuestring);
+      s_lua_paths += str;
     }
   }
 
-  // We also look for Lua files in the cache root dir (e.g. ${BUILDCACHE_DIR}/lua).
-  paths += file::append_path(dir, "lua");
+  // Get "prefix".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "prefix");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_prefix = std::string(node->valuestring);
+    }
+  }
 
-  return paths;
+  // Get "max_cache_size".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "max_cache_size");
+    if (cJSON_IsNumber(node)) {
+      s_max_cache_size = static_cast<int64_t>(node->valuedouble);
+    }
+  }
+
+  // Get "debug".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "debug");
+    if (cJSON_IsNumber(node)) {
+      s_debug = static_cast<int32_t>(node->valueint);
+    }
+  }
+
+  // Get "perf".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "perf");
+    if (cJSON_IsBool(node)) {
+      s_perf = cJSON_IsTrue(node);
+    }
+  }
+
+  // Get "disable".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "disable");
+    if (cJSON_IsBool(node)) {
+      s_disable = cJSON_IsTrue(node);
+    }
+  }
+
+  cJSON_Delete(root);
 }
-
 }  // namespace
 
 namespace config {
@@ -134,12 +190,37 @@ void init() {
   }
   s_initialized = true;
 
+  // TODO(m): If we get an exception during get_dir() or load_from_file() for instance, those error
+  // messages will never be printed, *even* when BUILDCACHE_DEBUG=1 is passed in the environment.
+  // We need to untie this catch-22.
   try {
     // Get the BuildCache home directory.
     s_dir = get_dir();
 
-    // Get the Lua paths.
-    s_lua_paths = get_lua_paths(s_dir);
+    // Get the Lua paths from the environment.
+    // Note: We need do this before loading the configuration file, in order for the environment to
+    // have priority over the JSON file.
+    {
+      const env_var_t lua_path_env("BUILDCACHE_LUA_PATH");
+      if (lua_path_env) {
+  #ifdef _WIN32
+        s_lua_paths += string_list_t(lua_path_env.as_string(), ";");
+  #else
+        s_lua_paths += string_list_t(lua_path_env.as_string(), ":");
+  #endif
+      }
+    }
+
+    // Load any paramaters from the user configuration file.
+    // Note: We do this before reading the configuration from the environment, so that the
+    // environment overrides the configuration file.
+    const auto config_file = file::append_path(s_dir, CONFIGURATION_FILE_NAME);
+    load_from_file(config_file);
+
+    // We also look for Lua files in the cache root dir (e.g. ${BUILDCACHE_DIR}/lua).
+    // Note: We need do this after loading the configuration file, to give the default Lua path the
+    // lowest priority.
+    s_lua_paths += file::append_path(s_dir, "lua");
 
     // Get the command prefix from the environment.
     {
@@ -191,19 +272,8 @@ void init() {
   } catch (...) {
     // If we could not initialize the configuration, we can't proceed. We need to disable the cache.
     s_disable = true;
+    throw;
   }
-}
-
-void update(const std::string& file_name) {
-  // TODO(m): Implement me!
-}
-
-void update(const std::map<std::string, std::string>& options) {
-  // TODO(m): Implement me!
-}
-
-void save_to_file(const std::string& file_name) {
-  // TODO(m): Implement me!
 }
 
 const std::string& dir() {
@@ -218,19 +288,19 @@ const std::string& prefix() {
   return s_prefix;
 }
 
-const int64_t max_cache_size() {
+int64_t max_cache_size() {
   return s_max_cache_size;
 }
 
-const int32_t debug() {
+int32_t debug() {
   return s_debug;
 }
 
-const bool perf() {
+bool perf() {
   return s_perf;
 }
 
-const bool disable() {
+bool disable() {
   return s_disable;
 }
 }  // namespace config

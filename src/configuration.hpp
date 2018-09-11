@@ -31,17 +31,6 @@ namespace config {
 /// @brief Initialize the configuration based on environment variables etc.
 void init();
 
-/// @brief Update configuration options from the given file.
-/// @param file_name The name of the file to load the options from.
-void update(const std::string& file_name);
-
-/// @brief Update configuration options from a key-value options map.
-/// @param options A key-value map containing the options.
-void update(const std::map<std::string, std::string>& options);
-
-/// @brief Save the configuration options object to a file.
-void save_to_file(const std::string& file_name);
-
 /// @returns the BuildCache home directory.
 const std::string& dir();
 
@@ -52,16 +41,16 @@ const string_list_t& lua_paths();
 const std::string& prefix();
 
 /// @returns the maximum cache size (in bytes).
-const int64_t max_cache_size();
+int64_t max_cache_size();
 
 /// @returns the debug level (-1 for no debugging).
-const int32_t debug();
+int32_t debug();
 
 /// @returns true if performance profiling output is enabled.
-const bool perf();
+bool perf();
 
 /// @returns true if BuildCache is disabled.
-const bool disable();
+bool disable();
 
 }  // namespace config
 }  // namespace bcache

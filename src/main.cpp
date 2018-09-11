@@ -273,7 +273,13 @@ void print_help(const char* program_name) {
 
 int main(int argc, const char** argv) {
   // Initialize the configuration.
-  bcache::config::init();
+  try {
+    bcache::config::init();
+  } catch (const std::exception& e) {
+    bcache::debug::log(bcache::debug::ERROR) << "Warning: " << e.what();
+  } catch (...) {
+    bcache::debug::log(bcache::debug::ERROR) << "An exception occurred.";
+  }
 
   // Handle symlink invokation.
   if (bcache::file::get_file_part(std::string(argv[0]), false) != BUILDCACHE_EXE_NAME) {
