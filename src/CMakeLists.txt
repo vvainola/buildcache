@@ -34,6 +34,8 @@ add_subdirectory(third_party)
 add_executable(buildcache
   cache.cpp
   cache.hpp
+  configuration.cpp
+  configuration.hpp
   debug_utils.cpp
   debug_utils.hpp
   file_utils.cpp

@@ -46,6 +46,7 @@
 
 #include "cache.hpp"
 
+#include "configuration.hpp"
 #include "debug_utils.hpp"
 #include "file_utils.hpp"
 #include "serializer_utils.hpp"
@@ -58,39 +59,12 @@
 
 namespace bcache {
 namespace {
-const int64_t DEFAULT_MAX_CACHE_SIZE_IN_BYTES = 5368709120L;  // 5 GB
-
-const std::string ROOT_FOLDER_NAME = ".buildcache";
 const std::string TEMP_FOLDER_NAME = "tmp";
 const std::string CACHE_FILES_FOLDER_NAME = "c";
-
-const std::string CONFIGURATION_FILE_NAME = "buildcache.conf";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 
 // The version of the entry file serialization data format.
 const int32_t ENTRY_DATA_FORMAT_VERSION = 1;
-
-std::string find_root_folder() {
-  // Is the environment variable BUILDCACHE_DIR defined?
-  {
-    const auto* buildcache_dir_env = std::getenv("BUILDCACHE_DIR");
-    if (buildcache_dir_env != nullptr) {
-      return std::string(buildcache_dir_env);
-    }
-  }
-
-  // Use the user home directory if possible.
-  {
-    auto home = file::get_user_home_dir();
-    if (!home.empty()) {
-      // TODO(m): Should use ".cache/buildcache".
-      return file::append_path(home, ROOT_FOLDER_NAME);
-    }
-  }
-
-  // We failed.
-  throw std::runtime_error("Unable to determine a home directory for BuildCache.");
-}
 
 bool is_cache_entry_dir_path(const std::string& path) {
   const auto entry_dir_name = file::get_file_part(path);
@@ -179,22 +153,17 @@ cache_t::entry_t deserialize_entry(const std::string& data) {
 }  // namespace
 
 cache_t::cache_t() {
-  // Find the cache root folder.
-  m_root_folder = find_root_folder();
-
   // Can we use the cache?
-  if (!file::dir_exists(m_root_folder)) {
-    file::create_dir(m_root_folder);
+  if (!file::dir_exists(config::dir())) {
+    file::create_dir(config::dir());
   }
-
-  load_config();
 }
 
 cache_t::~cache_t() {
 }
 
 const std::string cache_t::get_tmp_folder() const {
-  const auto tmp_path = file::append_path(m_root_folder, TEMP_FOLDER_NAME);
+  const auto tmp_path = file::append_path(config::dir(), TEMP_FOLDER_NAME);
   if (!file::dir_exists(tmp_path)) {
     file::create_dir(tmp_path);
   }
@@ -202,7 +171,7 @@ const std::string cache_t::get_tmp_folder() const {
 }
 
 const std::string cache_t::get_cache_files_folder() const {
-  const auto cache_files_path = file::append_path(m_root_folder, CACHE_FILES_FOLDER_NAME);
+  const auto cache_files_path = file::append_path(config::dir(), CACHE_FILES_FOLDER_NAME);
   if (!file::dir_exists(cache_files_path)) {
     file::create_dir(cache_files_path);
   }
@@ -217,7 +186,7 @@ const std::string cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash
 
 void cache_t::clear() {
   // Remove all cached files.
-  const auto cache_files_path = file::append_path(m_root_folder, CACHE_FILES_FOLDER_NAME);
+  const auto cache_files_path = file::append_path(config::dir(), CACHE_FILES_FOLDER_NAME);
   try {
     file::remove_dir(cache_files_path, true);
     std::cout << "Cleared the cache.\n";
@@ -228,7 +197,7 @@ void cache_t::clear() {
 
 void cache_t::show_stats() {
   // Calculate the total cache size.
-  const auto dirs = get_cache_entry_dirs(m_root_folder);
+  const auto dirs = get_cache_entry_dirs(config::dir());
   int num_entries = 0;
   int64_t total_size = 0;
   for (const auto& dir : dirs) {
@@ -236,9 +205,9 @@ void cache_t::show_stats() {
     total_size += dir.size();
   }
   const double total_size_mb = static_cast<double>(total_size) / (1024.0 * 1024.0);
-  const double max_size_mb = static_cast<double>(m_max_size) / (1024.0 * 1024.0);
+  const double max_size_mb = static_cast<double>(config::max_cache_size()) / (1024.0 * 1024.0);
 
-  std::cout << "cache directory:   " << m_root_folder << "\n";
+  std::cout << "cache directory:   " << config::dir() << "\n";
   // std::cout << "primary config:    " << get_configuration_file_name() << "\n";
   std::cout << "entries in cache:  " << num_entries << "\n";
   std::cout << "cache size:        " << total_size_mb << " MB\n";
@@ -303,24 +272,13 @@ cache_t::entry_t cache_t::lookup(const hasher_t::hash_t& hash) {
   }
 }
 
-void cache_t::load_config() {
-  // Set default values.
-  m_max_size = DEFAULT_MAX_CACHE_SIZE_IN_BYTES;
-
-  // TODO(m): Load settings from a config file!
-}
-
-void cache_t::save_config() {
-  // TODO(m): Save settings to a config file!
-}
-
 void cache_t::perform_housekeeping() {
   const auto start_t = std::chrono::high_resolution_clock::now();
 
   debug::log(debug::INFO) << "Performing housekeeping.";
 
   // Get all the cache entry directories.
-  auto dirs = get_cache_entry_dirs(m_root_folder);
+  auto dirs = get_cache_entry_dirs(config::dir());
 
   // Sort the entries according to their access time (newest first).
   std::sort(
@@ -335,7 +293,7 @@ void cache_t::perform_housekeeping() {
   for (const auto& dir : dirs) {
     num_entries++;
     total_size += dir.size();
-    if (total_size > m_max_size) {
+    if (total_size > config::max_cache_size()) {
       try {
         debug::log(debug::DEBUG) << "Purging " << dir.path() << " (last accessed "
                                  << dir.access_time() << ", " << dir.size() << " bytes)";

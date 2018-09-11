@@ -51,12 +51,6 @@ public:
   /// @brief De-initialzie the cache object.
   ~cache_t();
 
-  /// @brief Get the root folder of the cache.
-  /// @returns the path to the root folder.
-  const std::string& root_folder() const {
-    return m_root_folder;
-  }
-
   /// @brief Clear all entries in the cache.
   void clear();
 
@@ -82,13 +76,7 @@ private:
   const std::string get_tmp_folder() const;
   const std::string get_cache_files_folder() const;
 
-  void load_config();
-  void save_config();
-
   void perform_housekeeping();
-
-  std::string m_root_folder;
-  int64_t m_max_size;
 };
 
 }  // namespace bcache
