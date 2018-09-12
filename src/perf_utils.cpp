@@ -19,6 +19,7 @@
 
 #include "perf_utils.hpp"
 
+#include "configuration.hpp"
 #include "unicode_utils.hpp"
 
 #include <chrono>
@@ -36,15 +37,6 @@ int64_t get_time_in_us() {
           .count();
   return t;
 }
-
-bool is_perf_enabled() {
-  const auto* perf_env = std::getenv("BUILDCACHE_PERF");
-  if (perf_env == nullptr) {
-    return false;
-  }
-  const auto perf = lower_case(std::string(perf_env));
-  return (perf != "no") && (perf != "off") && (perf != "false");
-}
 }  // namespace
 
 int64_t start() {
@@ -57,12 +49,13 @@ void stop(const int64_t start_time, const id_t id) {
 }
 
 void report() {
-  if (is_perf_enabled()) {
+  if (config::perf()) {
     std::cerr << "Find exectuable:    " << s_perf_log[ID_FIND_EXECUTABLE] << " us\n";
     std::cerr << "Find wrapper:       " << s_perf_log[ID_FIND_WRAPPER] << " us\n";
     std::cerr << "Lua - Init:         " << s_perf_log[ID_LUA_INIT] << " us\n";
     std::cerr << "Lua - Load script:  " << s_perf_log[ID_LUA_LOAD_SCRIPT] << " us\n";
     std::cerr << "Lua - Run:          " << s_perf_log[ID_LUA_RUN] << " us\n";
+    std::cerr << "Get wrapper config: " << s_perf_log[ID_GET_WRAPPER_CONFIG] << " us\n";
     std::cerr << "Resolve args:       " << s_perf_log[ID_RESOLVE_ARGS] << " us\n";
     std::cerr << "Preprocess:         " << s_perf_log[ID_PREPROCESS] << " us\n";
     std::cerr << "Filter arguments:   " << s_perf_log[ID_FILTER_ARGS] << " us\n";

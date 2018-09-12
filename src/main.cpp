@@ -18,6 +18,7 @@
 //--------------------------------------------------------------------------------------------------
 
 #include "cache.hpp"
+#include "configuration.hpp"
 #include "debug_utils.hpp"
 #include "gcc_wrapper.hpp"
 #include "ghs_wrapper.hpp"
@@ -38,27 +39,6 @@ namespace {
 // The name of the BuildCache executable (excluding the file extension).
 const std::string BUILDCACHE_EXE_NAME = "buildcache";
 
-bcache::string_list_t get_lua_paths(const bcache::cache_t& cache) {
-  bcache::string_list_t paths;
-
-  // The BUILDCACHE_LUA_PATH env variable can contain a colon-separated list of paths.
-  {
-    const auto* lua_path_env = std::getenv("BUILDCACHE_LUA_PATH");
-    if (lua_path_env != nullptr) {
-#ifdef _WIN32
-      paths += bcache::string_list_t(std::string(lua_path_env), ";");
-#else
-      paths += bcache::string_list_t(std::string(lua_path_env), ":");
-#endif
-    }
-  }
-
-  // We also look for Lua files in the cache root dir (e.g. ${BUILDCACHE_DIR}/lua).
-  paths += bcache::file::append_path(cache.root_folder(), "lua");
-
-  return paths;
-}
-
 bool is_lua_script(const std::string& script_path) {
   return (bcache::lower_case(bcache::file::get_extension(script_path)) == ".lua");
 }
@@ -71,7 +51,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
 
   // Try Lua wrappers first (so you can override internal wrappers).
   // Iterate over the existing Lua paths.
-  for (const auto& lua_root_dir : get_lua_paths(cache)) {
+  for (const auto& lua_root_dir : bcache::config::lua_paths()) {
     if (bcache::file::dir_exists(lua_root_dir)) {
       // Find all .lua files in the given directory.
       const auto lua_files = bcache::file::walk_directory(lua_root_dir);
@@ -81,13 +61,12 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
           // Check if the given wrapper can handle this command (first match wins).
           wrapper.reset(new bcache::lua_wrapper_t(args, cache, script_path));
           if (wrapper->can_handle_command()) {
-            bcache::debug::log(bcache::debug::DEBUG)
-                << "Found matching Lua wrapper for " << true_exe_path << ": " << script_path;
+            bcache::debug::log(bcache::debug::DEBUG) << "Found matching Lua wrapper for "
+                                                     << true_exe_path << ": " << script_path;
             break;
           } else {
             wrapper = nullptr;
           }
-
         }
       }
     }
@@ -132,7 +111,33 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
   int return_code = 0;
   try {
     bcache::cache_t cache;
+
+    // Print the cache stats.
+    std::cout << "Cache status:\n";
     cache.show_stats();
+
+    {
+// Print the configuration.
+#ifdef _WIN32
+      const std::string PATH_SEP = ";";
+#else
+      const std::string PATH_SEP = ":";
+#endif
+
+      std::cout << "\nConfiguration:\n";
+      std::cout << "  BUILDCACHE_DIR:            " << bcache::config::dir() << "\n";
+      std::cout << "  BUILDCACHE_LUA_PATH:       "
+                << bcache::config::lua_paths().join(PATH_SEP, false) << "\n";
+      std::cout << "  BUILDCACHE_PREFIX:         " << bcache::config::prefix() << "\n";
+      std::cout << "  BUILDCACHE_MAX_CACHE_SIZE: " << bcache::config::max_cache_size() << "\n";
+      std::cout << "  BUILDCACHE_DEBUG:          " << bcache::config::debug() << "\n";
+      std::cout << "  BUILDCACHE_HARD_LINKS:     "
+                << (bcache::config::hard_links() ? "true" : "false") << "\n";
+      std::cout << "  BUILDCACHE_PERF:           " << (bcache::config::perf() ? "true" : "false")
+                << "\n";
+      std::cout << "  BUILDCACHE_DISABLE:        " << (bcache::config::disable() ? "true" : "false")
+                << "\n";
+    }
   } catch (const std::exception& e) {
     std::cerr << "*** Unexpected error: " << e.what() << "\n";
     return_code = 1;
@@ -144,7 +149,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
 }
 
 [[noreturn]] void print_version_and_exit() {
-  std::cout << "BuildCache version 0.2-dev\n";
+  std::cout << "BuildCache version 0.3-dev\n";
   std::exit(0);
 }
 
@@ -175,52 +180,59 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
       throw std::runtime_error("Missing arguments.");
     }
 
-    // Find the true path to the executable file. This affects things like if we can match the
-    // compiler name or not, and what version string we get. We also want to avoid incorrectly
-    // identifying other compiler accelerators (e.g. ccache) as actual compilers.
-    // TODO(m): This call may throw an excepption, which currently means that we will not even try
-    // to run the original command. At the same time this is a protection against endless symlink
-    // recursion. Figure something out!
-    PERF_START(FIND_EXECUTABLE);
-    const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
-    PERF_STOP(FIND_EXECUTABLE);
-
-    // Replace the command with the true exe path. Most of the following operations rely on having
-    // a correct executable path. Also, this is important to avoid recursions when we are invoked
-    // from a symlink, for instance.
-    args[0] = true_exe_path;
-
-    try {
-      return_code = 1;
-
-      // Initialize a cache object.
-      bcache::cache_t cache;
-
-      // Select a matching compiler wrapper.
-      PERF_START(FIND_WRAPPER);
-      auto wrapper = find_suitable_wrapper(args, cache);
-      PERF_STOP(FIND_WRAPPER);
-
-      // Run the wrapper, if any.
-      if (wrapper) {
-        was_wrapped = wrapper->handle_command(return_code);
-      } else {
-        bcache::debug::log(bcache::debug::INFO) << "No suitable wrapper for " << true_exe_path;
-      }
-    } catch (const std::exception& e) {
-      bcache::debug::log(bcache::debug::ERROR) << "Unexpected error: " << e.what();
-      return_code = 1;
-    } catch (...) {
-      bcache::debug::log(bcache::debug::ERROR) << "Unexpected error.";
-      return_code = 1;
-    }
-
-    // Fall back to running the command as is.
-    if (!was_wrapped) {
-      PERF_START(RUN_FOR_FALLBACK);
-      auto result = bcache::sys::run_with_prefix(args, false);
-      PERF_STOP(RUN_FOR_FALLBACK);
+    // Is the caching mechanism disabled?
+    if (bcache::config::disable()) {
+      // Bypass all the cache logic and call the intended command directly.
+      auto result = bcache::sys::run(args, false);
       return_code = result.return_code;
+    } else {
+      // Find the true path to the executable file. This affects things like if we can match the
+      // compiler name or not, and what version string we get. We also want to avoid incorrectly
+      // identifying other compiler accelerators (e.g. ccache) as actual compilers.
+      // TODO(m): This call may throw an exception, which currently means that we will not even try
+      // to run the original command. At the same time this is a protection against endless symlink
+      // recursion. Figure something out!
+      PERF_START(FIND_EXECUTABLE);
+      const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
+      PERF_STOP(FIND_EXECUTABLE);
+
+      // Replace the command with the true exe path. Most of the following operations rely on having
+      // a correct executable path. Also, this is important to avoid recursions when we are invoked
+      // from a symlink, for instance.
+      args[0] = true_exe_path;
+
+      try {
+        return_code = 1;
+
+        // Initialize a cache object.
+        bcache::cache_t cache;
+
+        // Select a matching compiler wrapper.
+        PERF_START(FIND_WRAPPER);
+        auto wrapper = find_suitable_wrapper(args, cache);
+        PERF_STOP(FIND_WRAPPER);
+
+        // Run the wrapper, if any.
+        if (wrapper) {
+          was_wrapped = wrapper->handle_command(return_code);
+        } else {
+          bcache::debug::log(bcache::debug::INFO) << "No suitable wrapper for " << true_exe_path;
+        }
+      } catch (const std::exception& e) {
+        bcache::debug::log(bcache::debug::ERROR) << "Unexpected error: " << e.what();
+        return_code = 1;
+      } catch (...) {
+        bcache::debug::log(bcache::debug::ERROR) << "Unexpected error.";
+        return_code = 1;
+      }
+
+      // Fall back to running the command as is.
+      if (!was_wrapped) {
+        PERF_START(RUN_FOR_FALLBACK);
+        auto result = bcache::sys::run_with_prefix(args, false);
+        PERF_STOP(RUN_FOR_FALLBACK);
+        return_code = result.return_code;
+      }
     }
   } catch (const std::exception& e) {
     bcache::debug::log(bcache::debug::FATAL) << "Unexpected error: " << e.what();
@@ -231,7 +243,9 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
   }
 
   // Report performance timings.
-  bcache::perf::report();
+  if (!bcache::config::disable()) {
+    bcache::perf::report();
+  }
 
   std::exit(return_code);
 }
@@ -260,6 +274,15 @@ void print_help(const char* program_name) {
 }  // namespace
 
 int main(int argc, const char** argv) {
+  // Initialize the configuration.
+  try {
+    bcache::config::init();
+  } catch (const std::exception& e) {
+    bcache::debug::log(bcache::debug::ERROR) << "Warning: " << e.what();
+  } catch (...) {
+    bcache::debug::log(bcache::debug::ERROR) << "An exception occurred.";
+  }
+
   // Handle symlink invokation.
   if (bcache::file::get_file_part(std::string(argv[0]), false) != BUILDCACHE_EXE_NAME) {
     bcache::debug::log(bcache::debug::DEBUG) << "Invoked as symlink: " << argv[0];

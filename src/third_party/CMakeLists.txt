@@ -22,6 +22,11 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCH
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 endif()
 
+add_library(cjson
+  cjson/cJSON.c
+  )
+target_include_directories(cjson INTERFACE .)
+
 add_library(md4
   md4/md4.c
   )

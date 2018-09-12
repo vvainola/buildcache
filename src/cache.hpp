@@ -51,12 +51,6 @@ public:
   /// @brief De-initialzie the cache object.
   ~cache_t();
 
-  /// @brief Get the root folder of the cache.
-  /// @returns the path to the root folder.
-  const std::string& root_folder() const {
-    return m_root_folder;
-  }
-
   /// @brief Clear all entries in the cache.
   void clear();
 
@@ -66,7 +60,8 @@ public:
   /// @brief Adds a set of files to the cache
   /// @param hash The cache entry identifier.
   /// @param entry The cache entry data (files, stdout, etc).
-  void add(const hasher_t::hash_t& hash, const entry_t& entry);
+  /// @param allow_hard_links Whether or not to allow hard links to be used when caching files.
+  void add(const hasher_t::hash_t& hash, const entry_t& entry, const bool allow_hard_links);
 
   /// @brief Check if an entry exists in the cache.
   /// @returns A cache hit struct.
@@ -82,13 +77,7 @@ private:
   const std::string get_tmp_folder() const;
   const std::string get_cache_files_folder() const;
 
-  void load_config();
-  void save_config();
-
   void perform_housekeeping();
-
-  std::string m_root_folder;
-  int64_t m_max_size;
 };
 
 }  // namespace bcache

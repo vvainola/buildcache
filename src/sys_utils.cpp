@@ -19,6 +19,7 @@
 
 #include "sys_utils.hpp"
 
+#include "configuration.hpp"
 #include "debug_utils.hpp"
 #include "file_utils.hpp"
 #include "unicode_utils.hpp"
@@ -266,13 +267,11 @@ run_result_t run_with_prefix(const string_list_t& args, const bool quiet) {
   // Prepend the argument list with a prefix, if any.
   bool is_icecc_prefix = false;
   string_list_t prefixed_args;
-  const auto* prefix_env = std::getenv("BUILDCACHE_PREFIX");
-  if (prefix_env != nullptr) {
-    const auto prefix_str = std::string(prefix_env);
-    prefixed_args += prefix_str;
+  if (!config::prefix().empty()) {
+    prefixed_args += config::prefix();
 
     // Are we prefixed by ICECC?
-    is_icecc_prefix = (file::get_file_part(prefix_str, false) == "icecc");
+    is_icecc_prefix = (file::get_file_part(config::prefix(), false) == "icecc");
   }
   prefixed_args += args;
 

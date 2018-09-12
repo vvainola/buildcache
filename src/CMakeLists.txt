@@ -34,6 +34,8 @@ add_subdirectory(third_party)
 add_executable(buildcache
   cache.cpp
   cache.hpp
+  configuration.cpp
+  configuration.hpp
   debug_utils.cpp
   debug_utils.hpp
   file_utils.cpp
@@ -61,7 +63,7 @@ add_executable(buildcache
   unicode_utils.cpp
   unicode_utils.hpp
   )
-target_link_libraries(buildcache md4 lua)
+target_link_libraries(buildcache cjson md4 lua)
 
 if(WIN32 OR MINGW)
   target_link_libraries(buildcache userenv)

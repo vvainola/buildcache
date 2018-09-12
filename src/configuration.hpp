@@ -17,48 +17,45 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_PERF_UTILS_HPP_
-#define BUILDCACHE_PERF_UTILS_HPP_
+#ifndef BUILDCACHE_CONFIGURATION_HPP_
+#define BUILDCACHE_CONFIGURATION_HPP_
 
 #include <cstdint>
+#include <map>
+#include <string>
+
+#include "string_list.hpp"
 
 namespace bcache {
-namespace perf {
-enum id_t {
-  ID_FIND_EXECUTABLE = 0,
-  ID_FIND_WRAPPER = 1,
-  ID_LUA_INIT = 2,
-  ID_LUA_LOAD_SCRIPT = 3,
-  ID_LUA_RUN = 4,
-  ID_GET_WRAPPER_CONFIG = 5,
-  ID_RESOLVE_ARGS = 6,
-  ID_PREPROCESS = 7,
-  ID_FILTER_ARGS = 8,
-  ID_GET_PRG_ID = 9,
-  ID_CACHE_LOOKUP = 10,
-  ID_GET_BUILD_FILES = 11,
-  ID_RUN_FOR_MISS = 12,
-  ID_ADD_TO_CACHE = 13,
-  ID_RUN_FOR_FALLBACK = 14,
-  NUM_PERF_IDS
-};
+namespace config {
+/// @brief Initialize the configuration based on environment variables etc.
+void init();
 
-/// @brief Start measuring time.
-/// @returns a starting time point.
-int64_t start();
+/// @returns the BuildCache home directory.
+const std::string& dir();
 
-/// @brief Stop measuring time.
-/// @param start_time The starting time for the measurment.
-/// @param id The id of the measurment.
-void stop(const int64_t start_time, const id_t id);
+/// @returns the Lua search paths.
+const string_list_t& lua_paths();
 
-/// @brief Report the results.
-void report();
-}  // namespace perf
+/// @returns the compiler exectution prefix command.
+const std::string& prefix();
+
+/// @returns the maximum cache size (in bytes).
+int64_t max_cache_size();
+
+/// @returns the debug level (-1 for no debugging).
+int32_t debug();
+
+/// @returns true if BuildCache should use hard links when possible.
+bool hard_links();
+
+/// @returns true if performance profiling output is enabled.
+bool perf();
+
+/// @returns true if BuildCache is disabled.
+bool disable();
+
+}  // namespace config
 }  // namespace bcache
 
-// Convenience macros.
-#define PERF_START(id) const auto t0_ID_##id = bcache::perf::start()
-#define PERF_STOP(id) bcache::perf::stop(t0_ID_##id, bcache::perf::ID_##id);
-
-#endif  // BUILDCACHE_PERF_UTILS_HPP_
+#endif  // BUILDCACHE_CONFIGURATION_HPP_

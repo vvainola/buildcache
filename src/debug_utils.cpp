@@ -19,8 +19,8 @@
 
 #include "debug_utils.hpp"
 
-#include <atomic>
-#include <cstdlib>
+#include "configuration.hpp"
+
 #include <iostream>
 #include <string>
 
@@ -43,8 +43,6 @@
 namespace bcache {
 namespace debug {
 namespace {
-std::atomic_int s_log_level(-1);
-
 std::string get_level_string(const log_level_t level) {
   switch (level) {
     case DEBUG:
@@ -61,27 +59,11 @@ std::string get_level_string(const log_level_t level) {
 }
 
 log_level_t get_log_level() {
-  int log_level = s_log_level;
+  int log_level = config::debug();
 
-  // The first time get_log_level() is called, s_log_level is undefined (negative).
-  if (log_level < 0) {
-    // Get the log level from the environment variable BUILDCACHE_DEBUG.
-    const auto* log_level_env = std::getenv("BUILDCACHE_DEBUG");
-    if (log_level_env != nullptr) {
-      try {
-        log_level = std::stoi(std::string(log_level_env));
-      } catch (...) {
-      }
-      if ((log_level < static_cast<int>(DEBUG)) || (log_level > static_cast<int>(FATAL))) {
-        log_level = -1;
-      }
-    }
-
-    // If we did not get a valid log level, fall back to NONE (higher than the highest level).
-    if (log_level < 0) {
-      log_level = static_cast<int>(NONE);
-    }
-    s_log_level = log_level;
+  // If we did not get a valid log level, fall back to NONE (higher than the highest level).
+  if ((log_level < static_cast<int>(DEBUG)) || (log_level > static_cast<int>(FATAL))) {
+    log_level = static_cast<int>(NONE);
   }
 
   return static_cast<log_level_t>(log_level);
