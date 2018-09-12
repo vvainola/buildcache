@@ -55,8 +55,8 @@ void report() {
     std::cerr << "Lua - Init:         " << s_perf_log[ID_LUA_INIT] << " us\n";
     std::cerr << "Lua - Load script:  " << s_perf_log[ID_LUA_LOAD_SCRIPT] << " us\n";
     std::cerr << "Lua - Run:          " << s_perf_log[ID_LUA_RUN] << " us\n";
-    std::cerr << "Get wrapper config: " << s_perf_log[ID_GET_WRAPPER_CONFIG] << " us\n";
     std::cerr << "Resolve args:       " << s_perf_log[ID_RESOLVE_ARGS] << " us\n";
+    std::cerr << "Get capabilities:   " << s_perf_log[ID_GET_CAPABILITIES] << " us\n";
     std::cerr << "Preprocess:         " << s_perf_log[ID_PREPROCESS] << " us\n";
     std::cerr << "Filter arguments:   " << s_perf_log[ID_FILTER_ARGS] << " us\n";
     std::cerr << "Get program id:     " << s_perf_log[ID_GET_PRG_ID] << " us\n";

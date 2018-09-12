@@ -57,6 +57,20 @@ protected:
   /// @throws runtime_error if the request could not be completed.
   virtual void resolve_args();
 
+  /// @brief Generate a list of supported capabilites.
+  ///
+  /// The list of capabilites can contain zero or more of the following (case sensitive) strings:
+  ///
+  /// | String     | Meaning                             |
+  /// | ---------- | ----------------------------------- |
+  /// | hard_links | Can use hard links for cached files |
+  ///
+  /// @returns a list of supported capabilites.
+  /// @throws runtime_error if the request could not be completed.
+  /// @note Capabilites are "opt-in". If this method is not implemented or returns an empty list,
+  /// all capabilites will be treated as "not supported".
+  virtual string_list_t get_capabilities();
+
   /// @brief Generate the preprocessed source text.
   /// @returns the preprocessed source code file as a string, or an empty string if the operation
   /// failed.

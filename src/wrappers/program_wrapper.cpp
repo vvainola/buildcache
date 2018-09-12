@@ -29,6 +29,29 @@
 #include <map>
 
 namespace bcache {
+namespace {
+/// @brief A helper class for managing wrapper capabilities.
+class capabilities_t {
+public:
+  capabilities_t(const string_list_t& cap_strings);
+
+  bool hard_links() const {
+    return m_hard_links;
+  }
+
+private:
+  bool m_hard_links = false;
+};
+
+capabilities_t::capabilities_t(const string_list_t& cap_strings) {
+  for (const auto& str : cap_strings) {
+    if (str == "hard_links") {
+      m_hard_links = true;
+    }
+  }
+}
+}  // namespace
+
 program_wrapper_t::program_wrapper_t(const string_list_t& args, cache_t& cache)
     : m_args(args), m_cache(cache) {
 }
@@ -44,6 +67,11 @@ bool program_wrapper_t::handle_command(int& return_code) {
     PERF_START(RESOLVE_ARGS);
     resolve_args();
     PERF_STOP(RESOLVE_ARGS);
+
+    // Get wrapper capabilities.
+    PERF_START(GET_CAPABILITIES);
+    const auto capabilites = capabilities_t(get_capabilities());
+    PERF_STOP(GET_CAPABILITIES);
 
     // Start a hash.
     hasher_t hasher;
@@ -68,8 +96,7 @@ bool program_wrapper_t::handle_command(int& return_code) {
     const auto hash = hasher.final();
 
     // Check if we can use hard links.
-    // TODO(m): Add support for disabling hard links on a per wrapper basis.
-    auto allow_hard_links = config::hard_links();
+    auto allow_hard_links = config::hard_links() && capabilites.hard_links();
 
     // Look up the entry in the cache.
     PERF_START(CACHE_LOOKUP);
@@ -157,6 +184,12 @@ bool program_wrapper_t::handle_command(int& return_code) {
 
 void program_wrapper_t::resolve_args() {
   // Default: Do nothing.
+}
+
+string_list_t program_wrapper_t::get_capabilities() {
+  // Default: No capabilities are supported.
+  string_list_t capabilites;
+  return capabilites;
 }
 
 std::string program_wrapper_t::preprocess_source() {

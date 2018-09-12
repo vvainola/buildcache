@@ -62,6 +62,7 @@ private:
   };
 
   void resolve_args() override;
+  string_list_t get_capabilities() override;
   std::string preprocess_source() override;
   string_list_t get_relevant_arguments() override;
   std::map<std::string, std::string> get_relevant_env_vars() override;

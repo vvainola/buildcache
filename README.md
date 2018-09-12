@@ -86,13 +86,14 @@ All program arguments are available in the global `ARGS` array (an array of
 strings).
 
 The following methods can be implemented (see
-[program_wrapper.hpp](src/program_wrapper.hpp) for a more detailed
+[program_wrapper.hpp](src/wrappers/program_wrapper.hpp) for a more detailed
 documentation):
 
 | Function | Returns | Default |
 | --- | --- | --- |
 | can_handle_command () | Can the wrapper handle this program? | true |
 | resolve_args () | (nothing) | - |
+| get_capabilities () | A list of supported capabilities | An empty table |
 | preprocess_source () | The preprocessed source code (e.g. for C/C++) | An empty string |
 | get_relevant_arguments () | Arguments that can affect the build output | All arguments |
 | get_relevant_env_vars () | Environment variables that can affect the build output | An empty table |

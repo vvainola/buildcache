@@ -53,6 +53,12 @@ end
 -- Wrapper interface implementation.
 -------------------------------------------------------------------------------
 
+function get_capabilities ()
+  -- We can use hard links with GCC since it will never overwrite already
+  -- existing files.
+  return { "hard_links" }
+end
+
 function preprocess_source ()
   -- Check if this is a compilation command that we support.
   local is_object_compilation = false

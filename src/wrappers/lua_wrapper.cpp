@@ -388,6 +388,14 @@ void lua_wrapper_t::resolve_args() {
   }
 }
 
+string_list_t lua_wrapper_t::get_capabilities() {
+  if (m_runner.call("get_capabilities")) {
+    return pop_string_list(m_runner.state());
+  } else {
+    return program_wrapper_t::get_capabilities();
+  }
+}
+
 std::string lua_wrapper_t::preprocess_source() {
   if (m_runner.call("preprocess_source")) {
     return pop_string(m_runner.state());
