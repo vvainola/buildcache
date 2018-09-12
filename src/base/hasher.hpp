@@ -30,8 +30,10 @@ extern "C" {
 
 namespace bcache {
 
+/// @brief A class for hashing data.
 class hasher_t {
 public:
+  /// @brief A helper class for storing the data hash.
   class hash_t {
   public:
     uint8_t* data() {
@@ -73,7 +75,7 @@ public:
   void update_from_file(const std::string& path);
 
   /// @brief Finalize the hash calculation.
-  /// @param[out] result The result of the hash.
+  /// @returns the result of the hash.
   /// @note This method must only be called once.
   hash_t final() {
     hash_t result;

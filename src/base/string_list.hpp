@@ -63,7 +63,7 @@ public:
   }
 
   /// @brief Construct a list of arguments from a string with a shell-like format.
-  /// @param str The string.
+  /// @param cmd The string.
   /// @note As far as possible this routine mimics the standard shell behaviour, e.g. w.r.t.
   /// escaping and quotation.
   static string_list_t split_args(const std::string& cmd) {

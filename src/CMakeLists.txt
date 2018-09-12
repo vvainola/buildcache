@@ -48,6 +48,24 @@ add_executable(buildcache
   )
 target_link_libraries(buildcache base config sys wrappers)
 
+# Doxygen documentation.
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+  set(DOXYGEN_PROJECT_NAME BuildCache)
+  set(DOXYGEN_OUTPUT_DIRECTORY doc)
+  set(DOXYGEN_GENERATE_HTML YES)
+  set(DOXYGEN_GENERATE_LATEX NO)
+  set(DOXYGEN_EXCLUDE third_party)
+  set(DOXYGEN_EXTRACT_PRIVATE YES)
+  set(DOXYGEN_EXTRACT_STATIC YES)
+  set(DOXYGEN_QUIET YES)
+  set(DOXYGEN_WARN_IF_UNDOCUMENTED NO)
+  doxygen_add_docs(doc
+                   ${PROJECT_SOURCE_DIR}
+                   COMMENT "Generating documentation with Doxygen")
+endif()
+
+# Installation.
 install(
   TARGETS buildcache
   RUNTIME DESTINATION bin)

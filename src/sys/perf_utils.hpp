@@ -24,6 +24,7 @@
 
 namespace bcache {
 namespace perf {
+/// @brief Recognized instrumentation IDs.
 enum id_t {
   ID_FIND_EXECUTABLE = 0,
   ID_FIND_WRAPPER = 1,

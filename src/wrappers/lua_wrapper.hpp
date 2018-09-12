@@ -27,6 +27,10 @@ typedef struct lua_State lua_State;
 }
 
 namespace bcache {
+/// @brief A program wrapper that wraps Lua scripts.
+///
+/// This special wrapper class implements the wrapper API methods by redirecting the calls to the
+/// corrsponding methods in a Lua script.
 class lua_wrapper_t : public program_wrapper_t {
 public:
   lua_wrapper_t(const string_list_t& args, cache_t& cache, const std::string& lua_script_path);
