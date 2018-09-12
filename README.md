@@ -119,15 +119,43 @@ $ BUILDCACHE_DEBUG=2 buildcache g++ -c -O2 hello.cpp -o hello.o
 
 ## Configuration options
 
-The following environment variables control the behavior of BuildCache:
+BuildCache can be configured via environment variables and a per-cache JSON
+configuration file. The optinal configuration file is located in the cache
+root directory, and is called `config.json` (e.g.
+`$HOME/.buildcache/config.json`).
 
-| Option | Description | Default |
-| --- | --- | --- |
-| `BUILDCACHE_DIR` | The cache root directory | `$HOME/.buildcache` |
-| `BUILDCACHE_PREFIX` | Prefix command for cache misses | None |
-| `BUILDCACHE_LUA_PATH` | Path(s) to Lua wrappers | None |
-| `BUILDCACHE_DEBUG` | Debug level | None |
-| `BUILDCACHE_PERF` | Enable performance logging | Disabled |
+The following options control the behavior of BuildCache:
+
+| Env | JSON | Description | Default |
+| --- | --- | --- | --- |
+| `BUILDCACHE_DIR` | - | The cache root directory | `$HOME/.buildcache` |
+| `BUILDCACHE_PREFIX` | `prefix` | Prefix command for cache misses | None |
+| `BUILDCACHE_LUA_PATH` | `lua_paths` | Extra path(s) to Lua wrappers | None |
+| `BUILDCACHE_DEBUG` | `debug` | Debug level | None |
+| `BUILDCACHE_MAX_CACHE_SIZE` | `max_cache_size` | Cache size limit in bytes | 5368709120 |
+| `BUILDCACHE_HARD_LINKS` | `hard_links` | Allow the use of hard links when caching | true |
+| `BUILDCACHE_PERF` | `perf` | Enable performance logging | false |
+| `BUILDCACHE_DISABLE` | `disable` | Disable caching (bypass BuildCache) | false |
+
+An example configuration file:
+
+```json
+{
+  "max_cache_size": 10000000000,
+  "prefix": "icecc",
+  "debug": 3,
+  "lua_paths": [
+    "/home/myname/buildcache-lua",
+    "/opt/buildcache-lua"
+  ]
+}
+```
+
+To see the configuration options that are in effect, run:
+
+```bash
+$ buildcache -s
+```
 
 ## Status
 
