@@ -46,6 +46,9 @@ int64_t max_cache_size();
 /// @returns the debug level (-1 for no debugging).
 int32_t debug();
 
+/// @returns true if BuildCache should use hard links when possible.
+bool hard_links();
+
 /// @returns true if performance profiling output is enabled.
 bool perf();
 

@@ -219,7 +219,9 @@ void cache_t::show_stats() {
   std::cout.copyfmt(old_fmt);
 }
 
-void cache_t::add(const hasher_t::hash_t& hash, const cache_t::entry_t& entry) {
+void cache_t::add(const hasher_t::hash_t& hash,
+                  const cache_t::entry_t& entry,
+                  const bool allow_hard_links) {
   // Create the required directories in the cache.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
   const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
@@ -233,7 +235,11 @@ void cache_t::add(const hasher_t::hash_t& hash, const cache_t::entry_t& entry) {
   // Copy the files into the cache.
   for (const auto& file : entry.files) {
     const auto target_path = file::append_path(cache_entry_path, file.first);
-    file::link_or_copy(file.second, target_path);
+    if (allow_hard_links) {
+      file::link_or_copy(file.second, target_path);
+    } else {
+      file::copy(file.second, target_path);
+    }
   }
 
   // Create a cache entry file.

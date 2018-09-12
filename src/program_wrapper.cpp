@@ -19,6 +19,7 @@
 
 #include "program_wrapper.hpp"
 
+#include "configuration.hpp"
 #include "debug_utils.hpp"
 #include "hasher.hpp"
 #include "perf_utils.hpp"
@@ -66,6 +67,10 @@ bool program_wrapper_t::handle_command(int& return_code) {
     // Finalize the hash.
     const auto hash = hasher.final();
 
+    // Check if we can use hard links.
+    // TODO(m): Add support for disabling hard links on a per wrapper basis.
+    auto allow_hard_links = config::hard_links();
+
     // Look up the entry in the cache.
     PERF_START(CACHE_LOOKUP);
     const auto cached_entry = m_cache.lookup(hash);
@@ -84,7 +89,11 @@ bool program_wrapper_t::handle_command(int& return_code) {
         const auto& source_file = file.second;
         debug::log(debug::INFO) << "Cache hit (" << hash.as_string() << "): " << source_file
                                 << " => " << target_file;
-        file::link_or_copy(source_file, target_file);
+        if (allow_hard_links) {
+          file::link_or_copy(source_file, target_file);
+        } else {
+          file::copy(source_file, target_file);
+        }
       }
 
       // Return/print the cached program results.
@@ -122,7 +131,7 @@ bool program_wrapper_t::handle_command(int& return_code) {
       new_entry.std_err = result.std_err;
       new_entry.return_code = result.return_code;
       PERF_START(ADD_TO_CACHE);
-      m_cache.add(hash, new_entry);
+      m_cache.add(hash, new_entry, allow_hard_links);
       PERF_STOP(ADD_TO_CACHE);
     }
 

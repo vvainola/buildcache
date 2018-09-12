@@ -60,7 +60,8 @@ public:
   /// @brief Adds a set of files to the cache
   /// @param hash The cache entry identifier.
   /// @param entry The cache entry data (files, stdout, etc).
-  void add(const hasher_t::hash_t& hash, const entry_t& entry);
+  /// @param allow_hard_links Whether or not to allow hard links to be used when caching files.
+  void add(const hasher_t::hash_t& hash, const entry_t& entry, const bool allow_hard_links);
 
   /// @brief Check if an entry exists in the cache.
   /// @returns A cache hit struct.

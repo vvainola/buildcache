@@ -40,6 +40,7 @@ string_list_t s_lua_paths;
 std::string s_prefix;
 int64_t s_max_cache_size = DEFAULT_MAX_CACHE_SIZE;
 int32_t s_debug = -1;
+bool s_hard_links = true;
 bool s_perf = false;
 bool s_disable = false;
 
@@ -161,6 +162,14 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
+  // Get "hard_links".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "hard_links");
+    if (cJSON_IsBool(node)) {
+      s_hard_links = cJSON_IsTrue(node);
+    }
+  }
+
   // Get "perf".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "perf");
@@ -203,11 +212,11 @@ void init() {
     {
       const env_var_t lua_path_env("BUILDCACHE_LUA_PATH");
       if (lua_path_env) {
-  #ifdef _WIN32
+#ifdef _WIN32
         s_lua_paths += string_list_t(lua_path_env.as_string(), ";");
-  #else
+#else
         s_lua_paths += string_list_t(lua_path_env.as_string(), ":");
-  #endif
+#endif
       }
     }
 
@@ -254,6 +263,14 @@ void init() {
       }
     }
 
+    // Get the hard_links flag from the environment.
+    {
+      const env_var_t hard_links_env("BUILDCACHE_HARD_LINKS");
+      if (hard_links_env) {
+        s_hard_links = hard_links_env.as_bool();
+      }
+    }
+
     // Get the perf flag from the environment.
     {
       const env_var_t perf_env("BUILDCACHE_PERF");
@@ -294,6 +311,10 @@ int64_t max_cache_size() {
 
 int32_t debug() {
   return s_debug;
+}
+
+bool hard_links() {
+  return s_hard_links;
 }
 
 bool perf() {
