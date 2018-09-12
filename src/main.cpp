@@ -281,9 +281,9 @@ int main(int argc, const char** argv) {
     // Set the debug log level to what is given by the configuration.
     bcache::debug::set_log_level(bcache::config::debug());
   } catch (const std::exception& e) {
-    bcache::debug::log(bcache::debug::ERROR) << "Warning: " << e.what();
+    bcache::debug::log(bcache::debug::FATAL) << e.what();
   } catch (...) {
-    bcache::debug::log(bcache::debug::ERROR) << "An exception occurred.";
+    bcache::debug::log(bcache::debug::FATAL) << "An exception occurred.";
   }
 
   // Handle symlink invokation.

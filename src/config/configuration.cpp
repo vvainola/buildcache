@@ -199,9 +199,6 @@ void init() {
   }
   s_initialized = true;
 
-  // TODO(m): If we get an exception during get_dir() or load_from_file() for instance, those error
-  // messages will never be printed, *even* when BUILDCACHE_DEBUG=1 is passed in the environment.
-  // We need to untie this catch-22.
   try {
     // Get the BuildCache home directory.
     s_dir = get_dir();

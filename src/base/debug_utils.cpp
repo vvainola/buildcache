@@ -42,7 +42,10 @@ namespace bcache {
 namespace debug {
 namespace {
 // The log level.
-log_level_t s_log_level = NONE;
+// Note: We set this to ERROR at startup, in order to log early errors related to configuration
+// parsing etc. Once the configuration has been read, the log level will be reset to the user
+// selected level (NONE by default).
+log_level_t s_log_level = ERROR;
 
 std::string get_level_string(const log_level_t level) {
   switch (level) {
