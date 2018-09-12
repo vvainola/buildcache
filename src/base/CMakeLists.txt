@@ -30,5 +30,4 @@ add_library(base
   unicode_utils.cpp
   unicode_utils.hpp
   )
-target_include_directories(base PUBLIC ..)
 target_link_libraries(base md4)

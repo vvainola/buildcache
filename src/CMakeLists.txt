@@ -20,6 +20,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(BuildCache)
 
+# We build everything against the C++11 standard.
 set(CMAKE_CXX_STANDARD 11)
 set(CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -29,13 +30,19 @@ if(MINGW)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
 endif()
 
+# Thrid party libraries used by BuildCache.
 add_subdirectory(third_party)
 
+# For the project internal files, all includes are relative to the root folder.
+include_directories(.)
+
+# BuildCache internal libraries.
 add_subdirectory(base)
 add_subdirectory(config)
 add_subdirectory(sys)
 add_subdirectory(wrappers)
 
+# The BuildCache application.
 add_executable(buildcache
   main.cpp
   )

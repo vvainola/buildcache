@@ -21,6 +21,5 @@ add_library(config
   configuration.cpp
   configuration.hpp
   )
-target_include_directories(config PUBLIC ..)
 target_link_libraries(config base cjson)
 

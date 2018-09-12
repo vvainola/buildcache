@@ -25,7 +25,6 @@ add_library(sys
   sys_utils.cpp
   sys_utils.hpp
   )
-target_include_directories(sys PUBLIC ..)
 target_link_libraries(sys base config)
 
 if(WIN32 OR MINGW)

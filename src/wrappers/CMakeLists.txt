@@ -29,6 +29,5 @@ add_library(wrappers
   program_wrapper.cpp
   program_wrapper.hpp
   )
-target_include_directories(wrappers PUBLIC ..)
 target_link_libraries(wrappers base config sys lua)
 
