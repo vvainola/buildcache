@@ -54,6 +54,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 
@@ -204,16 +205,18 @@ void cache_t::show_stats() {
     num_entries++;
     total_size += dir.size();
   }
-  const double total_size_mb = static_cast<double>(total_size) / (1024.0 * 1024.0);
-  const double max_size_mb = static_cast<double>(config::max_cache_size()) / (1024.0 * 1024.0);
+  const auto total_size_mib = static_cast<double>(total_size) / (1024.0 * 1024.0);
+  const auto max_size_mib = static_cast<double>(config::max_cache_size()) / (1024.0 * 1024.0);
+  const auto full_percentage = 100.0 * total_size_mib / max_size_mib;
 
-  std::cout << "cache directory:   " << config::dir() << "\n";
-  // std::cout << "primary config:    " << get_configuration_file_name() << "\n";
-  std::cout << "entries in cache:  " << num_entries << "\n";
-  std::cout << "cache size:        " << total_size_mb << " MB\n";
-  std::cout << "max cache size:    " << max_size_mb << " MB\n";
-
-  // TODO(m): Implement more stats.
+  // Print stats.
+  std::ios old_fmt(nullptr);
+  old_fmt.copyfmt(std::cout);
+  std::cout << std::setiosflags(std::ios::fixed) << std::setprecision(1);
+  std::cout << "  Entries in cache:          " << num_entries << "\n";
+  std::cout << "  Cache size:                " << total_size_mib << " MiB (" << full_percentage
+            << "%)\n";
+  std::cout.copyfmt(old_fmt);
 }
 
 void cache_t::add(const hasher_t::hash_t& hash, const cache_t::entry_t& entry) {
