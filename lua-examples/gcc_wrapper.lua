@@ -153,6 +153,8 @@ function get_build_files ()
       end
       files["object"] = ARGS[next_idx]
       found_object_file = true
+    elseif (ARGS[i] == "-ftest-coverage") then
+      error("Code coverage data is currently not supported.")
     end
   end
   if not found_object_file then
