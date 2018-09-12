@@ -17,18 +17,18 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "cache.hpp"
-#include "configuration.hpp"
-#include "debug_utils.hpp"
-#include "gcc_wrapper.hpp"
-#include "ghs_wrapper.hpp"
-#include "lua_wrapper.hpp"
-#include "msvc_wrapper.hpp"
-#include "perf_utils.hpp"
-#include "program_wrapper.hpp"
-#include "string_list.hpp"
-#include "sys_utils.hpp"
-#include "unicode_utils.hpp"
+#include <base/debug_utils.hpp>
+#include <base/string_list.hpp>
+#include <base/unicode_utils.hpp>
+#include <config/configuration.hpp>
+#include <sys/cache.hpp>
+#include <sys/perf_utils.hpp>
+#include <sys/sys_utils.hpp>
+#include <wrappers/gcc_wrapper.hpp>
+#include <wrappers/ghs_wrapper.hpp>
+#include <wrappers/lua_wrapper.hpp>
+#include <wrappers/msvc_wrapper.hpp>
+#include <wrappers/program_wrapper.hpp>
 
 #include <iostream>
 #include <memory>
@@ -274,9 +274,12 @@ void print_help(const char* program_name) {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  // Initialize the configuration.
   try {
+    // Initialize the configuration.
     bcache::config::init();
+
+    // Set the debug log level to what is given by the configuration.
+    bcache::debug::set_log_level(bcache::config::debug());
   } catch (const std::exception& e) {
     bcache::debug::log(bcache::debug::ERROR) << "Warning: " << e.what();
   } catch (...) {

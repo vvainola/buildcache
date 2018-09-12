@@ -17,24 +17,58 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_GCC_WRAPPER_HPP_
-#define BUILDCACHE_GCC_WRAPPER_HPP_
+#ifndef BUILDCACHE_LUA_WRAPPER_HPP_
+#define BUILDCACHE_LUA_WRAPPER_HPP_
 
-#include "program_wrapper.hpp"
+#include <wrappers/program_wrapper.hpp>
+
+extern "C" {
+typedef struct lua_State lua_State;
+}
 
 namespace bcache {
-class gcc_wrapper_t : public program_wrapper_t {
+class lua_wrapper_t : public program_wrapper_t {
 public:
-  gcc_wrapper_t(const string_list_t& args, cache_t& cache);
+  lua_wrapper_t(const string_list_t& args, cache_t& cache, const std::string& lua_script_path);
 
   bool can_handle_command() override;
 
 private:
+  // A helper class for managing the Lua state.
+  class runner_t {
+  public:
+    runner_t(const std::string& script_path, const string_list_t& args);
+    ~runner_t();
+
+    bool call(const std::string& func);
+
+    const std::string& script() const {
+      return m_script;
+    }
+
+    lua_State* state() {
+      return m_state;
+    }
+
+  private:
+    void init_lua_state();
+    void setup_lua_libs_and_globals();
+    [[noreturn]] void bail(const std::string& message);
+
+    lua_State* m_state = nullptr;
+    const std::string m_script_path;
+    const string_list_t m_args;
+    std::string m_script;
+  };
+
+  void resolve_args() override;
   std::string preprocess_source() override;
   string_list_t get_relevant_arguments() override;
   std::map<std::string, std::string> get_relevant_env_vars() override;
   std::string get_program_id() override;
   std::map<std::string, std::string> get_build_files() override;
+
+  runner_t m_runner;
 };
 }  // namespace bcache
-#endif  // BUILDCACHE_GCC_WRAPPER_HPP_
+#endif  // BUILDCACHE_LUA_WRAPPER_HPP_

@@ -20,7 +20,7 @@
 #ifndef BUILDCACHE_SYS_UTILS_HPP_
 #define BUILDCACHE_SYS_UTILS_HPP_
 
-#include "string_list.hpp"
+#include <base/string_list.hpp>
 
 #include <string>
 

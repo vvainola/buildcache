@@ -17,10 +17,10 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "ghs_wrapper.hpp"
+#include <wrappers/ghs_wrapper.hpp>
 
-#include "file_utils.hpp"
-#include "unicode_utils.hpp"
+#include <base/file_utils.hpp>
+#include <base/unicode_utils.hpp>
 
 #include <stdexcept>
 

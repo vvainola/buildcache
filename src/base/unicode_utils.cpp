@@ -17,7 +17,7 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "unicode_utils.hpp"
+#include <base/unicode_utils.hpp>
 
 // The codecvt routines are buggy on some systems, so we fall back to a custom routine instead if
 // that is the case.

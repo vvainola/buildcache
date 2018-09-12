@@ -17,25 +17,49 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_GHS_WRAPPER_HPP_
-#define BUILDCACHE_GHS_WRAPPER_HPP_
+#ifndef BUILDCACHE_DEBUG_UTILS_HPP_
+#define BUILDCACHE_DEBUG_UTILS_HPP_
 
-#include "gcc_wrapper.hpp"
+#include <sstream>
+#include <string>
 
 namespace bcache {
-/// @brief This is a wrapper for the Green Hills Software C/C++ compiler.
-///
-/// The GHS compiler is fairly compatible with the GCC wrapper, so we derive from it.
-class ghs_wrapper_t : public gcc_wrapper_t {
-public:
-  ghs_wrapper_t(const string_list_t& args, cache_t& cache);
+namespace debug {
+enum log_level_t { DEBUG = 1, INFO = 2, ERROR = 3, FATAL = 4, NONE = 5 };
 
-  bool can_handle_command() override;
+/// @brief Set the global log level.
+/// @param level An integer that corresponds to a log_level_t enum value.
+/// @note If level is not a valid log level, the global log level is set to NONE.
+void set_log_level(const int level);
+
+/// @brief A simple log stream object.
+///
+/// Usage:
+/// @code
+/// debug::log(debug::INFO) << "Hello world! The answer is: " << some_variable;
+/// @endcode
+class log {
+public:
+  /// @brief Log stream constructor.
+  /// @param level The log level.
+  log(const log_level_t level);
+
+  /// @brief Log stream destructor.
+  ///
+  /// The log message is printed once the log stream object goes out of scope.
+  ~log();
+
+  template <typename T>
+  log& operator<<(const T message) {
+    m_stream << message;
+    return *this;
+  }
 
 private:
-  std::map<std::string, std::string> get_relevant_env_vars() override;
-  std::string get_program_id() override;
+  const log_level_t m_level;
+  std::ostringstream m_stream;
 };
+}  // namespace debug
 }  // namespace bcache
 
-#endif  // BUILDCACHE_GHS_WRAPPER_HPP_
+#endif  // BUILDCACHE_DEBUG_UTILS_HPP_

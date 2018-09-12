@@ -17,34 +17,25 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "hasher.hpp"
+#ifndef BUILDCACHE_GHS_WRAPPER_HPP_
+#define BUILDCACHE_GHS_WRAPPER_HPP_
 
-#include "file_utils.hpp"
+#include <wrappers/gcc_wrapper.hpp>
 
 namespace bcache {
-const std::string hasher_t::hash_t::as_string() const {
-  static const char digits[17] = "0123456789abcdef";
-  std::string result(SIZE * 2, '0');
-  for (size_t i = 0; i < SIZE; ++i) {
-    result[i * 2] = digits[m_data[i] >> 4];
-    result[i * 2 + 1] = digits[m_data[i] & 0x0fu];
-  }
-  return result;
-}
+/// @brief This is a wrapper for the Green Hills Software C/C++ compiler.
+///
+/// The GHS compiler is fairly compatible with the GCC wrapper, so we derive from it.
+class ghs_wrapper_t : public gcc_wrapper_t {
+public:
+  ghs_wrapper_t(const string_list_t& args, cache_t& cache);
 
-void hasher_t::update(const std::map<std::string, std::string>& data) {
-  // Note: This is guaranteed by the C++ standard to iterate over the elements in ascending key
-  // order, so the hash will always be the same for the same map contents.
-  for (const auto& item : data) {
-    update(item.first);
-    update(item.second);
-  }
-}
+  bool can_handle_command() override;
 
-void hasher_t::update_from_file(const std::string& path) {
-  // TODO(m): Investigate if using buffered input gives better performance (at least it should use
-  // less memory, and it should be nicer to the CPU caches).
-  const auto file_data = file::read(path);
-  update(file_data);
-}
+private:
+  std::map<std::string, std::string> get_relevant_env_vars() override;
+  std::string get_program_id() override;
+};
 }  // namespace bcache
+
+#endif  // BUILDCACHE_GHS_WRAPPER_HPP_

@@ -17,12 +17,12 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "sys_utils.hpp"
+#include <sys/sys_utils.hpp>
 
-#include "configuration.hpp"
-#include "debug_utils.hpp"
-#include "file_utils.hpp"
-#include "unicode_utils.hpp"
+#include <base/debug_utils.hpp>
+#include <base/file_utils.hpp>
+#include <base/unicode_utils.hpp>
+#include <config/configuration.hpp>
 
 #include <cstdio>
 #include <cstdlib>

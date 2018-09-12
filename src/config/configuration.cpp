@@ -17,9 +17,9 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "configuration.hpp"
+#include <config/configuration.hpp>
 
-#include "file_utils.hpp"
+#include <base/file_utils.hpp>
 
 #include <cjson/cJSON.h>
 

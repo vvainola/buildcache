@@ -17,13 +17,13 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "program_wrapper.hpp"
+#include <wrappers/program_wrapper.hpp>
 
-#include "configuration.hpp"
-#include "debug_utils.hpp"
-#include "hasher.hpp"
-#include "perf_utils.hpp"
-#include "sys_utils.hpp"
+#include <base/debug_utils.hpp>
+#include <base/hasher.hpp>
+#include <config/configuration.hpp>
+#include <sys/perf_utils.hpp>
+#include <sys/sys_utils.hpp>
 
 #include <iostream>
 #include <map>

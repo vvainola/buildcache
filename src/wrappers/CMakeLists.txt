@@ -17,30 +17,18 @@
 #  3. This notice may not be removed or altered from any source distribution.
 #---------------------------------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.5)
-project(BuildCache)
-
-set(CMAKE_CXX_STANDARD 11)
-set(CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-if(MINGW)
-  # For ease of deployment, statically link the standard libraries when using MinGW.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
-endif()
-
-add_subdirectory(third_party)
-
-add_subdirectory(base)
-add_subdirectory(config)
-add_subdirectory(sys)
-add_subdirectory(wrappers)
-
-add_executable(buildcache
-  main.cpp
+add_library(wrappers
+  gcc_wrapper.cpp
+  gcc_wrapper.hpp
+  ghs_wrapper.cpp
+  ghs_wrapper.hpp
+  lua_wrapper.cpp
+  lua_wrapper.hpp
+  msvc_wrapper.cpp
+  msvc_wrapper.hpp
+  program_wrapper.cpp
+  program_wrapper.hpp
   )
-target_link_libraries(buildcache base config sys wrappers)
+target_include_directories(wrappers PUBLIC ..)
+target_link_libraries(wrappers base config sys lua)
 
-install(
-  TARGETS buildcache
-  RUNTIME DESTINATION bin)

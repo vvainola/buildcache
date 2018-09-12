@@ -20,7 +20,7 @@
 #ifndef BUILDCACHE_MSVC_WRAPPER_HPP_
 #define BUILDCACHE_MSVC_WRAPPER_HPP_
 
-#include "program_wrapper.hpp"
+#include <wrappers/program_wrapper.hpp>
 
 namespace bcache {
 class msvc_wrapper_t : public program_wrapper_t {

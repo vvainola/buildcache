@@ -20,11 +20,11 @@
 #ifndef BUILDCACHE_CONFIGURATION_HPP_
 #define BUILDCACHE_CONFIGURATION_HPP_
 
+#include <base/string_list.hpp>
+
 #include <cstdint>
 #include <map>
 #include <string>
-
-#include "string_list.hpp"
 
 namespace bcache {
 namespace config {

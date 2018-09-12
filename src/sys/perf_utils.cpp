@@ -17,10 +17,10 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "perf_utils.hpp"
+#include <sys/perf_utils.hpp>
 
-#include "configuration.hpp"
-#include "unicode_utils.hpp"
+#include <base/unicode_utils.hpp>
+#include <config/configuration.hpp>
 
 #include <chrono>
 #include <iostream>

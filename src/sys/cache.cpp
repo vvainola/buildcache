@@ -44,12 +44,12 @@
 //     +- ...
 //--------------------------------------------------------------------------------------------------
 
-#include "cache.hpp"
+#include <sys/cache.hpp>
 
-#include "configuration.hpp"
-#include "debug_utils.hpp"
-#include "file_utils.hpp"
-#include "serializer_utils.hpp"
+#include <base/debug_utils.hpp>
+#include <base/file_utils.hpp>
+#include <base/serializer_utils.hpp>
+#include <config/configuration.hpp>
 
 #include <algorithm>
 #include <chrono>

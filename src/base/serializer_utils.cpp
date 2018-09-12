@@ -17,7 +17,7 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "serializer_utils.hpp"
+#include <base/serializer_utils.hpp>
 
 #include <stdexcept>
 

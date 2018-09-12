@@ -17,9 +17,7 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "debug_utils.hpp"
-
-#include "configuration.hpp"
+#include <base/debug_utils.hpp>
 
 #include <iostream>
 #include <string>
@@ -43,6 +41,9 @@
 namespace bcache {
 namespace debug {
 namespace {
+// The log level.
+log_level_t s_log_level = NONE;
+
 std::string get_level_string(const log_level_t level) {
   switch (level) {
     case DEBUG:
@@ -58,17 +59,6 @@ std::string get_level_string(const log_level_t level) {
   }
 }
 
-log_level_t get_log_level() {
-  int log_level = config::debug();
-
-  // If we did not get a valid log level, fall back to NONE (higher than the highest level).
-  if ((log_level < static_cast<int>(DEBUG)) || (log_level > static_cast<int>(FATAL))) {
-    log_level = static_cast<int>(NONE);
-  }
-
-  return static_cast<log_level_t>(log_level);
-}
-
 int get_process_id() {
 #ifdef _WIN32
   return static_cast<int>(GetCurrentProcessId());
@@ -82,11 +72,20 @@ std::string pad_string(const std::string& str, const size_t width) {
 }
 }  // namespace
 
+void set_log_level(const int level) {
+  // If we did not get a valid log level, fall back to NONE (higher than the highest level).
+  if ((level < static_cast<int>(DEBUG)) || (level > static_cast<int>(FATAL))) {
+    s_log_level = NONE;
+  } else {
+    s_log_level = static_cast<log_level_t>(level);
+  }
+}
+
 log::log(const log_level_t level) : m_level(level) {
 }
 
 log::~log() {
-  if (m_level >= get_log_level()) {
+  if (m_level >= s_log_level) {
     const auto level_str = std::string("(") + get_level_string(m_level) + ")";
     std::cout << "BuildCache[" << get_process_id() << "] " << pad_string(level_str, 7) << " "
               << m_stream.str() << "\n"

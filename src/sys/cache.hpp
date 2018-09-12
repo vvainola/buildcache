@@ -20,8 +20,8 @@
 #ifndef BUILDCACHE_CACHE_HPP_
 #define BUILDCACHE_CACHE_HPP_
 
-#include "file_utils.hpp"
-#include "hasher.hpp"
+#include <base/file_utils.hpp>
+#include <base/hasher.hpp>
 
 #include <map>
 #include <string>

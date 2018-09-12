@@ -17,30 +17,18 @@
 #  3. This notice may not be removed or altered from any source distribution.
 #---------------------------------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.5)
-project(BuildCache)
+add_library(sys
+  cache.cpp
+  cache.hpp
+  perf_utils.cpp
+  perf_utils.hpp
+  sys_utils.cpp
+  sys_utils.hpp
+  )
+target_include_directories(sys PUBLIC ..)
+target_link_libraries(sys base config)
 
-set(CMAKE_CXX_STANDARD 11)
-set(CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-if(MINGW)
-  # For ease of deployment, statically link the standard libraries when using MinGW.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+if(WIN32 OR MINGW)
+  target_link_libraries(sys userenv)
 endif()
 
-add_subdirectory(third_party)
-
-add_subdirectory(base)
-add_subdirectory(config)
-add_subdirectory(sys)
-add_subdirectory(wrappers)
-
-add_executable(buildcache
-  main.cpp
-  )
-target_link_libraries(buildcache base config sys wrappers)
-
-install(
-  TARGETS buildcache
-  RUNTIME DESTINATION bin)

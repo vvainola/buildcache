@@ -17,12 +17,12 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "lua_wrapper.hpp"
+#include <wrappers/lua_wrapper.hpp>
 
-#include "debug_utils.hpp"
-#include "file_utils.hpp"
-#include "perf_utils.hpp"
-#include "sys_utils.hpp"
+#include <base/debug_utils.hpp>
+#include <base/file_utils.hpp>
+#include <sys/perf_utils.hpp>
+#include <sys/sys_utils.hpp>
 
 extern "C" {
 #include <lauxlib.h>

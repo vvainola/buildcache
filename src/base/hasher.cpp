@@ -17,44 +17,34 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_DEBUG_UTILS_HPP_
-#define BUILDCACHE_DEBUG_UTILS_HPP_
+#include <base/hasher.hpp>
 
-#include <sstream>
-#include <string>
+#include <base/file_utils.hpp>
 
 namespace bcache {
-namespace debug {
-enum log_level_t { DEBUG = 1, INFO = 2, ERROR = 3, FATAL = 4, NONE = 5 };
-
-/// @brief A simple log stream object.
-///
-/// Usage:
-/// @code
-/// debug::log(debug::INFO) << "Hello world! The answer is: " << some_variable;
-/// @endcode
-class log {
-public:
-  /// @brief Log stream constructor.
-  /// @param level The log level.
-  log(const log_level_t level);
-
-  /// @brief Log stream destructor.
-  ///
-  /// The log message is printed once the log stream object goes out of scope.
-  ~log();
-
-  template <typename T>
-  log& operator<<(const T message) {
-    m_stream << message;
-    return *this;
+const std::string hasher_t::hash_t::as_string() const {
+  static const char digits[17] = "0123456789abcdef";
+  std::string result(SIZE * 2, '0');
+  for (size_t i = 0; i < SIZE; ++i) {
+    result[i * 2] = digits[m_data[i] >> 4];
+    result[i * 2 + 1] = digits[m_data[i] & 0x0fu];
   }
+  return result;
+}
 
-private:
-  const log_level_t m_level;
-  std::ostringstream m_stream;
-};
-}  // namespace debug
+void hasher_t::update(const std::map<std::string, std::string>& data) {
+  // Note: This is guaranteed by the C++ standard to iterate over the elements in ascending key
+  // order, so the hash will always be the same for the same map contents.
+  for (const auto& item : data) {
+    update(item.first);
+    update(item.second);
+  }
+}
+
+void hasher_t::update_from_file(const std::string& path) {
+  // TODO(m): Investigate if using buffered input gives better performance (at least it should use
+  // less memory, and it should be nicer to the CPU caches).
+  const auto file_data = file::read(path);
+  update(file_data);
+}
 }  // namespace bcache
-
-#endif  // BUILDCACHE_DEBUG_UTILS_HPP_

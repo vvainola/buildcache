@@ -17,11 +17,11 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include "msvc_wrapper.hpp"
+#include <wrappers/msvc_wrapper.hpp>
 
-#include "debug_utils.hpp"
-#include "sys_utils.hpp"
-#include "unicode_utils.hpp"
+#include <base/debug_utils.hpp>
+#include <base/unicode_utils.hpp>
+#include <sys/sys_utils.hpp>
 
 #include <cstdlib>
 #include <stdexcept>

@@ -20,9 +20,9 @@
 #ifndef BUILDCACHE_PROGRAM_WRAPPER_HPP_
 #define BUILDCACHE_PROGRAM_WRAPPER_HPP_
 
-#include "cache.hpp"
-#include "file_utils.hpp"
-#include "string_list.hpp"
+#include <base/file_utils.hpp>
+#include <base/string_list.hpp>
+#include <sys/cache.hpp>
 
 #include <string>
 
