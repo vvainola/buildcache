@@ -36,6 +36,7 @@ const int64_t DEFAULT_MAX_CACHE_SIZE = 5368709120L;  // 5 GB
 
 // Configuration options.
 std::string s_dir;
+std::string s_config_file;
 string_list_t s_lua_paths;
 std::string s_prefix;
 int64_t s_max_cache_size = DEFAULT_MAX_CACHE_SIZE;
@@ -104,6 +105,10 @@ std::string get_dir() {
 
   // We failed.
   throw std::runtime_error("Unable to determine a home directory for BuildCache.");
+}
+
+std::string get_config_file(const std::string& dir) {
+  return file::append_path(dir, CONFIGURATION_FILE_NAME);
 }
 
 void load_from_file(const std::string& file_name) {
@@ -220,8 +225,8 @@ void init() {
     // Load any paramaters from the user configuration file.
     // Note: We do this before reading the configuration from the environment, so that the
     // environment overrides the configuration file.
-    const auto config_file = file::append_path(s_dir, CONFIGURATION_FILE_NAME);
-    load_from_file(config_file);
+    s_config_file = get_config_file(s_dir);
+    load_from_file(s_config_file);
 
     // We also look for Lua files in the cache root dir (e.g. ${BUILDCACHE_DIR}/lua).
     // Note: We need do this after loading the configuration file, to give the default Lua path the
@@ -292,6 +297,10 @@ void init() {
 
 const std::string& dir() {
   return s_dir;
+}
+
+const std::string& config_file() {
+  return s_config_file;
 }
 
 const string_list_t& lua_paths() {

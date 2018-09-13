@@ -34,6 +34,9 @@ void init();
 /// @returns the BuildCache home directory.
 const std::string& dir();
 
+/// @returns the BuildCache configuration file.
+const std::string& config_file();
+
 /// @returns the Lua search paths.
 const string_list_t& lua_paths();
 
