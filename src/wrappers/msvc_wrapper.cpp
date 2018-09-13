@@ -80,6 +80,11 @@ bool msvc_wrapper_t::can_handle_command() {
   return (cmd == "cl");
 }
 
+string_list_t msvc_wrapper_t::get_capabilities() {
+  // We can use hard links with MSVC since it will never overwrite already existing files.
+  return string_list_t{"hard_links"};
+}
+
 std::string msvc_wrapper_t::preprocess_source() {
   // Check if this is a compilation command that we support.
   auto is_object_compilation = false;
