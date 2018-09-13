@@ -78,12 +78,8 @@ bool gcc_wrapper_t::can_handle_command() {
 }
 
 string_list_t gcc_wrapper_t::get_capabilities() {
-  string_list_t capabilites;
-
   // We can use hard links with GCC since it will never overwrite already existing files.
-  capabilites += "hard_links";
-
-  return capabilites;
+  return string_list_t{"hard_links"};
 }
 
 std::string gcc_wrapper_t::preprocess_source() {

@@ -20,6 +20,7 @@
 #ifndef BUILDCACHE_STRING_LIST_HPP_
 #define BUILDCACHE_STRING_LIST_HPP_
 
+#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,11 @@ public:
 
   /// @brief Construct an empty list.
   string_list_t() {
+  }
+
+  /// @brief Construct a list from an initializer list.
+  /// @param list The strings to add to the string list object.
+  string_list_t(std::initializer_list<std::string> list) : m_args(list) {
   }
 
   /// @brief Construct a list from command line arguments.
