@@ -42,10 +42,26 @@ add_subdirectory(config)
 add_subdirectory(sys)
 add_subdirectory(wrappers)
 
+# Sources for the buildcache applicatoin.
+set(BUILDCACHE_SRCS
+    main.cpp)
+
+# On Windows we want to include an application resource (for version information).
+if(WIN32 OR MINGW)
+  list(APPEND BUILDCACHE_SRCS buildcache.rc)
+  if(MINGW)
+    # This is an ugly hack to find and use the MinGW resource compiler.
+    string(REGEX REPLACE "g\\+\\+$" "windres" CMAKE_RC_COMPILER "${CMAKE_CXX_COMPILER}")
+    if(EXISTS "${CMAKE_RC_COMPILER}")
+      enable_language(RC)
+      set(CMAKE_RC_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR} -O COFF")
+      set(CMAKE_RC_COMPILE_OBJECT "${CMAKE_RC_COMPILER} ${CMAKE_RC_FLAGS} -i <SOURCE> -o <OBJECT>")
+    endif()
+  endif()
+endif()
+
 # The BuildCache application.
-add_executable(buildcache
-  main.cpp
-  )
+add_executable(buildcache ${BUILDCACHE_SRCS})
 target_link_libraries(buildcache base config sys wrappers)
 
 # Doxygen documentation.

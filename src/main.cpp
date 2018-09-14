@@ -35,6 +35,12 @@
 #include <stdexcept>
 #include <string>
 
+#include "buildcache_version.h"
+
+// For program binary identification (e.g. using the "strings", "ident" or "what" tools).
+char PROGRAM_IDENTITY_1[] = "@(#)BuildCache version " BUILDCACHE_VERSION_STRING;
+char PROGRAM_IDENTITY_2[] = "$BuildCacheVersion: " BUILDCACHE_VERSION_STRING " $";
+
 namespace {
 // The name of the BuildCache executable (excluding the file extension).
 const std::string BUILDCACHE_EXE_NAME = "buildcache";
@@ -150,7 +156,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
 }
 
 [[noreturn]] void print_version_and_exit() {
-  std::cout << "BuildCache version 0.3-dev\n";
+  std::cout << "BuildCache version " BUILDCACHE_VERSION_STRING "\n";
   std::exit(0);
 }
 
