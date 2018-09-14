@@ -42,7 +42,7 @@ add_subdirectory(config)
 add_subdirectory(sys)
 add_subdirectory(wrappers)
 
-# Sources for the buildcache applicatoin.
+# Sources for the buildcache application.
 set(BUILDCACHE_SRCS
     main.cpp)
 
@@ -66,7 +66,7 @@ target_link_libraries(buildcache base config sys wrappers)
 
 # Doxygen documentation.
 find_package(Doxygen)
-if(DOXYGEN_FOUND)
+if(DOXYGEN_FOUND AND NOT (${CMAKE_VERSION} VERSION_LESS "3.9.0"))
   set(DOXYGEN_PROJECT_NAME BuildCache)
   set(DOXYGEN_OUTPUT_DIRECTORY doc)
   set(DOXYGEN_GENERATE_HTML YES)
