@@ -149,6 +149,11 @@ std::string resolve_path(const std::string& path);
 /// @throws runtime_error if the file could not be found.
 std::string find_executable(const std::string& path, const std::string& exclude = std::string());
 
+/// @brief Get file information about a single file or directory.
+/// @param path The path to the file (or directory).
+/// @returns a file information object.
+file_info_t get_file_info(const std::string& path);
+
 /// @brief Walk a directory and its subdirectories.
 /// @param path The path to the directory.
 /// @returns a vector of file information objects.

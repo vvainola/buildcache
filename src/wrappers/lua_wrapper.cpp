@@ -138,6 +138,22 @@ void push(lua_State* state, const sys::run_result_t& data) {
   lua_setfield(state, -2, "return_code");
 }
 
+void push(lua_State* state, const file::file_info_t& data) {
+  // Push the information as a string-indexed table (i.e. a map).
+  assert_state_initialized(state);
+  lua_createtable(state, 0, 5);
+  lua_pushlstring(state, data.path().c_str(), data.path().size());
+  lua_setfield(state, -2, "path");
+  lua_pushinteger(state, static_cast<lua_Integer>(data.modify_time()));
+  lua_setfield(state, -2, "modify_time");
+  lua_pushinteger(state, static_cast<lua_Integer>(data.access_time()));
+  lua_setfield(state, -2, "access_time");
+  lua_pushinteger(state, static_cast<lua_Integer>(data.size()));
+  lua_setfield(state, -2, "size");
+  lua_pushboolean(state, data.is_dir() ? 1 : 0);
+  lua_setfield(state, -2, "is_dir");
+}
+
 //--------------------------------------------------------------------------------------------------
 // Begin: The Lua side "bcache" library.
 //--------------------------------------------------------------------------------------------------
@@ -193,6 +209,11 @@ int l_get_dir_part(lua_State* state) {
   return 1;
 }
 
+int l_get_file_info(lua_State* state) {
+  push(state, file::get_file_info(pop_string(state)));
+  return 1;
+}
+
 static const luaL_Reg BCACHE_LIB_FUNCS[] = {{"split_args", l_split_args},
                                             {"run", l_run},
                                             {"dir_exists", l_dir_exists},
@@ -200,6 +221,7 @@ static const luaL_Reg BCACHE_LIB_FUNCS[] = {{"split_args", l_split_args},
                                             {"get_extension", l_get_extension},
                                             {"get_file_part", l_get_file_part},
                                             {"get_dir_part", l_get_dir_part},
+                                            {"get_file_info", l_get_file_info},
                                             {NULL, NULL}};
 
 int luaopen_bcache(lua_State* state) {

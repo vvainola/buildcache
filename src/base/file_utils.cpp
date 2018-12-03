@@ -549,6 +549,51 @@ void write(const std::string& data, const std::string& path) {
   }
 }
 
+file_info_t get_file_info(const std::string& path) {
+  // TODO(m): This is pretty much copy-paste from walk_directory(). Refactor.
+#ifdef _WIN32
+  WIN32_FIND_DATAW find_data;
+  auto find_handle = FindFirstFileW(utf8_to_ucs2(path).c_str(), &find_data);
+  if (find_handle != INVALID_HANDLE_VALUE) {
+    const auto name = ucs2_to_utf8(std::wstring(&find_data.cFileName[0]));
+    const auto file_path = append_path(path, name);
+    file_info_t::time_t modify_time = 0;
+    file_info_t::time_t access_time = 0;
+    int64_t size = 0;
+    bool is_dir = ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+    if (!is_dir) {
+      size = two_dwords_to_int64(find_data.nFileSizeLow, find_data.nFileSizeHigh);
+      modify_time = win32_filetime_as_unix_epoch(find_data.ftLastWriteTime);
+      access_time = win32_filetime_as_unix_epoch(find_data.ftLastAccessTime);
+    }
+    return file_info_t(file_path, modify_time, access_time, size, is_dir);
+  }
+#else
+  struct stat file_stat;
+  const bool stat_ok = (stat(path.c_str(), &file_stat) == 0);
+  if (stat_ok) {
+    file_info_t::time_t modify_time = 0;
+    file_info_t::time_t access_time = 0;
+    int64_t size = 0;
+    const bool is_dir = S_ISDIR(file_stat.st_mode);
+    const bool is_file = S_ISREG(file_stat.st_mode);
+    if (is_file) {
+      size = static_cast<int64_t>(file_stat.st_size);
+#ifdef __APPLE__
+      modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtimespec.tv_sec);
+      access_time = static_cast<file_info_t::time_t>(file_stat.st_atimespec.tv_sec);
+#else
+      modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtim.tv_sec);
+      access_time = static_cast<file_info_t::time_t>(file_stat.st_atim.tv_sec);
+#endif
+    }
+    return file_info_t(path, modify_time, access_time, size, is_dir);
+  }
+#endif
+
+  throw std::runtime_error("Unable to get file information.");
+}
+
 std::vector<file_info_t> walk_directory(const std::string& path) {
   std::vector<file_info_t> files;
 
