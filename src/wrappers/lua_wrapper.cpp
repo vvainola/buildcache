@@ -104,6 +104,11 @@ std::map<std::string, std::string> pop_map(lua_State* state, bool keep_value_on_
   return result;
 }
 
+void push(lua_State* state, const bool data) {
+  assert_state_initialized(state);
+  lua_pushboolean(state, data ? 1 : 0);
+}
+
 void push(lua_State* state, const std::string& data) {
   assert_state_initialized(state);
   lua_pushlstring(state, data.c_str(), data.size());
@@ -155,6 +160,21 @@ int l_run(lua_State* state) {
   return 1;
 }
 
+int l_dir_exists(lua_State* state) {
+  push(state, file::dir_exists(pop_string(state)));
+  return 1;
+}
+
+int l_file_exists(lua_State* state) {
+  push(state, file::file_exists(pop_string(state)));
+  return 1;
+}
+
+int l_get_extension(lua_State* state) {
+  push(state, file::get_extension(pop_string(state)));
+  return 1;
+}
+
 int l_get_file_part(lua_State* state) {
   // Get arguments.
   const auto path = pop_string(state);
@@ -168,15 +188,18 @@ int l_get_file_part(lua_State* state) {
   return 1;
 }
 
-int l_get_extension(lua_State* state) {
-  push(state, file::get_extension(pop_string(state)));
+int l_get_dir_part(lua_State* state) {
+  push(state, file::get_dir_part(pop_string(state)));
   return 1;
 }
 
 static const luaL_Reg BCACHE_LIB_FUNCS[] = {{"split_args", l_split_args},
                                             {"run", l_run},
-                                            {"get_file_part", l_get_file_part},
+                                            {"dir_exists", l_dir_exists},
+                                            {"file_exists", l_file_exists},
                                             {"get_extension", l_get_extension},
+                                            {"get_file_part", l_get_file_part},
+                                            {"get_dir_part", l_get_dir_part},
                                             {NULL, NULL}};
 
 int luaopen_bcache(lua_State* state) {
