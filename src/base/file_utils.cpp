@@ -280,8 +280,14 @@ std::string resolve_path(const std::string& path) {
 std::string find_executable(const std::string& path, const std::string& exclude) {
   auto file_to_find = path;
 
-  // Handle absolute paths.
-  if (is_absolute_path(file_to_find)) {
+  // TODO(m): For Windows we should also look for files with ".exe" endings (e.g. if you have only
+  // specified "gcc", we should find "gcc.exe"). Furthermore we should also prepend the current
+  // working directory to the PATH, as Windows searches the CWD before searching the PATH.
+
+  // Handle absolute and relative paths. Examples:
+  //  - "C:\Foo\foo.exe"
+  //  - "somedir/../mysubdir/foo"
+  if (is_absolute_path(file_to_find) || (get_last_path_separator_pos(file_to_find) > 0)) {
     // Return the full path unless it points to the excluded executable.
     const auto true_path = resolve_path(file_to_find);
     if (true_path.empty()) {
