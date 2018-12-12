@@ -18,6 +18,8 @@
 #---------------------------------------------------------------------------------------------------
 
 add_library(base
+  compressor.cpp
+  compressor.hpp
   debug_utils.cpp
   debug_utils.hpp
   file_utils.cpp
@@ -30,4 +32,4 @@ add_library(base
   unicode_utils.cpp
   unicode_utils.hpp
   )
-target_link_libraries(base md4)
+target_link_libraries(base md4 lz4)

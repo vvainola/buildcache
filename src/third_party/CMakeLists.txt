@@ -32,6 +32,11 @@ add_library(md4
   )
 target_include_directories(md4 INTERFACE .)
 
+add_library(lz4
+  lz4/lz4.c
+  )
+target_include_directories(lz4 INTERFACE .)
+
 set(LUA_DIR lua-5.3.4)
 add_library(lua
   ${LUA_DIR}/src/lapi.c
