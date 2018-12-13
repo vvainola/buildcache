@@ -46,6 +46,7 @@
 
 #include <sys/cache.hpp>
 
+#include <base/compressor.hpp>
 #include <base/debug_utils.hpp>
 #include <base/file_utils.hpp>
 #include <base/serializer_utils.hpp>
@@ -65,7 +66,7 @@ const std::string CACHE_FILES_FOLDER_NAME = "c";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 
 // The version of the entry file serialization data format.
-const int32_t ENTRY_DATA_FORMAT_VERSION = 1;
+const int32_t ENTRY_DATA_FORMAT_VERSION = 2;
 
 bool is_cache_entry_dir_path(const std::string& path) {
   const auto entry_dir_name = file::get_file_part(path);
@@ -126,9 +127,15 @@ bool is_time_for_housekeeping() {
 
 std::string serialize_entry(const cache_t::entry_t& entry) {
   std::string data = serialize::from_int(ENTRY_DATA_FORMAT_VERSION);
+  data += serialize::from_int(static_cast<int>(entry.compression_mode));
   data += serialize::from_map(entry.files);
-  data += serialize::from_string(entry.std_out);
-  data += serialize::from_string(entry.std_err);
+  if (entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL) {
+    data += serialize::from_string(comp::compress(entry.std_out));
+    data += serialize::from_string(comp::compress(entry.std_err));
+  } else {
+    data += serialize::from_string(entry.std_out);
+    data += serialize::from_string(entry.std_err);
+  }
   data += serialize::from_int(static_cast<int32_t>(entry.return_code));
   return data;
 }
@@ -138,16 +145,28 @@ cache_t::entry_t deserialize_entry(const std::string& data) {
 
   // Read and check the format version.
   int32_t format_version = serialize::to_int(data, pos);
-  if (format_version != ENTRY_DATA_FORMAT_VERSION) {
+  if (format_version > ENTRY_DATA_FORMAT_VERSION) {
     throw std::runtime_error("Unsupported serialization format version.");
   }
 
   // De-serialize the entry.
   cache_t::entry_t entry;
+  if (format_version > 1) {
+    entry.compression_mode =
+        static_cast<cache_t::entry_t::comp_mode_t>(serialize::to_int(data, pos));
+  } else {
+    entry.compression_mode = cache_t::entry_t::comp_mode_t::NONE;
+  }
   entry.files = serialize::to_map(data, pos);
   entry.std_out = serialize::to_string(data, pos);
   entry.std_err = serialize::to_string(data, pos);
   entry.return_code = static_cast<int>(serialize::to_int(data, pos));
+
+  // Optionally decompress the program output.
+  if (entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL) {
+    entry.std_out = comp::decompress(entry.std_out);
+    entry.std_err = comp::decompress(entry.std_err);
+  }
 
   return entry;
 }
@@ -235,7 +254,10 @@ void cache_t::add(const hasher_t::hash_t& hash,
   // Copy the files into the cache.
   for (const auto& file : entry.files) {
     const auto target_path = file::append_path(cache_entry_path, file.first);
-    if (allow_hard_links) {
+    if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
+      debug::log(debug::DEBUG) << "Compressing " << file.second << " => " << target_path;
+      comp::compress_file(file.second, target_path);
+    } else if (allow_hard_links) {
       file::link_or_copy(file.second, target_path);
     } else {
       file::copy(file.second, target_path);

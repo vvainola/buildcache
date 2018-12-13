@@ -52,6 +52,9 @@ int32_t debug();
 /// @returns true if BuildCache should use hard links when possible.
 bool hard_links();
 
+/// @returns true if BuildCache should compress data in the cache.
+bool compress();
+
 /// @returns true if performance profiling output is enabled.
 bool perf();
 

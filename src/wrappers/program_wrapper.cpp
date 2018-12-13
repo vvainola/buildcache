@@ -19,6 +19,7 @@
 
 #include <wrappers/program_wrapper.hpp>
 
+#include <base/compressor.hpp>
 #include <base/debug_utils.hpp>
 #include <base/hasher.hpp>
 #include <config/configuration.hpp>
@@ -47,6 +48,8 @@ capabilities_t::capabilities_t(const string_list_t& cap_strings) {
   for (const auto& str : cap_strings) {
     if (str == "hard_links") {
       m_hard_links = true;
+    } else {
+      debug::log(debug::ERROR) << "Invalid capability string: " << str;
     }
   }
 }
@@ -96,7 +99,7 @@ bool program_wrapper_t::handle_command(int& return_code) {
     const auto hash = hasher.final();
 
     // Check if we can use hard links.
-    auto allow_hard_links = config::hard_links() && capabilites.hard_links();
+    const auto allow_hard_links = config::hard_links() && capabilites.hard_links();
 
     // Look up the entry in the cache.
     PERF_START(CACHE_LOOKUP);
@@ -116,7 +119,13 @@ bool program_wrapper_t::handle_command(int& return_code) {
         const auto& source_file = file.second;
         debug::log(debug::INFO) << "Cache hit (" << hash.as_string() << "): " << source_file
                                 << " => " << target_file;
-        if (allow_hard_links) {
+
+        if (cached_entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL) {
+          // We need to decompress the file if it was stored compressed in the cache, regardless of
+          // the current compression configuration.
+          debug::log(debug::DEBUG) << "Decompressing file from cache";
+          comp::decompress_file(source_file, target_file);
+        } else if (allow_hard_links) {
           file::link_or_copy(source_file, target_file);
         } else {
           file::copy(source_file, target_file);
@@ -154,6 +163,8 @@ bool program_wrapper_t::handle_command(int& return_code) {
     // Note: We do not want to create cache entries for failed program runs. We could, but that
     // would run the risk of caching intermittent faults for instance.
     if (result.return_code == 0) {
+      new_entry.compression_mode = (config::compress() ? cache_t::entry_t::comp_mode_t::ALL
+                                                       : cache_t::entry_t::comp_mode_t::NONE);
       new_entry.std_out = result.std_out;
       new_entry.std_err = result.std_err;
       new_entry.return_code = result.return_code;
