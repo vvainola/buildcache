@@ -121,7 +121,7 @@ $ BUILDCACHE_DEBUG=2 buildcache g++ -c -O2 hello.cpp -o hello.o
 ## Configuration options
 
 BuildCache can be configured via environment variables and a per-cache JSON
-configuration file. The optinal configuration file is located in the cache
+configuration file. The optional configuration file is located in the cache
 root directory, and is called `config.json` (e.g.
 `$HOME/.buildcache/config.json`).
 
@@ -135,6 +135,7 @@ The following options control the behavior of BuildCache:
 | `BUILDCACHE_DEBUG` | `debug` | Debug level | None |
 | `BUILDCACHE_MAX_CACHE_SIZE` | `max_cache_size` | Cache size limit in bytes | 5368709120 |
 | `BUILDCACHE_HARD_LINKS` | `hard_links` | Allow the use of hard links when caching | true |
+| `BUILDCACHE_COMPRESS` | `compress` | Allow the use of compression when caching (overrides hard links) | true |
 | `BUILDCACHE_PERF` | `perf` | Enable performance logging | false |
 | `BUILDCACHE_DISABLE` | `disable` | Disable caching (bypass BuildCache) | false |
 
@@ -148,7 +149,8 @@ An example configuration file:
   "lua_paths": [
     "/home/myname/buildcache-lua",
     "/opt/buildcache-lua"
-  ]
+  ],
+  "compress": true
 }
 ```
 

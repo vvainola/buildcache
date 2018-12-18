@@ -17,51 +17,35 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_CONFIGURATION_HPP_
-#define BUILDCACHE_CONFIGURATION_HPP_
+#ifndef BUILDCACHE_COMPRESSOR_HPP_
+#define BUILDCACHE_COMPRESSOR_HPP_
 
-#include <base/string_list.hpp>
-
-#include <cstdint>
-#include <map>
 #include <string>
 
 namespace bcache {
-namespace config {
-/// @brief Initialize the configuration based on environment variables etc.
-void init();
+namespace comp {
+/// @brief Compress a string in memory.
+/// @param str The string to compress.
+/// @returns the compressed string.
+std::string compress(const std::string& str);
 
-/// @returns the BuildCache home directory.
-const std::string& dir();
+/// @brief Decompress a string in memory.
+/// @param str The compressed string to decompress.
+/// @returns the original (decompressed) string.
+std::string decompress(const std::string& str);
 
-/// @returns the BuildCache configuration file.
-const std::string& config_file();
+/// @brief Compress a file.
+/// @param from_path The source file (uncompressed).
+/// @param to_path The destination file (compressed).
+/// @throws runtime_error if the operation could not be completed.
+void compress_file(const std::string& from_path, const std::string& to_path);
 
-/// @returns the Lua search paths.
-const string_list_t& lua_paths();
-
-/// @returns the compiler exectution prefix command.
-const std::string& prefix();
-
-/// @returns the maximum cache size (in bytes).
-int64_t max_cache_size();
-
-/// @returns the debug level (-1 for no debugging).
-int32_t debug();
-
-/// @returns true if BuildCache should use hard links when possible.
-bool hard_links();
-
-/// @returns true if BuildCache should compress data in the cache.
-bool compress();
-
-/// @returns true if performance profiling output is enabled.
-bool perf();
-
-/// @returns true if BuildCache is disabled.
-bool disable();
-
-}  // namespace config
+/// @brief Decompress a file.
+/// @param from_path The source file (compressed).
+/// @param to_path The destination file (uncompressed).
+/// @throws runtime_error if the operation could not be completed.
+void decompress_file(const std::string& from_path, const std::string& to_path);
+}  // namespace comp
 }  // namespace bcache
 
-#endif  // BUILDCACHE_CONFIGURATION_HPP_
+#endif  // BUILDCACHE_COMPRESSOR_HPP_

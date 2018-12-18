@@ -32,12 +32,18 @@ namespace bcache {
 class cache_t {
 public:
   struct entry_t {
+    enum class comp_mode_t {
+      NONE = 0,
+      ALL = 1
+    };
+
     /// @returns true if this object represents a valid cache entry. For a cache miss, the return
     /// value is false.
     operator bool() const {
       return (!files.empty()) || (!std_out.empty()) || (!std_err.empty());
     }
 
+    comp_mode_t compression_mode = comp_mode_t::NONE;
     std::map<std::string, std::string> files;
     std::string std_out;
     std::string std_err;

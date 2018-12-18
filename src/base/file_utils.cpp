@@ -384,6 +384,25 @@ bool file_exists(const std::string& path) {
 #endif
 }
 
+void move(const std::string& from_path, const std::string& to_path) {
+  // First remove the old target file, if any (otherwise the rename will fail).
+  if (file_exists(to_path)) {
+    remove_file(to_path);
+  }
+
+  // Rename the file.
+#ifdef _WIN32
+  const auto success =
+      (_wrename(utf8_to_ucs2(from_path).c_str(), utf8_to_ucs2(to_path).c_str()) == 0);
+#else
+  const auto success = (std::rename(from_path.c_str(), to_path.c_str()) == 0);
+#endif
+
+  if (!success) {
+    throw std::runtime_error("Unable to move file.");
+  }
+}
+
 void copy(const std::string& from_path, const std::string& to_path) {
   // Copy to a temporary file first and once the copy has succeeded rename it to the target file.
   // This should prevent half-finished copies if the process is terminated prematurely (e.g.
@@ -424,27 +443,13 @@ void copy(const std::string& from_path, const std::string& to_path) {
   }
 #endif
 
-  // Rename the temporary file to its target name.
-  if (success) {
-    // First remove the old file, if any (otherwise the rename will fail).
-    if (file_exists(to_path)) {
-      remove_file(to_path);
-    }
-
-#ifdef _WIN32
-    success = (_wrename(utf8_to_ucs2(tmp_file.path()).c_str(), utf8_to_ucs2(to_path).c_str()) == 0);
-#else
-    success = (std::rename(tmp_file.path().c_str(), to_path.c_str()) == 0);
-#endif
-    if (!success) {
-      debug::log(debug::ERROR) << "Copying failed due to a failing rename operation.";
-    }
-  }
-
   if (!success) {
     // Note: At this point the temporary file (if any) will be deleted.
     throw std::runtime_error("Unable to copy file.");
   }
+
+  // Move the temporary file to its target name.
+  move(tmp_file.path(), to_path);
 }
 
 void link_or_copy(const std::string& from_path, const std::string& to_path) {

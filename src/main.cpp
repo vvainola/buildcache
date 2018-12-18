@@ -140,6 +140,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
       std::cout << "  BUILDCACHE_DEBUG:          " << bcache::config::debug() << "\n";
       std::cout << "  BUILDCACHE_HARD_LINKS:     "
                 << (bcache::config::hard_links() ? "true" : "false") << "\n";
+      std::cout << "  BUILDCACHE_COMPRESS:       "
+                << (bcache::config::compress() ? "true" : "false") << "\n";
       std::cout << "  BUILDCACHE_PERF:           " << (bcache::config::perf() ? "true" : "false")
                 << "\n";
       std::cout << "  BUILDCACHE_DISABLE:        " << (bcache::config::disable() ? "true" : "false")

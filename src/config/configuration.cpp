@@ -42,6 +42,7 @@ std::string s_prefix;
 int64_t s_max_cache_size = DEFAULT_MAX_CACHE_SIZE;
 int32_t s_debug = -1;
 bool s_hard_links = true;
+bool s_compress = false;
 bool s_perf = false;
 bool s_disable = false;
 
@@ -175,6 +176,14 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
+  // Get "compress".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress");
+    if (cJSON_IsBool(node)) {
+      s_compress = cJSON_IsTrue(node);
+    }
+  }
+
   // Get "perf".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "perf");
@@ -273,6 +282,14 @@ void init() {
       }
     }
 
+    // Get the compress flag from the environment.
+    {
+      const env_var_t compress_env("BUILDCACHE_COMPRESS");
+      if (compress_env) {
+        s_compress = compress_env.as_bool();
+      }
+    }
+
     // Get the perf flag from the environment.
     {
       const env_var_t perf_env("BUILDCACHE_PERF");
@@ -321,6 +338,10 @@ int32_t debug() {
 
 bool hard_links() {
   return s_hard_links;
+}
+
+bool compress() {
+  return s_compress;
 }
 
 bool perf() {
