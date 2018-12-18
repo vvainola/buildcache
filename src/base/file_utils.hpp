@@ -187,6 +187,12 @@ bool dir_exists(const std::string& path);
 /// @returns true if the file exists.
 bool file_exists(const std::string& path);
 
+/// @brief Move a file from an old location to a new location.
+/// @param from_path The source file.
+/// @param to_path The destination file.
+/// @throws runtime_error if the operation could not be completed.
+void move(const std::string& from_path, const std::string& to_path);
+
 /// @brief Make a full copy of a file.
 /// @param from_path The source file.
 /// @param to_path The destination file.
