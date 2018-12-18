@@ -114,6 +114,7 @@ bool program_wrapper_t::handle_command(int& return_code) {
       // Copy all files from the cache to their respective target paths.
       // Note: If there is a mismatch in the expected (target) files and the actual (cached) files,
       // this will throw an exception (i.e. fall back to full program execution).
+      PERF_START(RETRIEVE_CACHED_FILES);
       for (const auto& file : cached_entry.files) {
         const auto& target_file = target_files.at(file.first);
         const auto& source_file = file.second;
@@ -131,6 +132,7 @@ bool program_wrapper_t::handle_command(int& return_code) {
           file::copy(source_file, target_file);
         }
       }
+      PERF_STOP(RETRIEVE_CACHED_FILES);
 
       // Return/print the cached program results.
       std::cout << cached_entry.std_out;
