@@ -287,7 +287,8 @@ std::string find_executable(const std::string& path, const std::string& exclude)
   // Handle absolute and relative paths. Examples:
   //  - "C:\Foo\foo.exe"
   //  - "somedir/../mysubdir/foo"
-  if (is_absolute_path(file_to_find) || (get_last_path_separator_pos(file_to_find) > 0)) {
+  if (is_absolute_path(file_to_find) ||
+      (get_last_path_separator_pos(file_to_find) != std::string::npos)) {
     // Return the full path unless it points to the excluded executable.
     const auto true_path = resolve_path(file_to_find);
     if (true_path.empty()) {
