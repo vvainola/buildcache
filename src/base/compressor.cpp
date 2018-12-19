@@ -24,6 +24,7 @@
 #include <lz4/lz4.h>
 
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 
@@ -60,9 +61,17 @@ uint32_t decode_uint32(const std::string& buffer, const int offset) {
 }  // namespace
 
 std::string compress(const std::string& str) {
+  // Can this data be compressed?
+  if (str.size() > static_cast<std::string::size_type>(LZ4_MAX_INPUT_SIZE)) {
+    throw std::runtime_error("Unable to compress the data: Too large data buffer.");
+  }
+
   // Allocate memory for the destination buffer.
   const auto original_size = static_cast<int>(str.size());
   const auto max_compressed_size = LZ4_compressBound(original_size);
+  if (max_compressed_size == 0) {
+    throw std::runtime_error("Unable to compress the data.");
+  }
   std::vector<char> compressed_data(COMPR_HEADER_SIZE + max_compressed_size);
 
   // Perform the compression.
@@ -85,10 +94,17 @@ std::string decompress(const std::string& compressed_str) {
   if (compressed_str.size() < static_cast<std::string::size_type>(COMPR_HEADER_SIZE)) {
     throw std::runtime_error("Missing header in compressed data.");
   }
+  if (compressed_str.size() > std::numeric_limits<int>::max()) {
+    throw std::runtime_error("Too large input buffer for decompression.");
+  }
 
   // Read data from the header.
   const auto format = decode_uint32(compressed_str, 0);
-  const auto original_size = static_cast<int>(decode_uint32(compressed_str, 4));
+  const auto original_size_u32 = decode_uint32(compressed_str, 4);
+  if (original_size_u32 > static_cast<uint32_t>(std::numeric_limits<int32_t>::max())) {
+    throw std::runtime_error("Too large output buffer for decompression.");
+  }
+  const auto original_size = static_cast<int>(static_cast<int32_t>(original_size_u32));
 
   // Sanity check: Is the header data reasonable?
   if (format != COMPR_FORMAT_LZ4) {
@@ -130,8 +146,7 @@ void compress_file(const std::string& from_path, const std::string& to_path) {
   file::move(tmp_file.path(), to_path);
 }
 
-void decompress_file(const std::string& from_path, const std::string& to_path)
-{
+void decompress_file(const std::string& from_path, const std::string& to_path) {
   // Create a temporary file first and once the copy has succeeded, move it to the target file.
   // This should prevent half-finished copies if the process is terminated prematurely (e.g.
   // CTRL+C).
