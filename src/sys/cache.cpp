@@ -64,9 +64,14 @@ namespace {
 const std::string TEMP_FOLDER_NAME = "tmp";
 const std::string CACHE_FILES_FOLDER_NAME = "c";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
+const std::string LOCK_FILE_SUFFIX = ".lock";
 
 // The version of the entry file serialization data format.
 const int32_t ENTRY_DATA_FORMAT_VERSION = 2;
+
+std::string cache_entry_lock_file_path(const std::string& cache_entry_path) {
+  return cache_entry_path + LOCK_FILE_SUFFIX;
+}
 
 bool is_cache_entry_dir_path(const std::string& path) {
   const auto entry_dir_name = file::get_file_part(path);
@@ -77,7 +82,7 @@ bool is_cache_entry_dir_path(const std::string& path) {
     return false;
   }
 
-  // Is the hash prefix dir + endtry dir name a valid hash (i.a. all characters are hex)?
+  // Is the hash prefix dir + entry dir name a valid hash (i.a. all characters are hex)?
   const auto hash_str = hash_prefix_dir_name + entry_dir_name;
   for (const auto c : hash_str) {
     if ((c < '0') || (c > 'f') || ((c > '9') && (c < 'a'))) {
@@ -205,14 +210,25 @@ const std::string cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash
 }
 
 void cache_t::clear() {
-  // Remove all cached files.
-  const auto cache_files_path = file::append_path(config::dir(), CACHE_FILES_FOLDER_NAME);
-  try {
-    file::remove_dir(cache_files_path, true);
-    std::cout << "Cleared the cache.\n";
-  } catch (const std::exception& e) {
-    debug::log(debug::ERROR) << e.what();
+  const auto start_t = std::chrono::high_resolution_clock::now();
+
+  // Remove all cache entries.
+  auto dirs = get_cache_entry_dirs(config::dir());
+  for (const auto& dir : dirs) {
+    try {
+      // We acquire an exclusive lock for the cache entry before deleting it.
+      file::lock_file_t lock(cache_entry_lock_file_path(dir.path()));
+      if (lock.has_lock()) {
+        file::remove_dir(dir.path());
+      }
+    } catch (const std::exception& e) {
+      debug::log(debug::DEBUG) << "Failed: " << e.what();
+    }
   }
+
+  const auto stop_t = std::chrono::high_resolution_clock::now();
+  const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
+  std::cout << "Cleared the cache in " << dt << " ms\n";
 }
 
 void cache_t::show_stats() {
@@ -241,32 +257,42 @@ void cache_t::show_stats() {
 void cache_t::add(const hasher_t::hash_t& hash,
                   const cache_t::entry_t& entry,
                   const bool allow_hard_links) {
-  // Create the required directories in the cache.
+  // Create the cache entry parent directory if necessary.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
   const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
   if (!file::dir_exists(cache_entry_parent_path)) {
     file::create_dir(cache_entry_parent_path);
   }
-  if (!file::dir_exists(cache_entry_path)) {
-    file::create_dir(cache_entry_path);
-  }
 
-  // Copy the files into the cache.
-  for (const auto& file : entry.files) {
-    const auto target_path = file::append_path(cache_entry_path, file.first);
-    if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
-      debug::log(debug::DEBUG) << "Compressing " << file.second << " => " << target_path;
-      comp::compress_file(file.second, target_path);
-    } else if (allow_hard_links) {
-      file::link_or_copy(file.second, target_path);
-    } else {
-      file::copy(file.second, target_path);
+  {
+    // Acquire a scoped exclusive lock for the cache entry.
+    file::lock_file_t lock(cache_entry_lock_file_path(cache_entry_path));
+    if (!lock.has_lock()) {
+      throw std::runtime_error("Unable to acquire a cache entry lock for writing.");
     }
-  }
 
-  // Create a cache entry file.
-  const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
-  file::write(serialize_entry(entry), cache_entry_file_name);
+    // Create the cache entry directory.
+    if (!file::dir_exists(cache_entry_path)) {
+      file::create_dir(cache_entry_path);
+    }
+
+    // Copy (and optinally compress) the files into the cache.
+    for (const auto& file : entry.files) {
+      const auto target_path = file::append_path(cache_entry_path, file.first);
+      if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
+        debug::log(debug::DEBUG) << "Compressing " << file.second << " => " << target_path;
+        comp::compress_file(file.second, target_path);
+      } else if (allow_hard_links) {
+        file::link_or_copy(file.second, target_path);
+      } else {
+        file::copy(file.second, target_path);
+      }
+    }
+
+    // Create a cache entry file.
+    const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
+    file::write(serialize_entry(entry), cache_entry_file_name);
+  }
 
   // Occassionally perform housekeeping. We do it here, since:
   //  1) This is the only place where the cache should ever grow.
@@ -276,12 +302,18 @@ void cache_t::add(const hasher_t::hash_t& hash,
   }
 }
 
-cache_t::entry_t cache_t::lookup(const hasher_t::hash_t& hash) {
+std::pair<cache_t::entry_t, file::lock_file_t> cache_t::lookup(const hasher_t::hash_t& hash) {
   // Get the path to the cache entry.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
   const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
 
   try {
+    // Acquire a scoped lock for the cache entry.
+    file::lock_file_t lock(cache_entry_lock_file_path(cache_entry_path));
+    if (!lock.has_lock()) {
+      throw std::runtime_error("Unable to acquire a cache entry lock for reading.");
+    }
+
     // Read the cache entry file (this will throw if the file does not exist - i.e. if we have a
     // cache miss).
     const auto entry_data = file::read(cache_entry_file_name);
@@ -297,9 +329,9 @@ cache_t::entry_t cache_t::lookup(const hasher_t::hash_t& hash) {
       entry.files[file_name] = file_path;
     }
 
-    return entry;
+    return std::make_pair(entry, std::move(lock));
   } catch (...) {
-    return entry_t();
+    return std::make_pair(entry_t(), file::lock_file_t());
   }
 }
 
@@ -328,9 +360,14 @@ void cache_t::perform_housekeeping() {
       try {
         debug::log(debug::DEBUG) << "Purging " << dir.path() << " (last accessed "
                                  << dir.access_time() << ", " << dir.size() << " bytes)";
-        file::remove_dir(dir.path());
-        total_size -= dir.size();
-        num_entries--;
+
+        // We acquire a scoped lock for the cache entry before deleting it.
+        file::lock_file_t lock(cache_entry_lock_file_path(dir.path()));
+        if (lock.has_lock()) {
+          file::remove_dir(dir.path());
+          total_size -= dir.size();
+          num_entries--;
+        }
       } catch (const std::exception& e) {
         debug::log(debug::DEBUG) << "Failed: " << e.what();
       }
