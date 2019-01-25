@@ -26,6 +26,8 @@ add_library(base
   file_utils.hpp
   hasher.cpp
   hasher.hpp
+  lock_file.cpp
+  lock_file.hpp
   serializer_utils.cpp
   serializer_utils.hpp
   string_list.hpp

@@ -722,5 +722,6 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
 
   return files;
 }
+
 }  // namespace file
 }  // namespace bcache
