@@ -1,4 +1,4 @@
-# BuildCache
+# BuildCache [![Build Status](https://travis-ci.org/mbitsnbites/buildcache.svg?branch=master)](https://travis-ci.org/mbitsnbites/buildcache)
 
 This is a simple compiler accelerator that caches and reuses build results to
 avoid unnecessary re-compilations, and thereby speeding up the build process.
