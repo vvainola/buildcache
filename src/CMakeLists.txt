@@ -25,6 +25,10 @@ set(CMAKE_CXX_STANDARD 11)
 set(CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# For tests.
+enable_testing()
+include(cmake/buildcache_add_test.cmake)
+
 if(MINGW)
   # For ease of deployment, statically link the standard libraries when using MinGW.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
