@@ -62,7 +62,7 @@ public:
   /// @brief Update the hash with more data.
   /// @param text The data to hash.
   void update(const std::string& text) {
-    MD4_Update(&m_ctx, text.data(), text.size());
+    MD4_Update(&m_ctx, text.data(), static_cast<unsigned long>(text.size()));
   }
 
   /// @brief Update the hash with more data.

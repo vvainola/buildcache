@@ -29,9 +29,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 enable_testing()
 include(cmake/buildcache_add_test.cmake)
 
+# For ease of deployment, statically link the standard libraries when using MinGW.
 if(MINGW)
-  # For ease of deployment, statically link the standard libraries when using MinGW.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+endif()
+
+# Avoid CRT secure warnings when using MSVC.
+if(MSVC)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 # Thrid party libraries used by BuildCache.

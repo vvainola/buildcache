@@ -42,6 +42,7 @@
 #include <direct.h>
 #include <shlobj.h>
 #include <userenv.h>
+#include <sys/utime.h>
 #undef ERROR
 #undef log
 #else
@@ -52,11 +53,19 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <utime.h>
 #endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <utime.h>
+
+// S_ISDIR/S_ISREG are not defined by MSVC, but _S_IFDIR/_S_IFREG are.
+#if defined(_WIN32) && !defined(S_ISDIR)
+#define S_ISDIR(x) (((x) & _S_IFDIR) != 0)
+#endif
+#if defined(_WIN32) && !defined(S_ISREG)
+#define S_ISREG(x) (((x) & _S_IFREG) != 0)
+#endif
 
 namespace bcache {
 namespace file {

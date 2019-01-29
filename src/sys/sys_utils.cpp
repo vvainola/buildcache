@@ -53,7 +53,8 @@ std::string read_from_win_file(HANDLE file_handle,
   std::vector<char> buf(BUFSIZE);
   while (true) {
     DWORD bytes_read;
-    const auto success = ReadFile(file_handle, &buf[0], buf.size(), &bytes_read, nullptr);
+    const auto success =
+        ReadFile(file_handle, &buf[0], static_cast<DWORD>(buf.size()), &bytes_read, nullptr);
     if (!success || (bytes_read == 0)) {
       break;
     }
