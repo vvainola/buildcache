@@ -33,3 +33,7 @@ add_library(base
   unicode_utils.hpp
   )
 target_link_libraries(base md4 lz4)
+
+buildcache_add_test(NAME string_list_test
+                    SOURCES string_list_test.cpp
+                    LIBRARIES base)
