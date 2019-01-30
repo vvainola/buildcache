@@ -22,6 +22,11 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCH
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 endif()
 
+add_library(doctest
+  doctest/doctest_main.cpp
+  )
+target_include_directories(doctest INTERFACE .)
+
 add_library(cjson
   cjson/cJSON.c
   )

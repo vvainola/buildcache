@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------------------------------------
-# Copyright (c) 2018 Marcus Geelnard
+# Copyright (c) 2019 Marcus Geelnard
 #
 # This software is provided 'as-is', without any express or implied warranty. In no event will the
 # authors be held liable for any damages arising from the use of this software.
@@ -17,23 +17,23 @@
 #  3. This notice may not be removed or altered from any source distribution.
 #---------------------------------------------------------------------------------------------------
 
-add_library(base
-  compressor.cpp
-  compressor.hpp
-  debug_utils.cpp
-  debug_utils.hpp
-  file_utils.cpp
-  file_utils.hpp
-  hasher.cpp
-  hasher.hpp
-  serializer_utils.cpp
-  serializer_utils.hpp
-  string_list.hpp
-  unicode_utils.cpp
-  unicode_utils.hpp
-  )
-target_link_libraries(base md4 lz4)
+#---------------------------------------------------------------------------------------------------
+# buildcache_add_test: Add a test executable.
+#
+# Usage:
+#   buildcache_add_test(
+#       NAME <test name>
+#       SOURCES <sources>
+#       LIBRARIES <libraries>
+#   )
+#---------------------------------------------------------------------------------------------------
+function(buildcache_add_test)
+  set(_options)
+  set(oneValueArgs NAME)
+  set(multiValueArgs SOURCES LIBRARIES)
+  cmake_parse_arguments("" "${_options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-buildcache_add_test(NAME string_list_test
-                    SOURCES string_list_test.cpp
-                    LIBRARIES base)
+  add_executable(${_NAME} ${_SOURCES})
+  target_link_libraries(${_NAME} ${_LIBRARIES} doctest)
+  add_test(${_NAME} ${_NAME})
+endfunction()
