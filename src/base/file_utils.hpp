@@ -130,6 +130,10 @@ std::string get_file_part(const std::string& path, const bool include_ext = true
 /// separator, the entire path is returned.
 std::string get_dir_part(const std::string& path);
 
+/// @brief Get a temporary directory for this user and process.
+/// @returns the full path to the temporary directory.
+std::string get_temp_dir();
+
 /// @brief Get the user home directory.
 /// @returns the full path to the user home directory.
 std::string get_user_home_dir();

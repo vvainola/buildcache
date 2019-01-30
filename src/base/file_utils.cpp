@@ -224,6 +224,19 @@ std::string get_dir_part(const std::string& path) {
   return (pos != std::string::npos) ? path.substr(0, pos) : path;
 }
 
+std::string get_temp_dir() {
+#if defined(_WIN32)
+  WCHAR buf[MAX_PATH + 1] = {0};
+  DWORD path_len = GetTempPathW(MAX_PATH + 1, buf);
+  if (path_len > 0) {
+    return ucs2_to_utf8(std::wstring(buf, path_len));
+  }
+  return std::string();
+#else
+  return std::string("/tmp");
+#endif
+}
+
 std::string get_user_home_dir() {
 #if defined(_WIN32)
 #if 0
