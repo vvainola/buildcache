@@ -23,6 +23,10 @@
 
 #include <vector>
 
+// Workaround for macOS build errors.
+// See: https://github.com/onqtam/doctest/issues/126
+#include <iostream>
+
 using namespace bcache;
 
 TEST_CASE("string_list_t constructors are behaving as expected") {
