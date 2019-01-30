@@ -35,6 +35,13 @@ add_library(base
   unicode_utils.hpp
   )
 target_link_libraries(base md4 lz4)
+if(WIN32 OR MINGW)
+  target_link_libraries(base userenv)
+endif()
+
+buildcache_add_test(NAME lock_file_test
+                    SOURCES lock_file_test.cpp
+                    LIBRARIES base)
 
 buildcache_add_test(NAME string_list_test
                     SOURCES string_list_test.cpp
