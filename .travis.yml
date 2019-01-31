@@ -18,6 +18,7 @@ matrix:
         - cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../src
         - cmake --build .
         - ctest
+        - ../test_scripts/run_lock_file_stresstest.sh
 
     # macOS clang
     - os: osx
@@ -31,6 +32,7 @@ matrix:
         - cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../src
         - cmake --build .
         - ctest
+        - ../test_scripts/run_lock_file_stresstest.sh
 
     # Windows MSVC 2017
     - os: windows
@@ -47,4 +49,5 @@ matrix:
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../src &&
           ninja'
         - ninja test
+        - ../test_scripts/run_lock_file_stresstest.sh
 

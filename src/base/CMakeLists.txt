@@ -46,3 +46,8 @@ buildcache_add_test(NAME lock_file_test
 buildcache_add_test(NAME string_list_test
                     SOURCES string_list_test.cpp
                     LIBRARIES base)
+
+# This is a special test executable. It is meant to be run as multiple concurrent instances.
+add_executable(lock_file_stresstest
+               lock_file_stresstest.cpp)
+target_link_libraries(lock_file_stresstest base)
