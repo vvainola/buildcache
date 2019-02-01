@@ -26,6 +26,8 @@ add_library(base
   file_utils.hpp
   hasher.cpp
   hasher.hpp
+  lock_file.cpp
+  lock_file.hpp
   serializer_utils.cpp
   serializer_utils.hpp
   string_list.hpp
@@ -33,7 +35,19 @@ add_library(base
   unicode_utils.hpp
   )
 target_link_libraries(base md4 lz4)
+if(WIN32 OR MINGW)
+  target_link_libraries(base userenv)
+endif()
+
+buildcache_add_test(NAME lock_file_test
+                    SOURCES lock_file_test.cpp
+                    LIBRARIES base)
 
 buildcache_add_test(NAME string_list_test
                     SOURCES string_list_test.cpp
                     LIBRARIES base)
+
+# This is a special test executable. It is meant to be run as multiple concurrent instances.
+add_executable(lock_file_stresstest
+               lock_file_stresstest.cpp)
+target_link_libraries(lock_file_stresstest base)

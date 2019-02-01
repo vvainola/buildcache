@@ -17,7 +17,8 @@ matrix:
         - mkdir out && cd out
         - cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../src
         - cmake --build .
-        - ctest
+        - CTEST_OUTPUT_ON_FAILURE=TRUE ctest
+        - ../test_scripts/run_lock_file_stresstest.sh
 
     # macOS clang
     - os: osx
@@ -30,7 +31,8 @@ matrix:
         - mkdir out && cd out
         - cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../src
         - cmake --build .
-        - ctest
+        - CTEST_OUTPUT_ON_FAILURE=TRUE ctest
+        - ../test_scripts/run_lock_file_stresstest.sh
 
     # Windows MSVC 2017
     - os: windows
@@ -46,5 +48,6 @@ matrix:
         - cmd.exe /C '"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64 &&
           cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../src &&
           ninja'
-        - ninja test
+        - CTEST_OUTPUT_ON_FAILURE=TRUE ninja test
+        - ../test_scripts/run_lock_file_stresstest.sh
 
