@@ -243,12 +243,16 @@ std::string get_user_home_dir() {
   return local_app_data;
 #else
   std::string user_home;
-  HANDLE token = 0;
+  HANDLE token = nullptr;
   if (SUCCEEDED(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token))) {
-    WCHAR buf[MAX_PATH] = {0};
-    DWORD buf_size = MAX_PATH;
-    if (SUCCEEDED(GetUserProfileDirectoryW(token, buf, &buf_size))) {
-      user_home = ucs2_to_utf8(std::wstring(buf, buf_size));
+    // Query the necessary buffer size and allocate memory for it.
+    DWORD buf_size = 0;
+    GetUserProfileDirectoryW(token, nullptr, &buf_size);
+    std::vector<WCHAR> buf(buf_size);
+
+    // Get the actual path.
+    if (SUCCEEDED(GetUserProfileDirectoryW(token, buf.data(), &buf_size))) {
+      user_home = ucs2_to_utf8(std::wstring(buf.data(), buf.size() - 1));
     }
     CloseHandle(token);
   }
