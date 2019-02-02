@@ -185,22 +185,22 @@ private:
   static std::string escape_arg(const std::string& arg) {
     std::string escaped_arg;
 
-    auto has_space = false;
+    auto needs_quotes = false;
     for (auto c : arg) {
       if (c == '"') {
         escaped_arg += "\\\"";
       } else if (c == '\\') {
         escaped_arg += "\\\\";
       } else {
-        if (c == ' ') {
-          has_space = true;
+        if (c == ' ' || c == '&' || c == ';' || c == '>' || c == '<') {
+          needs_quotes = true;
         }
         escaped_arg += c;
       }
     }
 
     // Do we need to surround with quotes?
-    if (has_space) {
+    if (needs_quotes) {
       escaped_arg = std::string("\"") + escaped_arg + std::string("\"");
     }
 
