@@ -192,7 +192,7 @@ private:
       } else if (c == '\\') {
         escaped_arg += "\\\\";
       } else {
-        if (c == ' ' || c == '&' || c == ';' || c == '>' || c == '<') {
+        if (c == ' ' || c == '&' || c == ';' || c == '>' || c == '<' || c == '|') {
           needs_quotes = true;
         }
         escaped_arg += c;
