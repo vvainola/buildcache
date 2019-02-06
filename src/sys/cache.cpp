@@ -305,9 +305,16 @@ void cache_t::add(const hasher_t::hash_t& hash,
 std::pair<cache_t::entry_t, file::lock_file_t> cache_t::lookup(const hasher_t::hash_t& hash) {
   // Get the path to the cache entry.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
-  const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
 
   try {
+    // If the cache parent dir does not exist yet, we can't possibly have a cache hit.
+    // Note: This is mostly a trick to avoid irrelevant error log printouts from the lock_file_t
+    // constructor later on.
+    const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
+    if (!file::dir_exists(cache_entry_parent_path)) {
+      throw std::runtime_error("Cache entry parent dir does not exist.");
+    }
+
     // Acquire a scoped lock for the cache entry.
     file::lock_file_t lock(cache_entry_lock_file_path(cache_entry_path));
     if (!lock.has_lock()) {
@@ -316,6 +323,7 @@ std::pair<cache_t::entry_t, file::lock_file_t> cache_t::lookup(const hasher_t::h
 
     // Read the cache entry file (this will throw if the file does not exist - i.e. if we have a
     // cache miss).
+    const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
     const auto entry_data = file::read(cache_entry_file_name);
     auto entry = deserialize_entry(entry_data);
 
