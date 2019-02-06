@@ -19,6 +19,7 @@ matrix:
         - cmake --build .
         - CTEST_OUTPUT_ON_FAILURE=TRUE ctest
         - ../test_scripts/run_lock_file_stresstest.sh
+        - ../test_scripts/build_with_buildcache.sh
 
     # macOS clang
     - os: osx
@@ -33,6 +34,7 @@ matrix:
         - cmake --build .
         - CTEST_OUTPUT_ON_FAILURE=TRUE ctest
         - ../test_scripts/run_lock_file_stresstest.sh
+        - ../test_scripts/build_with_buildcache.sh
 
     # Windows MSVC 2017
     - os: windows
@@ -50,4 +52,5 @@ matrix:
           ninja'
         - CTEST_OUTPUT_ON_FAILURE=TRUE ninja test
         - ../test_scripts/run_lock_file_stresstest.sh
-
+        # TODO(m): It would be nice to get this working...
+        #- cmd.exe /C '"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64 && "C:\Program Files\Git\bin\sh.exe" ../test_scripts/build_with_buildcache.sh'
