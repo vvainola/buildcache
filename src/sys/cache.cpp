@@ -129,52 +129,6 @@ bool is_time_for_housekeeping() {
   // Only perform housekeeping 1% of the times that we are called.
   return (rnd % 100L) == 0L;
 }
-
-std::string serialize_entry(const cache_t::entry_t& entry) {
-  std::string data = serialize::from_int(ENTRY_DATA_FORMAT_VERSION);
-  data += serialize::from_int(static_cast<int>(entry.compression_mode));
-  data += serialize::from_map(entry.files);
-  if (entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL) {
-    data += serialize::from_string(comp::compress(entry.std_out));
-    data += serialize::from_string(comp::compress(entry.std_err));
-  } else {
-    data += serialize::from_string(entry.std_out);
-    data += serialize::from_string(entry.std_err);
-  }
-  data += serialize::from_int(static_cast<int32_t>(entry.return_code));
-  return data;
-}
-
-cache_t::entry_t deserialize_entry(const std::string& data) {
-  std::string::size_type pos = 0;
-
-  // Read and check the format version.
-  int32_t format_version = serialize::to_int(data, pos);
-  if (format_version > ENTRY_DATA_FORMAT_VERSION) {
-    throw std::runtime_error("Unsupported serialization format version.");
-  }
-
-  // De-serialize the entry.
-  cache_t::entry_t entry;
-  if (format_version > 1) {
-    entry.compression_mode =
-        static_cast<cache_t::entry_t::comp_mode_t>(serialize::to_int(data, pos));
-  } else {
-    entry.compression_mode = cache_t::entry_t::comp_mode_t::NONE;
-  }
-  entry.files = serialize::to_map(data, pos);
-  entry.std_out = serialize::to_string(data, pos);
-  entry.std_err = serialize::to_string(data, pos);
-  entry.return_code = static_cast<int>(serialize::to_int(data, pos));
-
-  // Optionally decompress the program output.
-  if (entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL) {
-    entry.std_out = comp::decompress(entry.std_out);
-    entry.std_err = comp::decompress(entry.std_err);
-  }
-
-  return entry;
-}
 }  // namespace
 
 cache_t::cache_t() {
@@ -389,6 +343,51 @@ void cache_t::perform_housekeeping() {
 
 file::tmp_file_t cache_t::get_temp_file(const std::string& extension) const {
   return file::tmp_file_t(get_tmp_folder(), extension);
+}
+
+std::string cache_t::serialize_entry(const entry_t& entry) {
+  std::string data = serialize::from_int(ENTRY_DATA_FORMAT_VERSION);
+  data += serialize::from_int(static_cast<int>(entry.compression_mode));
+  data += serialize::from_map(entry.files);
+  if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
+    data += serialize::from_string(comp::compress(entry.std_out));
+    data += serialize::from_string(comp::compress(entry.std_err));
+  } else {
+    data += serialize::from_string(entry.std_out);
+    data += serialize::from_string(entry.std_err);
+  }
+  data += serialize::from_int(static_cast<int32_t>(entry.return_code));
+  return data;
+}
+
+cache_t::entry_t cache_t::deserialize_entry(const std::string& data) {
+  std::string::size_type pos = 0;
+
+  // Read and check the format version.
+  int32_t format_version = serialize::to_int(data, pos);
+  if (format_version > ENTRY_DATA_FORMAT_VERSION) {
+    throw std::runtime_error("Unsupported serialization format version.");
+  }
+
+  // De-serialize the entry.
+  entry_t entry;
+  if (format_version > 1) {
+    entry.compression_mode = static_cast<entry_t::comp_mode_t>(serialize::to_int(data, pos));
+  } else {
+    entry.compression_mode = entry_t::comp_mode_t::NONE;
+  }
+  entry.files = serialize::to_map(data, pos);
+  entry.std_out = serialize::to_string(data, pos);
+  entry.std_err = serialize::to_string(data, pos);
+  entry.return_code = static_cast<int>(serialize::to_int(data, pos));
+
+  // Optionally decompress the program output.
+  if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
+    entry.std_out = comp::decompress(entry.std_out);
+    entry.std_err = comp::decompress(entry.std_err);
+  }
+
+  return entry;
 }
 
 }  // namespace bcache

@@ -81,6 +81,16 @@ public:
   /// @returns a temporary file object with a unique path.
   file::tmp_file_t get_temp_file(const std::string& extension) const;
 
+  /// @brief Serialize a cache entry.
+  /// @param entry The cache entry.
+  /// @returns a serialized data as a string object.
+  static std::string serialize_entry(const entry_t& entry);
+
+  /// @brief Deserialize a cache entry.
+  /// @param data The serialized data.
+  /// @returns the deserialized cache entry.
+  static entry_t deserialize_entry(const std::string& data);
+
 private:
   const std::string hash_to_cache_entry_path(const hasher_t::hash_t& hash) const;
   const std::string get_tmp_folder() const;
