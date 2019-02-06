@@ -320,7 +320,7 @@ std::string find_executable(const std::string& path, const std::string& exclude)
     if (true_path.empty()) {
       throw std::runtime_error("Could not resolve absolute path for the executable file.");
     }
-    if (get_file_part(true_path, false) != exclude) {
+    if (lower_case(get_file_part(true_path, false)) != exclude) {
       debug::log(debug::DEBUG) << "Found exe: " << true_path << " (looked for " << path << ")";
       return true_path;
     }
@@ -341,8 +341,7 @@ std::string find_executable(const std::string& path, const std::string& exclude)
     const auto true_path = resolve_path(append_path(base_path, file_to_find));
     if ((!true_path.empty()) && file_exists(true_path)) {
       // Check that this is not the excluded file name.
-      const auto true_name = get_file_part(true_path, false);
-      if (true_name != exclude) {
+      if (lower_case(get_file_part(true_path, false)) != exclude) {
         debug::log(debug::DEBUG) << "Found exe: " << true_path << " (looked for " << file_to_find
                                  << ")";
         return true_path;
