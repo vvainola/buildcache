@@ -43,6 +43,9 @@ const string_list_t& lua_paths();
 /// @returns the compiler exectution prefix command.
 const std::string& prefix();
 
+/// @returns the remote cache service address.
+const std::string& remote();
+
 /// @returns the maximum cache size (in bytes).
 int64_t max_cache_size();
 

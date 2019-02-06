@@ -131,6 +131,7 @@ The following options control the behavior of BuildCache:
 | --- | --- | --- | --- |
 | `BUILDCACHE_DIR` | - | The cache root directory | `$HOME/.buildcache` |
 | `BUILDCACHE_PREFIX` | `prefix` | Prefix command for cache misses | None |
+| `BUILDCACHE_REMOTE` | `remote` | Address of remote cache server (`redis://host:port`) | None |
 | `BUILDCACHE_LUA_PATH` | `lua_paths` | Extra path(s) to Lua wrappers | None |
 | `BUILDCACHE_DEBUG` | `debug` | Debug level | None |
 | `BUILDCACHE_MAX_CACHE_SIZE` | `max_cache_size` | Cache size limit in bytes | 5368709120 |
@@ -145,6 +146,7 @@ An example configuration file:
 {
   "max_cache_size": 10000000000,
   "prefix": "icecc",
+  "remote": "redis://my-server:6379",
   "debug": 3,
   "lua_paths": [
     "/home/myname/buildcache-lua",
