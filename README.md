@@ -3,7 +3,27 @@
 This is a simple compiler accelerator that caches and reuses build results to
 avoid unnecessary re-compilations, and thereby speeding up the build process.
 
-It is similar in spirit to [ccache](https://ccache.samba.org/).
+It is similar in spirit to [ccache](https://ccache.samba.org/), [sccache](https://github.com/mozilla/sccache) and [clcache](https://github.com/frerich/clcache).
+
+## Features
+
+* Works on different operating systems:
+  * Linux
+  * macOS
+  * Windows
+  * Though untested, it probably works on most BSD:s
+* A modular compiler support system:
+  * Built-in support for [popular compilers](#supported-compilers-and-languages).
+  * Extensible via custom [Lua](https://www.lua.org/) scripts.
+  * In addition to caching compilation results, BuildCache can be used for caching almost any reproducible program artifacts (e.g. test results, [rendered images](https://en.wikipedia.org/wiki/Rendering_(computer_graphics)), etc).
+* A fast local file system cache.
+* Can optionally use a remote, centralized [Redis](https://redis.io/)-based server as a second level cache *(experimental, only Linux/macOS)*.
+* Optional compression with [LZ4](https://github.com/lz4/lz4) (very low performance overhead).
+
+## Status
+
+**NOTE:** BuildCache is still in early development and should not be considered
+ready for production projects yet!
 
 ## Building
 
@@ -46,10 +66,6 @@ distributed compilation. To use icecream you can set the environment variable
 ```bash
 $ BUILDCACHE_PREFIX=/usr/bin/icecc buildcache g++ -c -O2 hello.cpp -o hello.o
 ```
-
-Note: At the time of writing there is a
-[bug](https://github.com/icecc/icecream/issues/390) in ICECC that may disable
-distributed compilation when ICECC is invoked via BuildCache.
 
 ## Supported compilers and languages
 
@@ -100,24 +116,6 @@ documentation):
 | get_program_id () | A unique program identification | The MD4 hash of the program binary |
 | get_build_files () | A table of build result files | An empty table |
 
-## Debugging
-
-To get debug output from a BuildCache run, set the environment variable
-`BUILDCACHE_DEBUG` to the desired debug level:
-
-| BUILDCACHE_DEBUG | Level | Comment           |
-| ---------------- | ----- | ----------------- |
-| 1                | DEBUG | Maximum printouts |
-| 2                | INFO  |                   |
-| 3                | ERROR |                   |
-| 4                | FATAL |                   |
-
-For instance:
-
-```bash
-$ BUILDCACHE_DEBUG=2 buildcache g++ -c -O2 hello.cpp -o hello.o
-```
-
 ## Configuration options
 
 BuildCache can be configured via environment variables and a per-cache JSON
@@ -162,8 +160,21 @@ To see the configuration options that are in effect, run:
 $ buildcache -s
 ```
 
-## Status
+## Debugging
 
-**NOTE:** BuildCache is still in early development and should not be considered
-ready for production projects yet!
+To get debug output from a BuildCache run, set the environment variable
+`BUILDCACHE_DEBUG` to the desired debug level (debug output is disabled by default):
 
+| BUILDCACHE_DEBUG | Level | Comment              |
+| ---------------- | ----- | -------------------- |
+| 1                | DEBUG | Maximum printouts    |
+| 2                | INFO  |                      |
+| 3                | ERROR |                      |
+| 4                | FATAL |                      |
+| -1               | -     | Disable debug output |
+
+For instance:
+
+```bash
+$ BUILDCACHE_DEBUG=2 buildcache g++ -c -O2 hello.cpp -o hello.o
+```
