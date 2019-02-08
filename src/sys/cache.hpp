@@ -45,11 +45,14 @@ public:
       return (!files.empty()) || (!std_out.empty()) || (!std_err.empty());
     }
 
-    comp_mode_t compression_mode = comp_mode_t::NONE;
-    std::map<std::string, std::string> files;
-    std::string std_out;
-    std::string std_err;
-    int return_code = 0;
+    // TODO(m): The source file paths are only used during addition to the cache, so they can be
+    // kept in a separate map and do not have to be stored in the cache entry. I.e. we only need to
+    // store the file ID:s (e.g. "object") in the cache entry.
+    std::map<std::string, std::string> files;          ///< ID:s and paths of the cached files.
+    comp_mode_t compression_mode = comp_mode_t::NONE;  ///< Compression mode.
+    std::string std_out;                               ///< stdout from the program run.
+    std::string std_err;                               ///< stderr from the program run.
+    int return_code = 0;                               ///< Program return code (0 = success).
   };
 
   /// @brief Initialize the cache object.
@@ -75,6 +78,18 @@ public:
   /// @returns A pair of a cache entry struct and a lock file object. If there was no cache hit,
   /// the entry will be empty, and the lock file object will not hold any lock.
   std::pair<entry_t, file::lock_file_t> lookup(const hasher_t::hash_t& hash);
+
+  /// @brief Copy a cached file to the local file system.
+  /// @param hash The cache entry identifier.
+  /// @param source_id The ID of the cached file to copy.
+  /// @param target_path The path to the local file.
+  /// @param is_compressed True if the cached data is compressed.
+  /// @param allow_hard_links True if hard links are allowed.
+  void get_file(const hasher_t::hash_t& hash,
+                const std::string& source_id,
+                const std::string& target_path,
+                const bool is_compressed,
+                const bool allow_hard_links);
 
   /// @brief Get a temporary file.
   /// @param extension File extension (including the period).

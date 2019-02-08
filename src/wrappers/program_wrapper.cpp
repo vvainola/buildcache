@@ -168,6 +168,7 @@ bool program_wrapper_t::lookup_in_local_cache(const hasher_t::hash_t hash,
                                               const bool allow_hard_links,
                                               int& return_code) {
   PERF_START(CACHE_LOOKUP);
+  // Note: The lookup will give us a lock file that is locked until we go out of scope.
   auto lookup_result = m_cache.lookup(hash);
   auto& cached_entry = lookup_result.first;
   PERF_STOP(CACHE_LOOKUP);
@@ -186,21 +187,13 @@ bool program_wrapper_t::lookup_in_local_cache(const hasher_t::hash_t hash,
   // files, this will throw an exception (i.e. fall back to full program execution).
   PERF_START(RETRIEVE_CACHED_FILES);
   for (const auto& file : cached_entry.files) {
-    const auto& target_file = target_files.at(file.first);
-    const auto& source_file = file.second;
-    debug::log(debug::INFO) << "Cache hit (" << hash.as_string() << "): " << source_file << " => "
-                            << target_file;
-
-    if (cached_entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL) {
-      // We need to decompress the file if it was stored compressed in the cache, regardless
-      // of the current compression configuration.
-      debug::log(debug::DEBUG) << "Decompressing file from cache";
-      comp::decompress_file(source_file, target_file);
-    } else if (allow_hard_links) {
-      file::link_or_copy(source_file, target_file);
-    } else {
-      file::copy(source_file, target_file);
-    }
+    const auto& target_path = target_files.at(file.first);
+    const auto& source_id = file.first;
+    debug::log(debug::INFO) << "Cache hit (" << hash.as_string() << "): " << source_id << " => "
+                            << target_path;
+    const auto is_compressed =
+        (cached_entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL);
+    m_cache.get_file(hash, source_id, target_path, is_compressed, allow_hard_links);
   }
   PERF_STOP(RETRIEVE_CACHED_FILES);
 

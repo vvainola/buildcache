@@ -232,14 +232,15 @@ void cache_t::add(const hasher_t::hash_t& hash,
 
     // Copy (and optinally compress) the files into the cache.
     for (const auto& file : entry.files) {
+      const auto& source_path = file.second;
       const auto target_path = file::append_path(cache_entry_path, file.first);
       if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
-        debug::log(debug::DEBUG) << "Compressing " << file.second << " => " << target_path;
-        comp::compress_file(file.second, target_path);
+        debug::log(debug::DEBUG) << "Compressing " << source_path << " => " << target_path;
+        comp::compress_file(source_path, target_path);
       } else if (allow_hard_links) {
-        file::link_or_copy(file.second, target_path);
+        file::link_or_copy(source_path, target_path);
       } else {
-        file::copy(file.second, target_path);
+        file::copy(source_path, target_path);
       }
     }
 
@@ -281,19 +282,26 @@ std::pair<cache_t::entry_t, file::lock_file_t> cache_t::lookup(const hasher_t::h
     const auto entry_data = file::read(cache_entry_file_name);
     auto entry = deserialize_entry(entry_data);
 
-    // Update the file names member of the entry, and check that the files exist.
-    for (auto& file : entry.files) {
-      const auto file_name = file.first;
-      const auto file_path = file::append_path(cache_entry_path, file_name);
-      if (!file::file_exists(file_path)) {
-        throw std::runtime_error("Missing file in cache entry.");
-      }
-      entry.files[file_name] = file_path;
-    }
-
     return std::make_pair(entry, std::move(lock));
   } catch (...) {
     return std::make_pair(entry_t(), file::lock_file_t());
+  }
+}
+
+void cache_t::get_file(const hasher_t::hash_t& hash,
+                       const std::string& source_id,
+                       const std::string& target_path,
+                       const bool is_compressed,
+                       const bool allow_hard_links) {
+  const auto cache_entry_path = hash_to_cache_entry_path(hash);
+  const auto source_path = file::append_path(cache_entry_path, source_id);
+  if (is_compressed) {
+    debug::log(debug::DEBUG) << "Decompressing file from cache";
+    comp::decompress_file(source_path, target_path);
+  } else if (allow_hard_links) {
+    file::link_or_copy(source_path, target_path);
+  } else {
+    file::copy(source_path, target_path);
   }
 }
 
