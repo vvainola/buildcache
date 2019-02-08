@@ -57,6 +57,24 @@ if(buildcache_program)
 endif()
 ```
 
+Another alternative is to create symbolic links that redirect invokations of your favourite compiler to go via BuildCache instead. For instance, if `$HOME/bin` is early in your PATH, you can do the following:
+
+```bash
+$ ln -s /path/to/buildcache $HOME/bin/cc
+$ ln -s /path/to/buildcache $HOME/bin/c++
+$ ln -s /path/to/buildcache $HOME/bin/gcc
+$ ln -s /path/to/buildcache $HOME/bin/g++
+…
+```
+
+You can check that it works by invoking the compiler with BuildCache debugging enabled:
+
+```bash
+$ BUILDCACHE_DEBUG=1 gcc
+BuildCache[52286] (DEBUG) Invoked as symlink: gcc
+…
+```
+
 ## Using with icecream
 
 [icecream](https://github.com/icecc/icecream) (or ICECC) is a tool for
