@@ -129,52 +129,6 @@ bool is_time_for_housekeeping() {
   // Only perform housekeeping 1% of the times that we are called.
   return (rnd % 100L) == 0L;
 }
-
-std::string serialize_entry(const cache_t::entry_t& entry) {
-  std::string data = serialize::from_int(ENTRY_DATA_FORMAT_VERSION);
-  data += serialize::from_int(static_cast<int>(entry.compression_mode));
-  data += serialize::from_map(entry.files);
-  if (entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL) {
-    data += serialize::from_string(comp::compress(entry.std_out));
-    data += serialize::from_string(comp::compress(entry.std_err));
-  } else {
-    data += serialize::from_string(entry.std_out);
-    data += serialize::from_string(entry.std_err);
-  }
-  data += serialize::from_int(static_cast<int32_t>(entry.return_code));
-  return data;
-}
-
-cache_t::entry_t deserialize_entry(const std::string& data) {
-  std::string::size_type pos = 0;
-
-  // Read and check the format version.
-  int32_t format_version = serialize::to_int(data, pos);
-  if (format_version > ENTRY_DATA_FORMAT_VERSION) {
-    throw std::runtime_error("Unsupported serialization format version.");
-  }
-
-  // De-serialize the entry.
-  cache_t::entry_t entry;
-  if (format_version > 1) {
-    entry.compression_mode =
-        static_cast<cache_t::entry_t::comp_mode_t>(serialize::to_int(data, pos));
-  } else {
-    entry.compression_mode = cache_t::entry_t::comp_mode_t::NONE;
-  }
-  entry.files = serialize::to_map(data, pos);
-  entry.std_out = serialize::to_string(data, pos);
-  entry.std_err = serialize::to_string(data, pos);
-  entry.return_code = static_cast<int>(serialize::to_int(data, pos));
-
-  // Optionally decompress the program output.
-  if (entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL) {
-    entry.std_out = comp::decompress(entry.std_out);
-    entry.std_err = comp::decompress(entry.std_err);
-  }
-
-  return entry;
-}
 }  // namespace
 
 cache_t::cache_t() {
@@ -278,14 +232,15 @@ void cache_t::add(const hasher_t::hash_t& hash,
 
     // Copy (and optinally compress) the files into the cache.
     for (const auto& file : entry.files) {
+      const auto& source_path = file.second;
       const auto target_path = file::append_path(cache_entry_path, file.first);
       if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
-        debug::log(debug::DEBUG) << "Compressing " << file.second << " => " << target_path;
-        comp::compress_file(file.second, target_path);
+        debug::log(debug::DEBUG) << "Compressing " << source_path << " => " << target_path;
+        comp::compress_file(source_path, target_path);
       } else if (allow_hard_links) {
-        file::link_or_copy(file.second, target_path);
+        file::link_or_copy(source_path, target_path);
       } else {
-        file::copy(file.second, target_path);
+        file::copy(source_path, target_path);
       }
     }
 
@@ -327,19 +282,26 @@ std::pair<cache_t::entry_t, file::lock_file_t> cache_t::lookup(const hasher_t::h
     const auto entry_data = file::read(cache_entry_file_name);
     auto entry = deserialize_entry(entry_data);
 
-    // Update the file names member of the entry, and check that the files exist.
-    for (auto& file : entry.files) {
-      const auto file_name = file.first;
-      const auto file_path = file::append_path(cache_entry_path, file_name);
-      if (!file::file_exists(file_path)) {
-        throw std::runtime_error("Missing file in cache entry.");
-      }
-      entry.files[file_name] = file_path;
-    }
-
     return std::make_pair(entry, std::move(lock));
   } catch (...) {
     return std::make_pair(entry_t(), file::lock_file_t());
+  }
+}
+
+void cache_t::get_file(const hasher_t::hash_t& hash,
+                       const std::string& source_id,
+                       const std::string& target_path,
+                       const bool is_compressed,
+                       const bool allow_hard_links) {
+  const auto cache_entry_path = hash_to_cache_entry_path(hash);
+  const auto source_path = file::append_path(cache_entry_path, source_id);
+  if (is_compressed) {
+    debug::log(debug::DEBUG) << "Decompressing file from cache";
+    comp::decompress_file(source_path, target_path);
+  } else if (allow_hard_links) {
+    file::link_or_copy(source_path, target_path);
+  } else {
+    file::copy(source_path, target_path);
   }
 }
 
@@ -389,6 +351,51 @@ void cache_t::perform_housekeeping() {
 
 file::tmp_file_t cache_t::get_temp_file(const std::string& extension) const {
   return file::tmp_file_t(get_tmp_folder(), extension);
+}
+
+std::string cache_t::serialize_entry(const entry_t& entry) {
+  std::string data = serialize::from_int(ENTRY_DATA_FORMAT_VERSION);
+  data += serialize::from_int(static_cast<int>(entry.compression_mode));
+  data += serialize::from_map(entry.files);
+  if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
+    data += serialize::from_string(comp::compress(entry.std_out));
+    data += serialize::from_string(comp::compress(entry.std_err));
+  } else {
+    data += serialize::from_string(entry.std_out);
+    data += serialize::from_string(entry.std_err);
+  }
+  data += serialize::from_int(static_cast<int32_t>(entry.return_code));
+  return data;
+}
+
+cache_t::entry_t cache_t::deserialize_entry(const std::string& data) {
+  std::string::size_type pos = 0;
+
+  // Read and check the format version.
+  int32_t format_version = serialize::to_int(data, pos);
+  if (format_version > ENTRY_DATA_FORMAT_VERSION) {
+    throw std::runtime_error("Unsupported serialization format version.");
+  }
+
+  // De-serialize the entry.
+  entry_t entry;
+  if (format_version > 1) {
+    entry.compression_mode = static_cast<entry_t::comp_mode_t>(serialize::to_int(data, pos));
+  } else {
+    entry.compression_mode = entry_t::comp_mode_t::NONE;
+  }
+  entry.files = serialize::to_map(data, pos);
+  entry.std_out = serialize::to_string(data, pos);
+  entry.std_err = serialize::to_string(data, pos);
+  entry.return_code = static_cast<int>(serialize::to_int(data, pos));
+
+  // Optionally decompress the program output.
+  if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
+    entry.std_out = comp::decompress(entry.std_out);
+    entry.std_err = comp::decompress(entry.std_err);
+  }
+
+  return entry;
 }
 
 }  // namespace bcache

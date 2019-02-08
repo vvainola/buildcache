@@ -22,26 +22,41 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCH
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 endif()
 
+#---------------------------------------------------------------------------------------------------
+# doctest
+#---------------------------------------------------------------------------------------------------
 add_library(doctest
   doctest/doctest_main.cpp
   )
 target_include_directories(doctest INTERFACE .)
 
+#---------------------------------------------------------------------------------------------------
+# cJSON
+#---------------------------------------------------------------------------------------------------
 add_library(cjson
   cjson/cJSON.c
   )
 target_include_directories(cjson INTERFACE .)
 
+#---------------------------------------------------------------------------------------------------
+# MD4
+#---------------------------------------------------------------------------------------------------
 add_library(md4
   md4/md4.c
   )
 target_include_directories(md4 INTERFACE .)
 
+#---------------------------------------------------------------------------------------------------
+# lz4
+#---------------------------------------------------------------------------------------------------
 add_library(lz4
   lz4/lz4.c
   )
 target_include_directories(lz4 INTERFACE .)
 
+#---------------------------------------------------------------------------------------------------
+# Lua
+#---------------------------------------------------------------------------------------------------
 set(LUA_DIR lua-5.3.4)
 add_library(lua
   ${LUA_DIR}/src/lapi.c
@@ -86,4 +101,32 @@ if(APPLE)
 elseif(UNIX AND NOT (WIN32 OR MINGW))
   target_compile_definitions(lua PRIVATE LUA_USE_LINUX)
   target_link_libraries(lua ${CMAKE_DL_LIBS})
+endif()
+
+#---------------------------------------------------------------------------------------------------
+# Hiredis
+# Note: hiredis does not build on Windows.
+#---------------------------------------------------------------------------------------------------
+if(NOT (WIN32 OR MINGW))
+  add_library(hiredis
+    hiredis/async.c
+    hiredis/async.h
+    hiredis/dict.c
+    hiredis/dict.h
+    hiredis/fmacros.h
+    hiredis/hiredis.c
+    hiredis/hiredis.h
+    hiredis/net.c
+    hiredis/net.h
+    hiredis/read.c
+    hiredis/read.h
+    hiredis/sds.c
+    hiredis/sds.h
+    hiredis/sdsalloc.h
+    )
+  target_include_directories(hiredis INTERFACE .)
+  set_property(TARGET hiredis PROPERTY C_STANDARD 99)
+  set(HAS_HIREDIS true PARENT_SCOPE)
+else()
+  message(WARNING "Redis is not supported on this platform")
 endif()

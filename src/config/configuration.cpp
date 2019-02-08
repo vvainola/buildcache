@@ -39,6 +39,7 @@ std::string s_dir;
 std::string s_config_file;
 string_list_t s_lua_paths;
 std::string s_prefix;
+std::string s_remote;
 int64_t s_max_cache_size = DEFAULT_MAX_CACHE_SIZE;
 int32_t s_debug = -1;
 bool s_hard_links = true;
@@ -152,6 +153,14 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
+  // Get "remote".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "remote");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_remote = std::string(node->valuestring);
+    }
+  }
+
   // Get "max_cache_size".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "max_cache_size");
@@ -250,6 +259,14 @@ void init() {
       }
     }
 
+    // Get the remote cache address from the environment.
+    {
+      const env_var_t remote_env("BUILDCACHE_REMOTE");
+      if (remote_env) {
+        s_remote = remote_env.as_string();
+      }
+    }
+
     // Get the max cache size from the environment.
     {
       const env_var_t max_cache_size_env("BUILDCACHE_MAX_CACHE_SIZE");
@@ -326,6 +343,10 @@ const string_list_t& lua_paths() {
 
 const std::string& prefix() {
   return s_prefix;
+}
+
+const std::string& remote() {
+  return s_remote;
 }
 
 int64_t max_cache_size() {

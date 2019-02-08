@@ -136,6 +136,9 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
       std::cout << "  BUILDCACHE_LUA_PATH:       "
                 << bcache::config::lua_paths().join(PATH_SEP, false) << "\n";
       std::cout << "  BUILDCACHE_PREFIX:         " << bcache::config::prefix() << "\n";
+      std::cout << "  BUILDCACHE_REMOTE:         "
+                << (bcache::config::remote().empty() ? "(disabled)" : bcache::config::remote())
+                << "\n";
       std::cout << "  BUILDCACHE_MAX_CACHE_SIZE: " << bcache::config::max_cache_size() << "\n";
       std::cout << "  BUILDCACHE_DEBUG:          " << bcache::config::debug() << "\n";
       std::cout << "  BUILDCACHE_HARD_LINKS:     "
@@ -255,7 +258,7 @@ void print_help(const char* program_name) {
   std::cout << "    " << program_name << " compiler [compiler-options]\n";
   std::cout << "\n";
   std::cout << "Options:\n";
-  std::cout << "    -C, --clear           clear the cache completely (except configuration)\n";
+  std::cout << "    -C, --clear           clear the local cache (except configuration)\n";
   std::cout << "    -s, --show-stats      show statistics summary and configuration\n";
   std::cout << "\n";
   std::cout << "    -h, --help            print this help text\n";

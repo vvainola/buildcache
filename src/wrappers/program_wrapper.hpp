@@ -23,6 +23,7 @@
 #include <base/file_utils.hpp>
 #include <base/string_list.hpp>
 #include <sys/cache.hpp>
+#include <sys/remote_cache.hpp>
 
 #include <string>
 
@@ -113,6 +114,37 @@ protected:
 
   const string_list_t& m_args;
   cache_t& m_cache;
+
+private:
+  /// @brief Perform a cache lookup in the local cache.
+  /// @param hash The hash of the cache entry.
+  /// @param allow_hard_links True if we are allowed to use hard links.
+  /// @param[out] return_code The return code of the program.
+  /// @returns true if we had a cache hit, otherwise false.
+  bool lookup_in_local_cache(const hasher_t::hash_t hash,
+                             const bool allow_hard_links,
+                             int& return_code);
+
+  /// @brief Add a new entry to the local cache.
+  /// @param hash The hash of the cache entry.
+  /// @param entry The cache entry description.
+  /// @param allow_hard_links True if we are allowed to use hard links.
+  void add_to_local_cache(const hasher_t::hash_t hash,
+                          const cache_t::entry_t& entry,
+                          const bool allow_hard_links);
+
+  /// @brief Perform a cache lookup in the remote cache.
+  /// @param hash The hash of the cache entry.
+  /// @param[out] return_code The return code of the program.
+  /// @returns true if we had a cache hit, otherwise false.
+  bool lookup_in_remote_cache(const hasher_t::hash_t hash, int& return_code);
+
+  /// @brief Add a new entry to the remote cache.
+  /// @param hash The hash of the cache entry.
+  /// @param entry The cache entry description.
+  void add_to_remote_cache(const hasher_t::hash_t hash, const cache_t::entry_t& entry);
+
+  remote_cache_t m_remote_cache;
 };
 }  // namespace bcache
 
