@@ -12,6 +12,7 @@ function is_windows() {
 function cleanup() {
     [[ ! -z "${PROJDIR}" ]] && rm -rf "${PROJDIR}"
     [[ ! -z "${BUILDCACHE_DIR}" ]] && rm -rf "${BUILDCACHE_DIR}"
+    [[ ! -z "${SYMLINKSDIR}" ]] && rm -rf "${SYMLINKSDIR}"
 }
 
 # Treat errors with exit code 1.
@@ -57,10 +58,10 @@ export BUILDCACHE_DEBUG=2
 
 # Clone the project.
 PROJDIR="/tmp/proj-$$"
-SRCDIR="${PROJDIR}"
+SRCDIR="${PROJDIR}/src"
 BUILDDIR="${PROJDIR}/out"
 rm -rf "${PROJDIR}"
-PROJURL=https://github.com/mzucker/miniray.git
+PROJURL=https://github.com/mbitsnbites/buildcache.git
 PROJVERSION=master
 git clone --branch ${PROJVERSION} --depth 1 ${PROJURL} "${PROJDIR}"
 
