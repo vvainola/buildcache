@@ -60,7 +60,9 @@ PROJDIR="/tmp/proj-$$"
 SRCDIR="${PROJDIR}"
 BUILDDIR="${PROJDIR}/out"
 rm -rf "${PROJDIR}"
-git clone --branch 2.88 --depth 1 https://github.com/bulletphysics/bullet3.git "${PROJDIR}"
+PROJURL=https://github.com/mzucker/miniray.git
+PROJVERSION=master
+git clone --branch ${PROJVERSION} --depth 1 ${PROJURL} "${PROJDIR}"
 
 echo "======== First build (cold cache) ========"
 buildcache -C
