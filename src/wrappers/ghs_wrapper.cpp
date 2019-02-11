@@ -25,8 +25,7 @@
 #include <stdexcept>
 
 namespace bcache {
-ghs_wrapper_t::ghs_wrapper_t(const string_list_t& args, cache_t& cache)
-    : gcc_wrapper_t(args, cache) {
+ghs_wrapper_t::ghs_wrapper_t(const string_list_t& args) : gcc_wrapper_t(args) {
 }
 
 bool ghs_wrapper_t::can_handle_command() {

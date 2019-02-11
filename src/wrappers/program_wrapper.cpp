@@ -22,6 +22,7 @@
 #include <base/compressor.hpp>
 #include <base/debug_utils.hpp>
 #include <base/hasher.hpp>
+#include <cache/cache.hpp>
 #include <config/configuration.hpp>
 #include <sys/perf_utils.hpp>
 #include <sys/sys_utils.hpp>
@@ -55,8 +56,7 @@ capabilities_t::capabilities_t(const string_list_t& cap_strings) {
 }
 }  // namespace
 
-program_wrapper_t::program_wrapper_t(const string_list_t& args, cache_t& cache)
-    : m_args(args), m_cache(cache) {
+program_wrapper_t::program_wrapper_t(const string_list_t& args) : m_args(args) {
 }
 
 program_wrapper_t::~program_wrapper_t() {

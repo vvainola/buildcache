@@ -22,7 +22,7 @@
 
 #include <base/file_utils.hpp>
 #include <base/string_list.hpp>
-#include <cache/cache.hpp>
+#include <cache/local_cache.hpp>
 #include <cache/remote_cache.hpp>
 
 #include <string>
@@ -49,7 +49,7 @@ public:
 
 protected:
   // This constructor is called by derived classes.
-  program_wrapper_t(const string_list_t &args, cache_t& cache);
+  program_wrapper_t(const string_list_t &args);
 
   /// @brief Resolve arguments on the command line.
   ///
@@ -143,7 +143,7 @@ private:
   /// @param entry The cache entry description.
   void add_to_remote_cache(const hasher_t::hash_t hash, const cache_t::entry_t& entry);
 
-  cache_t& m_cache;
+  local_cache_t m_cache;
   remote_cache_t m_remote_cache;
 };
 }  // namespace bcache

@@ -20,6 +20,8 @@
 set(CACHE_SRCS
   cache.cpp
   cache.hpp
+  local_cache.cpp
+  local_cache.hpp
   remote_cache.cpp
   remote_cache.hpp
   remote_cache_provider.cpp

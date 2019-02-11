@@ -28,7 +28,7 @@ namespace bcache {
 /// The GHS compiler is fairly compatible with the GCC wrapper, so we derive from it.
 class ghs_wrapper_t : public gcc_wrapper_t {
 public:
-  ghs_wrapper_t(const string_list_t& args, cache_t& cache);
+  ghs_wrapper_t(const string_list_t& args);
 
   bool can_handle_command() override;
 
