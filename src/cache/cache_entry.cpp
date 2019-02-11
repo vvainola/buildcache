@@ -42,7 +42,8 @@ cache_entry_t::cache_entry_t(const std::map<std::string, std::string>& files,
       m_compression_mode(compression_mode),
       m_std_out(std_out),
       m_std_err(std_err),
-      m_return_code(return_code) {
+      m_return_code(return_code),
+      m_valid(true) {
 }
 
 std::string cache_entry_t::serialize() const {

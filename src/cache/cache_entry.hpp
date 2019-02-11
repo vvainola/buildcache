@@ -51,7 +51,7 @@ public:
   /// @returns true if this object represents a valid cache entry. E.g. for a cache miss, the
   /// return value is false.
   operator bool() const {
-    return (!m_files.empty()) || (!m_std_out.empty()) || (!m_std_err.empty());
+    return m_valid;
   }
 
   /// @brief Serialize a cache entry.
@@ -97,6 +97,7 @@ private:
   std::string m_std_out;
   std::string m_std_err;
   int m_return_code = 0;
+  bool m_valid = false;  // true if this is a valid cache entry.
 };
 }  // namespace bcache
 
