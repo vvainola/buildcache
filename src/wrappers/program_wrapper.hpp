@@ -22,8 +22,8 @@
 
 #include <base/file_utils.hpp>
 #include <base/string_list.hpp>
-#include <sys/cache.hpp>
-#include <sys/remote_cache.hpp>
+#include <cache/cache.hpp>
+#include <cache/remote_cache.hpp>
 
 #include <string>
 

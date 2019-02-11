@@ -17,7 +17,7 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include <sys/redis_cache_provider.hpp>
+#include <cache/redis_cache_provider.hpp>
 
 #include <base/compressor.hpp>
 #include <base/debug_utils.hpp>

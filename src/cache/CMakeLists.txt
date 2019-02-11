@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------------------------------------
-# Copyright (c) 2018 Marcus Geelnard
+# Copyright (c) 2019 Marcus Geelnard
 #
 # This software is provided 'as-is', without any express or implied warranty. In no event will the
 # authors be held liable for any damages arising from the use of this software.
@@ -17,12 +17,25 @@
 #  3. This notice may not be removed or altered from any source distribution.
 #---------------------------------------------------------------------------------------------------
 
-set(SYS_SRCS
-  perf_utils.cpp
-  perf_utils.hpp
-  sys_utils.cpp
-  sys_utils.hpp
+set(CACHE_SRCS
+  cache.cpp
+  cache.hpp
+  remote_cache.cpp
+  remote_cache.hpp
+  remote_cache_provider.cpp
+  remote_cache_provider.hpp
   )
 
-add_library(sys ${SYS_SRCS})
-target_link_libraries(sys base config)
+if(HAS_HIREDIS)
+  list(APPEND CACHE_SRCS
+    redis_cache_provider.cpp
+    redis_cache_provider.hpp
+    )
+endif()
+
+add_library(cache ${CACHE_SRCS})
+target_link_libraries(cache base config)
+if(HAS_HIREDIS)
+  target_link_libraries(cache hiredis)
+  target_compile_definitions(cache PUBLIC ENABLE_REDIS)
+endif()

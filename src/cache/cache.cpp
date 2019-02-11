@@ -44,7 +44,7 @@
 //     +- ...
 //--------------------------------------------------------------------------------------------------
 
-#include <sys/cache.hpp>
+#include <cache/cache.hpp>
 
 #include <base/compressor.hpp>
 #include <base/debug_utils.hpp>

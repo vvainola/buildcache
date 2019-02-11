@@ -20,7 +20,7 @@
 #ifndef BUILDCACHE_REDIS_CACHE_PROVIDER_HPP_
 #define BUILDCACHE_REDIS_CACHE_PROVIDER_HPP_
 
-#include <sys/remote_cache_provider.hpp>
+#include <cache/remote_cache_provider.hpp>
 
 // Forward declaration.
 typedef struct redisContext redisContext;

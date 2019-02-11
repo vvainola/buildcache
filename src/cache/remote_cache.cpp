@@ -17,13 +17,13 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include <sys/remote_cache.hpp>
+#include <cache/remote_cache.hpp>
 
 #include <base/debug_utils.hpp>
 #include <config/configuration.hpp>
 
 #ifdef ENABLE_REDIS
-#include <sys/redis_cache_provider.hpp>
+#include <cache/redis_cache_provider.hpp>
 #endif
 
 namespace bcache {

@@ -29,5 +29,4 @@ add_library(wrappers
   program_wrapper.cpp
   program_wrapper.hpp
   )
-target_link_libraries(wrappers base config sys lua)
-
+target_link_libraries(wrappers base config sys cache lua)

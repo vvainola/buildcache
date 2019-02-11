@@ -17,7 +17,7 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include <sys/remote_cache_provider.hpp>
+#include <cache/remote_cache_provider.hpp>
 
 namespace bcache {
 

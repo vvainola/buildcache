@@ -17,59 +17,56 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_REMOTE_CACHE_PROVIDER_HPP_
-#define BUILDCACHE_REMOTE_CACHE_PROVIDER_HPP_
+#ifndef BUILDCACHE_REMOTE_CACHE_HPP_
+#define BUILDCACHE_REMOTE_CACHE_HPP_
 
 #include <base/hasher.hpp>
-#include <sys/cache.hpp>
+#include <cache/cache.hpp>
+#include <cache/remote_cache_provider.hpp>
 
 #include <string>
 
 namespace bcache {
 
-class remote_cache_provider_t {
+class remote_cache_t {
 public:
+  /// @brief Initialize the remote cache object.
+  remote_cache_t() {}
+
   /// @brief De-initialzie the remote cache object.
-  virtual ~remote_cache_provider_t();
+  ~remote_cache_t();
 
   /// @brief Connect to the remote cache.
-  /// @param host_description A string describing the host to connect to (excluding protocol).
   /// @returns true if the connection was successful.
-  virtual bool connect(const std::string& host_description) = 0;
+  bool connect();
 
   /// @brief Check if we have a connection to the remote cache.
   /// @returns true if we have a connection to the remote cache.
-  virtual bool is_connected() const = 0;
+  bool is_connected() const;
 
   /// @brief Check if an entry exists in the cache.
   /// @returns A cache entry struct. If there was no cache hit the entry will be empty.
-  virtual cache_t::entry_t lookup(const hasher_t::hash_t& hash) = 0;
+  cache_t::entry_t lookup(const hasher_t::hash_t& hash);
 
   /// @brief Adds a set of files to the cache.
   /// @param hash The cache entry identifier.
   /// @param entry The cache entry data (files, stdout, etc).
-  virtual void add(const hasher_t::hash_t& hash, const cache_t::entry_t& entry) = 0;
+  void add(const hasher_t::hash_t& hash, const cache_t::entry_t& entry);
 
   /// @brief Copy a cached file to the local file system.
   /// @param hash The cache entry identifier.
   /// @param source_id The ID of the remote file to copy.
   /// @param target_path The path to the local file.
   /// @param is_compressed True if the remote data is compressed.
-  virtual void get_file(const hasher_t::hash_t& hash,
-                        const std::string& source_id,
-                        const std::string& target_path,
-                        const bool is_compressed) = 0;
-
-protected:
-  // Constructor called by child classes.
-  remote_cache_provider_t();
+  void get_file(const hasher_t::hash_t& hash,
+                const std::string& source_id,
+                const std::string& target_path,
+                const bool is_compressed);
 
 private:
-  // Prohibit copy & assignment.
-  remote_cache_provider_t(const remote_cache_provider_t&) = delete;
-  remote_cache_provider_t& operator=(const remote_cache_provider_t&) = delete;
+  remote_cache_provider_t* m_provider = nullptr;
 };
 
 }  // namespace bcache
 
-#endif  // BUILDCACHE_REMOTE_CACHE_PROVIDER_HPP_
+#endif  // BUILDCACHE_REMOTE_CACHE_HPP_

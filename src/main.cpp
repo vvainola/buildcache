@@ -20,8 +20,8 @@
 #include <base/debug_utils.hpp>
 #include <base/string_list.hpp>
 #include <base/unicode_utils.hpp>
+#include <cache/cache.hpp>
 #include <config/configuration.hpp>
-#include <sys/cache.hpp>
 #include <sys/perf_utils.hpp>
 #include <sys/sys_utils.hpp>
 #include <wrappers/gcc_wrapper.hpp>

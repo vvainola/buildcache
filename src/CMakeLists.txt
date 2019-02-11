@@ -49,6 +49,7 @@ include_directories(.)
 add_subdirectory(base)
 add_subdirectory(config)
 add_subdirectory(sys)
+add_subdirectory(cache)
 add_subdirectory(wrappers)
 
 # Sources for the buildcache application.
@@ -71,7 +72,7 @@ endif()
 
 # The BuildCache application.
 add_executable(buildcache ${BUILDCACHE_SRCS})
-target_link_libraries(buildcache base config sys wrappers)
+target_link_libraries(buildcache base config sys cache wrappers)
 
 # Doxygen documentation.
 find_package(Doxygen)
