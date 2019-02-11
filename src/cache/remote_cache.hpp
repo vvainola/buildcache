@@ -51,7 +51,11 @@ public:
   /// @brief Adds a set of files to the cache.
   /// @param hash The cache entry identifier.
   /// @param entry The cache entry data (files, stdout, etc).
-  void add(const hasher_t::hash_t& hash, const cache_entry_t& entry);
+  /// @param file_paths Paths to the actual files in the local file system (map from file ID to
+  /// path).
+  void add(const hasher_t::hash_t& hash,
+           const cache_entry_t& entry,
+           const std::map<std::string, std::string>& file_paths);
 
   /// @brief Copy a cached file to the local file system.
   /// @param hash The cache entry identifier.

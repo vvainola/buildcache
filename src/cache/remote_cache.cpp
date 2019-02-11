@@ -99,9 +99,11 @@ cache_entry_t bcache::remote_cache_t::lookup(const hasher_t::hash_t& hash) {
   return cache_entry_t();
 }
 
-void remote_cache_t::add(const hasher_t::hash_t& hash, const cache_entry_t& entry) {
+void remote_cache_t::add(const hasher_t::hash_t& hash,
+                         const cache_entry_t& entry,
+                         const std::map<std::string, std::string>& file_paths) {
   if (m_provider != nullptr) {
-    m_provider->add(hash, entry);
+    m_provider->add(hash, entry, file_paths);
   }
 }
 

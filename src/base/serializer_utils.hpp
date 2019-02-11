@@ -23,15 +23,18 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace bcache {
 namespace serialize {
 std::string from_int(const int32_t x);
 std::string from_string(const std::string& x);
+std::string from_vector(const std::vector<std::string>& x);
 std::string from_map(const std::map<std::string, std::string>& x);
 
 int32_t to_int(const std::string& data, std::string::size_type& pos);
 std::string to_string(const std::string& data, std::string::size_type& pos);
+std::vector<std::string> to_vector(const std::string& data, std::string::size_type& pos);
 std::map<std::string, std::string> to_map(const std::string& data, std::string::size_type& pos);
 }  // namespace ser
 }  // namespace bcache
