@@ -61,7 +61,6 @@
 
 namespace bcache {
 namespace {
-const std::string TEMP_FOLDER_NAME = "tmp";
 const std::string CACHE_FILES_FOLDER_NAME = "c";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 const std::string LOCK_FILE_SUFFIX = ".lock";
@@ -136,14 +135,6 @@ cache_t::cache_t() {
 }
 
 cache_t::~cache_t() {
-}
-
-const std::string cache_t::get_tmp_folder() const {
-  const auto tmp_path = file::append_path(config::dir(), TEMP_FOLDER_NAME);
-  if (!file::dir_exists(tmp_path)) {
-    file::create_dir(tmp_path);
-  }
-  return tmp_path;
 }
 
 const std::string cache_t::get_cache_files_folder() const {
@@ -338,10 +329,6 @@ void cache_t::perform_housekeeping() {
   const auto stop_t = std::chrono::high_resolution_clock::now();
   const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
   debug::log(debug::INFO) << "Finished housekeeping in " << dt << " ms";
-}
-
-file::tmp_file_t cache_t::get_temp_file(const std::string& extension) const {
-  return file::tmp_file_t(get_tmp_folder(), extension);
 }
 
 std::string cache_t::serialize_entry(const entry_t& entry) {

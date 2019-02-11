@@ -113,7 +113,6 @@ protected:
   virtual std::map<std::string, std::string> get_build_files();
 
   const string_list_t& m_args;
-  cache_t& m_cache;
 
 private:
   /// @brief Perform a cache lookup in the local cache.
@@ -144,6 +143,7 @@ private:
   /// @param entry The cache entry description.
   void add_to_remote_cache(const hasher_t::hash_t hash, const cache_t::entry_t& entry);
 
+  cache_t& m_cache;
   remote_cache_t m_remote_cache;
 };
 }  // namespace bcache

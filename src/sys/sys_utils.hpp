@@ -50,6 +50,14 @@ run_result_t run(const string_list_t& args, const bool quiet = true);
 /// @returns The result from the command.
 /// @throws runtime_error if the command could not be run.
 run_result_t run_with_prefix(const string_list_t& args, const bool quiet = true);
+
+/// @brief Get the temporary folder for this BuildCache instance.
+///
+/// The temporary folder is located somewhere under $BUILDCACHE_DIR, and as such is suitable for
+/// files that later need to be moved or linked inside the local cache structure (for instance).
+/// The folder can also be considered a separate namespace that is dedicated to BuildCache, which
+/// means that it is very unlikely that there will be any file name conflicts with other programs.
+const std::string get_local_temp_folder();
 }  // namespace sys
 }  // namespace bcache
 

@@ -100,7 +100,7 @@ std::string gcc_wrapper_t::preprocess_source() {
   }
 
   // Run the preprocessor step.
-  const auto preprocessed_file = m_cache.get_temp_file(".i");
+  file::tmp_file_t preprocessed_file(sys::get_local_temp_folder(), ".i");
   const auto preprocessor_args = make_preprocessor_cmd(m_args, preprocessed_file.path());
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
