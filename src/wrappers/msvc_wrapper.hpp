@@ -26,7 +26,7 @@ namespace bcache {
 /// @brief A program wrapper MS Visual Studio.
 class msvc_wrapper_t : public program_wrapper_t {
 public:
-  msvc_wrapper_t(const string_list_t& args, cache_t& cache);
+  msvc_wrapper_t(const string_list_t& args);
 
   bool can_handle_command() override;
 

@@ -44,6 +44,8 @@
 namespace bcache {
 namespace sys {
 namespace {
+const std::string TEMP_FOLDER_NAME = "tmp";
+
 #if defined(_WIN32)
 std::string read_from_win_file(HANDLE file_handle,
                                std::ostream& stream,
@@ -284,5 +286,12 @@ run_result_t run_with_prefix(const string_list_t& args, const bool quiet) {
   // Run the command.
   return run(prefixed_args, quiet);
 }
+
+const std::string get_local_temp_folder() {
+  const auto tmp_path = file::append_path(config::dir(), TEMP_FOLDER_NAME);
+  file::create_dir_with_parents(tmp_path);
+  return tmp_path;
+}
+
 }  // namespace sys
 }  // namespace bcache

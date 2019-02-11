@@ -66,8 +66,7 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 }
 }  // namespace
 
-gcc_wrapper_t::gcc_wrapper_t(const string_list_t& args, cache_t& cache)
-    : program_wrapper_t(args, cache) {
+gcc_wrapper_t::gcc_wrapper_t(const string_list_t& args) : program_wrapper_t(args) {
 }
 
 bool gcc_wrapper_t::can_handle_command() {
@@ -100,7 +99,7 @@ std::string gcc_wrapper_t::preprocess_source() {
   }
 
   // Run the preprocessor step.
-  const auto preprocessed_file = m_cache.get_temp_file(".i");
+  file::tmp_file_t preprocessed_file(sys::get_local_temp_folder(), ".i");
   const auto preprocessor_args = make_preprocessor_cmd(m_args, preprocessed_file.path());
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {

@@ -92,14 +92,14 @@ bool remote_cache_t::is_connected() const {
   return (m_provider != nullptr) && m_provider->is_connected();
 }
 
-cache_t::entry_t bcache::remote_cache_t::lookup(const hasher_t::hash_t& hash) {
+cache_entry_t bcache::remote_cache_t::lookup(const hasher_t::hash_t& hash) {
   if (m_provider != nullptr) {
     return m_provider->lookup(hash);
   }
-  return cache_t::entry_t();
+  return cache_entry_t();
 }
 
-void remote_cache_t::add(const hasher_t::hash_t& hash, const cache_t::entry_t& entry) {
+void remote_cache_t::add(const hasher_t::hash_t& hash, const cache_entry_t& entry) {
   if (m_provider != nullptr) {
     m_provider->add(hash, entry);
   }

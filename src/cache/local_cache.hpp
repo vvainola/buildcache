@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------------------------------------
-// Copyright (c) 2018 Marcus Geelnard
+// Copyright (c) 2019 Marcus Geelnard
 //
 // This software is provided 'as-is', without any express or implied warranty. In no event will the
 // authors be held liable for any damages arising from the use of this software.
@@ -17,50 +17,27 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_CACHE_HPP_
-#define BUILDCACHE_CACHE_HPP_
+#ifndef BUILDCACHE_LOCAL_CACHE_HPP_
+#define BUILDCACHE_LOCAL_CACHE_HPP_
 
 #include <base/file_utils.hpp>
 #include <base/hasher.hpp>
 #include <base/lock_file.hpp>
+#include <cache/cache_entry.hpp>
 
-#include <map>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace bcache {
 
-class cache_t {
+class local_cache_t {
 public:
-  struct entry_t {
-    enum class comp_mode_t {
-      NONE = 0,
-      ALL = 1
-    };
-
-    /// @returns true if this object represents a valid cache entry. For a cache miss, the return
-    /// value is false.
-    operator bool() const {
-      return (!files.empty()) || (!std_out.empty()) || (!std_err.empty());
-    }
-
-    // TODO(m): The source file paths are only used during addition to the cache, so they can be
-    // kept in a separate map and do not have to be stored in the cache entry. I.e. we only need to
-    // store the file ID:s (e.g. "object") in the cache entry.
-    std::map<std::string, std::string> files;          ///< ID:s and paths of the cached files.
-    comp_mode_t compression_mode = comp_mode_t::NONE;  ///< Compression mode.
-    std::string std_out;                               ///< stdout from the program run.
-    std::string std_err;                               ///< stderr from the program run.
-    int return_code = 0;                               ///< Program return code (0 = success).
-  };
-
   /// @brief Initialize the cache object.
   /// @throws runtime_error if the cache could not be initialized.
-  cache_t();
+  local_cache_t();
 
   /// @brief De-initialzie the cache object.
-  ~cache_t();
+  ~local_cache_t();
 
   /// @brief Clear all entries in the cache.
   void clear();
@@ -68,16 +45,18 @@ public:
   /// @brief Show cache statistics (print to standard out).
   void show_stats();
 
-  /// @brief Adds a set of files to the cache
+  /// @brief Add a set of files to the cache
   /// @param hash The cache entry identifier.
   /// @param entry The cache entry data (files, stdout, etc).
   /// @param allow_hard_links Whether or not to allow hard links to be used when caching files.
-  void add(const hasher_t::hash_t& hash, const entry_t& entry, const bool allow_hard_links);
+  void add(const hasher_t::hash_t& hash,
+           const cache_entry_t& entry,
+           const bool allow_hard_links);
 
   /// @brief Check if an entry exists in the cache.
   /// @returns A pair of a cache entry struct and a lock file object. If there was no cache hit,
   /// the entry will be empty, and the lock file object will not hold any lock.
-  std::pair<entry_t, file::lock_file_t> lookup(const hasher_t::hash_t& hash);
+  std::pair<cache_entry_t, file::lock_file_t> lookup(const hasher_t::hash_t& hash);
 
   /// @brief Copy a cached file to the local file system.
   /// @param hash The cache entry identifier.
@@ -91,24 +70,8 @@ public:
                 const bool is_compressed,
                 const bool allow_hard_links);
 
-  /// @brief Get a temporary file.
-  /// @param extension File extension (including the period).
-  /// @returns a temporary file object with a unique path.
-  file::tmp_file_t get_temp_file(const std::string& extension) const;
-
-  /// @brief Serialize a cache entry.
-  /// @param entry The cache entry.
-  /// @returns a serialized data as a string object.
-  static std::string serialize_entry(const entry_t& entry);
-
-  /// @brief Deserialize a cache entry.
-  /// @param data The serialized data.
-  /// @returns the deserialized cache entry.
-  static entry_t deserialize_entry(const std::string& data);
-
 private:
   const std::string hash_to_cache_entry_path(const hasher_t::hash_t& hash) const;
-  const std::string get_tmp_folder() const;
   const std::string get_cache_files_folder() const;
 
   void perform_housekeeping();
@@ -116,4 +79,4 @@ private:
 
 }  // namespace bcache
 
-#endif  // BUILDCACHE_CACHE_HPP_
+#endif  // BUILDCACHE_LOCAL_CACHE_HPP_

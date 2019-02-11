@@ -359,7 +359,20 @@ void create_dir(const std::string& path) {
   const auto success = (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0);
 #endif
   if (!success) {
-    throw std::runtime_error("Unable to remove file.");
+    throw std::runtime_error("Unable to create directory " + path);
+  }
+}
+
+void create_dir_with_parents(const std::string& path) {
+  // Recursively create parent directories if necessary.
+  const auto parent = get_dir_part(path);
+  if (parent.size() < path.size() && !parent.empty() && !dir_exists(parent)) {
+    create_dir_with_parents(parent);
+  }
+
+  // Create the requested directory unless it already exists.
+  if (!dir_exists(path)) {
+    create_dir(path);
   }
 }
 

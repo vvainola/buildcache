@@ -44,7 +44,7 @@
 //     +- ...
 //--------------------------------------------------------------------------------------------------
 
-#include <cache/cache.hpp>
+#include <cache/local_cache.hpp>
 
 #include <base/compressor.hpp>
 #include <base/debug_utils.hpp>
@@ -52,16 +52,15 @@
 #include <base/serializer_utils.hpp>
 #include <config/configuration.hpp>
 
-#include <algorithm>
 #include <chrono>
 #include <cstdlib>
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
 
 namespace bcache {
 namespace {
-const std::string TEMP_FOLDER_NAME = "tmp";
 const std::string CACHE_FILES_FOLDER_NAME = "c";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 const std::string LOCK_FILE_SUFFIX = ".lock";
@@ -131,39 +130,26 @@ bool is_time_for_housekeeping() {
 }
 }  // namespace
 
-cache_t::cache_t() {
-  // Can we use the cache?
-  if (!file::dir_exists(config::dir())) {
-    file::create_dir(config::dir());
-  }
+local_cache_t::local_cache_t() {
+  file::create_dir_with_parents(config::dir());
 }
 
-cache_t::~cache_t() {
+local_cache_t::~local_cache_t() {
 }
 
-const std::string cache_t::get_tmp_folder() const {
-  const auto tmp_path = file::append_path(config::dir(), TEMP_FOLDER_NAME);
-  if (!file::dir_exists(tmp_path)) {
-    file::create_dir(tmp_path);
-  }
-  return tmp_path;
-}
-
-const std::string cache_t::get_cache_files_folder() const {
+const std::string local_cache_t::get_cache_files_folder() const {
   const auto cache_files_path = file::append_path(config::dir(), CACHE_FILES_FOLDER_NAME);
-  if (!file::dir_exists(cache_files_path)) {
-    file::create_dir(cache_files_path);
-  }
+  file::create_dir_with_parents(cache_files_path);
   return cache_files_path;
 }
 
-const std::string cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash) const {
+const std::string local_cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash) const {
   const std::string str = hash.as_string();
   const auto parent_dir_path = file::append_path(get_cache_files_folder(), str.substr(0, 2));
   return file::append_path(parent_dir_path, str.substr(2));
 }
 
-void cache_t::clear() {
+void local_cache_t::clear() {
   const auto start_t = std::chrono::high_resolution_clock::now();
 
   // Remove all cache entries.
@@ -185,7 +171,7 @@ void cache_t::clear() {
   std::cout << "Cleared the cache in " << dt << " ms\n";
 }
 
-void cache_t::show_stats() {
+void local_cache_t::show_stats() {
   // Calculate the total cache size.
   const auto dirs = get_cache_entry_dirs(config::dir());
   int num_entries = 0;
@@ -208,15 +194,13 @@ void cache_t::show_stats() {
   std::cout.copyfmt(old_fmt);
 }
 
-void cache_t::add(const hasher_t::hash_t& hash,
-                  const cache_t::entry_t& entry,
-                  const bool allow_hard_links) {
+void local_cache_t::add(const hasher_t::hash_t& hash,
+                        const cache_entry_t& entry,
+                        const bool allow_hard_links) {
   // Create the cache entry parent directory if necessary.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
   const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
-  if (!file::dir_exists(cache_entry_parent_path)) {
-    file::create_dir(cache_entry_parent_path);
-  }
+  file::create_dir_with_parents(cache_entry_parent_path);
 
   {
     // Acquire a scoped exclusive lock for the cache entry.
@@ -226,15 +210,13 @@ void cache_t::add(const hasher_t::hash_t& hash,
     }
 
     // Create the cache entry directory.
-    if (!file::dir_exists(cache_entry_path)) {
-      file::create_dir(cache_entry_path);
-    }
+    file::create_dir_with_parents(cache_entry_path);
 
     // Copy (and optinally compress) the files into the cache.
-    for (const auto& file : entry.files) {
+    for (const auto& file : entry.files()) {
       const auto& source_path = file.second;
       const auto target_path = file::append_path(cache_entry_path, file.first);
-      if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
+      if (entry.compression_mode() == cache_entry_t::comp_mode_t::ALL) {
         debug::log(debug::DEBUG) << "Compressing " << source_path << " => " << target_path;
         comp::compress_file(source_path, target_path);
       } else if (allow_hard_links) {
@@ -246,7 +228,7 @@ void cache_t::add(const hasher_t::hash_t& hash,
 
     // Create a cache entry file.
     const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
-    file::write(serialize_entry(entry), cache_entry_file_name);
+    file::write(entry.serialize(), cache_entry_file_name);
   }
 
   // Occassionally perform housekeeping. We do it here, since:
@@ -257,7 +239,7 @@ void cache_t::add(const hasher_t::hash_t& hash,
   }
 }
 
-std::pair<cache_t::entry_t, file::lock_file_t> cache_t::lookup(const hasher_t::hash_t& hash) {
+std::pair<cache_entry_t, file::lock_file_t> local_cache_t::lookup(const hasher_t::hash_t& hash) {
   // Get the path to the cache entry.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
 
@@ -280,19 +262,17 @@ std::pair<cache_t::entry_t, file::lock_file_t> cache_t::lookup(const hasher_t::h
     // cache miss).
     const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
     const auto entry_data = file::read(cache_entry_file_name);
-    auto entry = deserialize_entry(entry_data);
-
-    return std::make_pair(entry, std::move(lock));
+    return std::make_pair(cache_entry_t::deserialize(entry_data), std::move(lock));
   } catch (...) {
-    return std::make_pair(entry_t(), file::lock_file_t());
+    return std::make_pair(cache_entry_t(), file::lock_file_t());
   }
 }
 
-void cache_t::get_file(const hasher_t::hash_t& hash,
-                       const std::string& source_id,
-                       const std::string& target_path,
-                       const bool is_compressed,
-                       const bool allow_hard_links) {
+void local_cache_t::get_file(const hasher_t::hash_t& hash,
+                             const std::string& source_id,
+                             const std::string& target_path,
+                             const bool is_compressed,
+                             const bool allow_hard_links) {
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
   const auto source_path = file::append_path(cache_entry_path, source_id);
   if (is_compressed) {
@@ -305,7 +285,7 @@ void cache_t::get_file(const hasher_t::hash_t& hash,
   }
 }
 
-void cache_t::perform_housekeeping() {
+void local_cache_t::perform_housekeeping() {
   const auto start_t = std::chrono::high_resolution_clock::now();
 
   debug::log(debug::INFO) << "Performing housekeeping.";
@@ -347,55 +327,6 @@ void cache_t::perform_housekeeping() {
   const auto stop_t = std::chrono::high_resolution_clock::now();
   const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
   debug::log(debug::INFO) << "Finished housekeeping in " << dt << " ms";
-}
-
-file::tmp_file_t cache_t::get_temp_file(const std::string& extension) const {
-  return file::tmp_file_t(get_tmp_folder(), extension);
-}
-
-std::string cache_t::serialize_entry(const entry_t& entry) {
-  std::string data = serialize::from_int(ENTRY_DATA_FORMAT_VERSION);
-  data += serialize::from_int(static_cast<int>(entry.compression_mode));
-  data += serialize::from_map(entry.files);
-  if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
-    data += serialize::from_string(comp::compress(entry.std_out));
-    data += serialize::from_string(comp::compress(entry.std_err));
-  } else {
-    data += serialize::from_string(entry.std_out);
-    data += serialize::from_string(entry.std_err);
-  }
-  data += serialize::from_int(static_cast<int32_t>(entry.return_code));
-  return data;
-}
-
-cache_t::entry_t cache_t::deserialize_entry(const std::string& data) {
-  std::string::size_type pos = 0;
-
-  // Read and check the format version.
-  int32_t format_version = serialize::to_int(data, pos);
-  if (format_version > ENTRY_DATA_FORMAT_VERSION) {
-    throw std::runtime_error("Unsupported serialization format version.");
-  }
-
-  // De-serialize the entry.
-  entry_t entry;
-  if (format_version > 1) {
-    entry.compression_mode = static_cast<entry_t::comp_mode_t>(serialize::to_int(data, pos));
-  } else {
-    entry.compression_mode = entry_t::comp_mode_t::NONE;
-  }
-  entry.files = serialize::to_map(data, pos);
-  entry.std_out = serialize::to_string(data, pos);
-  entry.std_err = serialize::to_string(data, pos);
-  entry.return_code = static_cast<int>(serialize::to_int(data, pos));
-
-  // Optionally decompress the program output.
-  if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
-    entry.std_out = comp::decompress(entry.std_out);
-    entry.std_err = comp::decompress(entry.std_err);
-  }
-
-  return entry;
 }
 
 }  // namespace bcache

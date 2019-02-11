@@ -20,7 +20,7 @@
 #include <base/debug_utils.hpp>
 #include <base/string_list.hpp>
 #include <base/unicode_utils.hpp>
-#include <cache/cache.hpp>
+#include <cache/local_cache.hpp>
 #include <config/configuration.hpp>
 #include <sys/perf_utils.hpp>
 #include <sys/sys_utils.hpp>
@@ -49,8 +49,8 @@ bool is_lua_script(const std::string& script_path) {
   return (bcache::lower_case(bcache::file::get_extension(script_path)) == ".lua");
 }
 
-std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::string_list_t& args,
-                                                                 bcache::cache_t& cache) {
+std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
+    const bcache::string_list_t& args) {
   const auto& true_exe_path = args[0];
 
   std::unique_ptr<bcache::program_wrapper_t> wrapper;
@@ -65,7 +65,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
         const auto script_path = file_info.path();
         if ((!file_info.is_dir()) && is_lua_script(script_path)) {
           // Check if the given wrapper can handle this command (first match wins).
-          wrapper.reset(new bcache::lua_wrapper_t(args, cache, script_path));
+          wrapper.reset(new bcache::lua_wrapper_t(args, script_path));
           if (wrapper->can_handle_command()) {
             bcache::debug::log(bcache::debug::DEBUG) << "Found matching Lua wrapper for "
                                                      << true_exe_path << ": " << script_path;
@@ -83,11 +83,11 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
 
   // If no Lua wrappers were found, try built in wrappers.
   if (!wrapper) {
-    wrapper.reset(new bcache::gcc_wrapper_t(args, cache));
+    wrapper.reset(new bcache::gcc_wrapper_t(args));
     if (!wrapper->can_handle_command()) {
-      wrapper.reset(new bcache::ghs_wrapper_t(args, cache));
+      wrapper.reset(new bcache::ghs_wrapper_t(args));
       if (!wrapper->can_handle_command()) {
-        wrapper.reset(new bcache::msvc_wrapper_t(args, cache));
+        wrapper.reset(new bcache::msvc_wrapper_t(args));
         if (!wrapper->can_handle_command()) {
           wrapper = nullptr;
         }
@@ -101,7 +101,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
 [[noreturn]] void clear_cache_and_exit() {
   int return_code = 0;
   try {
-    bcache::cache_t cache;
+    bcache::local_cache_t cache;
     cache.clear();
   } catch (const std::exception& e) {
     std::cerr << "*** Unexpected error: " << e.what() << "\n";
@@ -116,7 +116,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
 [[noreturn]] void show_stats_and_exit() {
   int return_code = 0;
   try {
-    bcache::cache_t cache;
+    bcache::local_cache_t cache;
 
     // Print the cache stats.
     std::cout << "Cache status:\n";
@@ -200,12 +200,9 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(const bcache::s
       try {
         return_code = 1;
 
-        // Initialize a cache object.
-        bcache::cache_t cache;
-
         // Select a matching compiler wrapper.
         PERF_START(FIND_WRAPPER);
-        auto wrapper = find_suitable_wrapper(args, cache);
+        auto wrapper = find_suitable_wrapper(args);
         PERF_STOP(FIND_WRAPPER);
 
         // Run the wrapper, if any.

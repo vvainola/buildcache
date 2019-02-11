@@ -401,10 +401,8 @@ bool lua_wrapper_t::runner_t::call(const std::string& func) {
   return true;
 }
 
-lua_wrapper_t::lua_wrapper_t(const string_list_t& args,
-                             cache_t& cache,
-                             const std::string& lua_script_path)
-    : program_wrapper_t(args, cache), m_runner(lua_script_path, args) {
+lua_wrapper_t::lua_wrapper_t(const string_list_t& args, const std::string& lua_script_path)
+    : program_wrapper_t(args), m_runner(lua_script_path, args) {
 }
 
 bool lua_wrapper_t::can_handle_command() {

@@ -70,8 +70,7 @@ string_list_t make_preprocessor_cmd(const string_list_t& args) {
 }
 }  // namespace
 
-msvc_wrapper_t::msvc_wrapper_t(const string_list_t& args, cache_t& cache)
-    : program_wrapper_t(args, cache) {
+msvc_wrapper_t::msvc_wrapper_t(const string_list_t& args) : program_wrapper_t(args) {
 }
 
 bool msvc_wrapper_t::can_handle_command() {

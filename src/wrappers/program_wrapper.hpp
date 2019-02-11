@@ -22,7 +22,7 @@
 
 #include <base/file_utils.hpp>
 #include <base/string_list.hpp>
-#include <cache/cache.hpp>
+#include <cache/local_cache.hpp>
 #include <cache/remote_cache.hpp>
 
 #include <string>
@@ -49,7 +49,7 @@ public:
 
 protected:
   // This constructor is called by derived classes.
-  program_wrapper_t(const string_list_t &args, cache_t& cache);
+  program_wrapper_t(const string_list_t &args);
 
   /// @brief Resolve arguments on the command line.
   ///
@@ -113,7 +113,6 @@ protected:
   virtual std::map<std::string, std::string> get_build_files();
 
   const string_list_t& m_args;
-  cache_t& m_cache;
 
 private:
   /// @brief Perform a cache lookup in the local cache.
@@ -130,7 +129,7 @@ private:
   /// @param entry The cache entry description.
   /// @param allow_hard_links True if we are allowed to use hard links.
   void add_to_local_cache(const hasher_t::hash_t hash,
-                          const cache_t::entry_t& entry,
+                          const cache_entry_t& entry,
                           const bool allow_hard_links);
 
   /// @brief Perform a cache lookup in the remote cache.
@@ -142,8 +141,9 @@ private:
   /// @brief Add a new entry to the remote cache.
   /// @param hash The hash of the cache entry.
   /// @param entry The cache entry description.
-  void add_to_remote_cache(const hasher_t::hash_t hash, const cache_t::entry_t& entry);
+  void add_to_remote_cache(const hasher_t::hash_t hash, const cache_entry_t& entry);
 
+  local_cache_t m_cache;
   remote_cache_t m_remote_cache;
 };
 }  // namespace bcache
