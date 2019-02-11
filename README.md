@@ -89,14 +89,15 @@ $ BUILDCACHE_PREFIX=/usr/bin/icecc buildcache g++ -c -O2 hello.cpp -o hello.o
 
 Currently the following compilers and languages are supported:
 
-| Compiler | Languages | Supported |
+| Compiler | Languages | Support |
 | -------- | --------- | --------- |
-| GCC      | C, C++    | Yes       |
-| Clang    | C, C++    | Yes       |
-| MSVC     | C, C++    | Yes       |
-| GHS      | C, C++    | Yes       |
+| GCC      | C, C++    | Built-in  |
+| Clang    | C, C++    | Built-in  |
+| Microsoft Visual C++ | C, C++    | Built-in  |
+| Green Hills Software    | C, C++    | Built-in  |
+| Texas Instruments TMS320C6000™ | C, C++  | Lua example |
 
-New backends are relatively easy to add, both in C++ and in Lua (see below).
+New backends are relatively easy to add, both as built-in wrappers in C++ and as Lua wrappers (see below).
 
 ## Using custom Lua plugins
 
