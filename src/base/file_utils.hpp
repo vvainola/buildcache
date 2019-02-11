@@ -166,8 +166,17 @@ std::vector<file_info_t> walk_directory(const std::string& path);
 
 /// @brief Create a directory.
 /// @param path The path to the directory.
-/// @throws runtime_error if the file could not be removed.
+/// @throws runtime_error if the directory could not be created.
 void create_dir(const std::string& path);
+
+/// @brief Create a directory and its parent directories.
+///
+/// This function will create parent directories if required (similar to mkdir -p), and if the
+/// specified directory does not already exist, it is created (unlike @c create_dir, which will
+/// always try to create the directory).
+/// @param path The path to the directory.
+/// @throws runtime_error if the directory could not be created.
+void create_dir_with_parents(const std::string& path);
 
 /// @brief Remove an existing file.
 /// @param path The path to the file.

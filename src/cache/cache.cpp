@@ -132,10 +132,7 @@ bool is_time_for_housekeeping() {
 }  // namespace
 
 cache_t::cache_t() {
-  // Can we use the cache?
-  if (!file::dir_exists(config::dir())) {
-    file::create_dir(config::dir());
-  }
+  file::create_dir_with_parents(config::dir());
 }
 
 cache_t::~cache_t() {
@@ -151,9 +148,7 @@ const std::string cache_t::get_tmp_folder() const {
 
 const std::string cache_t::get_cache_files_folder() const {
   const auto cache_files_path = file::append_path(config::dir(), CACHE_FILES_FOLDER_NAME);
-  if (!file::dir_exists(cache_files_path)) {
-    file::create_dir(cache_files_path);
-  }
+  file::create_dir_with_parents(cache_files_path);
   return cache_files_path;
 }
 
@@ -214,9 +209,7 @@ void cache_t::add(const hasher_t::hash_t& hash,
   // Create the cache entry parent directory if necessary.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
   const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
-  if (!file::dir_exists(cache_entry_parent_path)) {
-    file::create_dir(cache_entry_parent_path);
-  }
+  file::create_dir_with_parents(cache_entry_parent_path);
 
   {
     // Acquire a scoped exclusive lock for the cache entry.
@@ -226,9 +219,7 @@ void cache_t::add(const hasher_t::hash_t& hash,
     }
 
     // Create the cache entry directory.
-    if (!file::dir_exists(cache_entry_path)) {
-      file::create_dir(cache_entry_path);
-    }
+    file::create_dir_with_parents(cache_entry_path);
 
     // Copy (and optinally compress) the files into the cache.
     for (const auto& file : entry.files) {
