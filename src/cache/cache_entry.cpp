@@ -17,7 +17,7 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include <cache/cache.hpp>
+#include <cache/cache_entry.hpp>
 
 #include <base/compressor.hpp>
 #include <base/serializer_utils.hpp>
@@ -30,22 +30,37 @@ namespace {
 const int32_t ENTRY_DATA_FORMAT_VERSION = 2;
 }  // namespace
 
-std::string cache_t::serialize_entry(const entry_t& entry) {
+cache_entry_t::cache_entry_t() {
+}
+
+cache_entry_t::cache_entry_t(const std::map<std::string, std::string>& files,
+                             const cache_entry_t::comp_mode_t compression_mode,
+                             const std::string& std_out,
+                             const std::string& std_err,
+                             const int return_code)
+    : m_files(files),
+      m_compression_mode(compression_mode),
+      m_std_out(std_out),
+      m_std_err(std_err),
+      m_return_code(return_code) {
+}
+
+std::string cache_entry_t::serialize() const {
   std::string data = serialize::from_int(ENTRY_DATA_FORMAT_VERSION);
-  data += serialize::from_int(static_cast<int>(entry.compression_mode));
-  data += serialize::from_map(entry.files);
-  if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
-    data += serialize::from_string(comp::compress(entry.std_out));
-    data += serialize::from_string(comp::compress(entry.std_err));
+  data += serialize::from_int(static_cast<int>(m_compression_mode));
+  data += serialize::from_map(m_files);
+  if (m_compression_mode == comp_mode_t::ALL) {
+    data += serialize::from_string(comp::compress(m_std_out));
+    data += serialize::from_string(comp::compress(m_std_err));
   } else {
-    data += serialize::from_string(entry.std_out);
-    data += serialize::from_string(entry.std_err);
+    data += serialize::from_string(m_std_out);
+    data += serialize::from_string(m_std_err);
   }
-  data += serialize::from_int(static_cast<int32_t>(entry.return_code));
+  data += serialize::from_int(static_cast<int32_t>(m_return_code));
   return data;
 }
 
-cache_t::entry_t cache_t::deserialize_entry(const std::string& data) {
+cache_entry_t cache_entry_t::deserialize(const std::string& data) {
   std::string::size_type pos = 0;
 
   // Read and check the format version.
@@ -55,24 +70,21 @@ cache_t::entry_t cache_t::deserialize_entry(const std::string& data) {
   }
 
   // De-serialize the entry.
-  entry_t entry;
-  if (format_version > 1) {
-    entry.compression_mode = static_cast<entry_t::comp_mode_t>(serialize::to_int(data, pos));
-  } else {
-    entry.compression_mode = entry_t::comp_mode_t::NONE;
-  }
-  entry.files = serialize::to_map(data, pos);
-  entry.std_out = serialize::to_string(data, pos);
-  entry.std_err = serialize::to_string(data, pos);
-  entry.return_code = static_cast<int>(serialize::to_int(data, pos));
+  const auto compression_mode = (format_version > 1)
+                                    ? static_cast<comp_mode_t>(serialize::to_int(data, pos))
+                                    : comp_mode_t::NONE;
+  const auto files = serialize::to_map(data, pos);
+  auto std_out = serialize::to_string(data, pos);
+  auto std_err = serialize::to_string(data, pos);
+  const auto return_code = static_cast<int>(serialize::to_int(data, pos));
 
   // Optionally decompress the program output.
-  if (entry.compression_mode == entry_t::comp_mode_t::ALL) {
-    entry.std_out = comp::decompress(entry.std_out);
-    entry.std_err = comp::decompress(entry.std_err);
+  if (compression_mode == comp_mode_t::ALL) {
+    std_out = comp::decompress(std_out);
+    std_err = comp::decompress(std_err);
   }
 
-  return entry;
+  return cache_entry_t(files, compression_mode, std_out, std_err, return_code);
 }
 
 }  // namespace bcache

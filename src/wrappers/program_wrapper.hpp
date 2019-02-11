@@ -129,7 +129,7 @@ private:
   /// @param entry The cache entry description.
   /// @param allow_hard_links True if we are allowed to use hard links.
   void add_to_local_cache(const hasher_t::hash_t hash,
-                          const cache_t::entry_t& entry,
+                          const cache_entry_t& entry,
                           const bool allow_hard_links);
 
   /// @brief Perform a cache lookup in the remote cache.
@@ -141,7 +141,7 @@ private:
   /// @brief Add a new entry to the remote cache.
   /// @param hash The hash of the cache entry.
   /// @param entry The cache entry description.
-  void add_to_remote_cache(const hasher_t::hash_t hash, const cache_t::entry_t& entry);
+  void add_to_remote_cache(const hasher_t::hash_t hash, const cache_entry_t& entry);
 
   local_cache_t m_cache;
   remote_cache_t m_remote_cache;

@@ -115,24 +115,23 @@ void redis_cache_provider_t::disconnect() {
   }
 }
 
-cache_t::entry_t bcache::redis_cache_provider_t::lookup(const hasher_t::hash_t& hash) {
+cache_entry_t bcache::redis_cache_provider_t::lookup(const hasher_t::hash_t& hash) {
   const auto key = remote_key_name(hash.as_string(), CACHE_ENTRY_FILE_NAME);
   try {
     // Try to get the cache entry item from the remote cache.
-    const auto data = get_data(key);
-    return cache_t::deserialize_entry(data);
+    return cache_entry_t::deserialize(get_data(key));
   } catch (const std::exception& e) {
     // We most likely had a cache miss.
     debug::log(debug::log_level_t::DEBUG) << e.what();
-    return cache_t::entry_t();
+    return cache_entry_t();
   }
 }
 
-void redis_cache_provider_t::add(const hasher_t::hash_t& hash, const cache_t::entry_t& entry) {
+void redis_cache_provider_t::add(const hasher_t::hash_t& hash, const cache_entry_t& entry) {
   const auto hash_str = hash.as_string();
 
   // Upload (and optinally compress) the files to the remote cache.
-  for (const auto& file : entry.files) {
+  for (const auto& file : entry.files()) {
     const auto& file_id = file.first;
     const auto& source_path = file.second;
 
@@ -140,7 +139,7 @@ void redis_cache_provider_t::add(const hasher_t::hash_t& hash, const cache_t::en
     auto data = file::read(source_path);
 
     // Compress?
-    if (entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL) {
+    if (entry.compression_mode() == cache_entry_t::comp_mode_t::ALL) {
       debug::log(debug::DEBUG) << "Compressing " << source_path << "...";
       data = comp::compress(data);
     }
@@ -152,7 +151,7 @@ void redis_cache_provider_t::add(const hasher_t::hash_t& hash, const cache_t::en
 
   // Create a cache entry file.
   const auto key = remote_key_name(hash_str, CACHE_ENTRY_FILE_NAME);
-  set_data(key, cache_t::serialize_entry(entry));
+  set_data(key, entry.serialize());
 }
 
 void redis_cache_provider_t::get_file(const hasher_t::hash_t& hash,

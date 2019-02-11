@@ -195,7 +195,7 @@ void local_cache_t::show_stats() {
 }
 
 void local_cache_t::add(const hasher_t::hash_t& hash,
-                        const cache_t::entry_t& entry,
+                        const cache_entry_t& entry,
                         const bool allow_hard_links) {
   // Create the cache entry parent directory if necessary.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
@@ -213,10 +213,10 @@ void local_cache_t::add(const hasher_t::hash_t& hash,
     file::create_dir_with_parents(cache_entry_path);
 
     // Copy (and optinally compress) the files into the cache.
-    for (const auto& file : entry.files) {
+    for (const auto& file : entry.files()) {
       const auto& source_path = file.second;
       const auto target_path = file::append_path(cache_entry_path, file.first);
-      if (entry.compression_mode == cache_t::entry_t::comp_mode_t::ALL) {
+      if (entry.compression_mode() == cache_entry_t::comp_mode_t::ALL) {
         debug::log(debug::DEBUG) << "Compressing " << source_path << " => " << target_path;
         comp::compress_file(source_path, target_path);
       } else if (allow_hard_links) {
@@ -228,7 +228,7 @@ void local_cache_t::add(const hasher_t::hash_t& hash,
 
     // Create a cache entry file.
     const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
-    file::write(cache_t::serialize_entry(entry), cache_entry_file_name);
+    file::write(entry.serialize(), cache_entry_file_name);
   }
 
   // Occassionally perform housekeeping. We do it here, since:
@@ -239,7 +239,7 @@ void local_cache_t::add(const hasher_t::hash_t& hash,
   }
 }
 
-std::pair<cache_t::entry_t, file::lock_file_t> local_cache_t::lookup(const hasher_t::hash_t& hash) {
+std::pair<cache_entry_t, file::lock_file_t> local_cache_t::lookup(const hasher_t::hash_t& hash) {
   // Get the path to the cache entry.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
 
@@ -262,11 +262,9 @@ std::pair<cache_t::entry_t, file::lock_file_t> local_cache_t::lookup(const hashe
     // cache miss).
     const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
     const auto entry_data = file::read(cache_entry_file_name);
-    auto entry = cache_t::deserialize_entry(entry_data);
-
-    return std::make_pair(entry, std::move(lock));
+    return std::make_pair(cache_entry_t::deserialize(entry_data), std::move(lock));
   } catch (...) {
-    return std::make_pair(cache_t::entry_t(), file::lock_file_t());
+    return std::make_pair(cache_entry_t(), file::lock_file_t());
   }
 }
 

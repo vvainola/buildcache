@@ -21,7 +21,7 @@
 #define BUILDCACHE_REMOTE_CACHE_HPP_
 
 #include <base/hasher.hpp>
-#include <cache/cache.hpp>
+#include <cache/cache_entry.hpp>
 #include <cache/remote_cache_provider.hpp>
 
 #include <string>
@@ -46,12 +46,12 @@ public:
 
   /// @brief Check if an entry exists in the cache.
   /// @returns A cache entry struct. If there was no cache hit the entry will be empty.
-  cache_t::entry_t lookup(const hasher_t::hash_t& hash);
+  cache_entry_t lookup(const hasher_t::hash_t& hash);
 
   /// @brief Adds a set of files to the cache.
   /// @param hash The cache entry identifier.
   /// @param entry The cache entry data (files, stdout, etc).
-  void add(const hasher_t::hash_t& hash, const cache_t::entry_t& entry);
+  void add(const hasher_t::hash_t& hash, const cache_entry_t& entry);
 
   /// @brief Copy a cached file to the local file system.
   /// @param hash The cache entry identifier.

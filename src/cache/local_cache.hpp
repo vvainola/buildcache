@@ -23,7 +23,7 @@
 #include <base/file_utils.hpp>
 #include <base/hasher.hpp>
 #include <base/lock_file.hpp>
-#include <cache/cache.hpp>
+#include <cache/cache_entry.hpp>
 
 #include <string>
 #include <utility>
@@ -50,13 +50,13 @@ public:
   /// @param entry The cache entry data (files, stdout, etc).
   /// @param allow_hard_links Whether or not to allow hard links to be used when caching files.
   void add(const hasher_t::hash_t& hash,
-           const cache_t::entry_t& entry,
+           const cache_entry_t& entry,
            const bool allow_hard_links);
 
   /// @brief Check if an entry exists in the cache.
   /// @returns A pair of a cache entry struct and a lock file object. If there was no cache hit,
   /// the entry will be empty, and the lock file object will not hold any lock.
-  std::pair<cache_t::entry_t, file::lock_file_t> lookup(const hasher_t::hash_t& hash);
+  std::pair<cache_entry_t, file::lock_file_t> lookup(const hasher_t::hash_t& hash);
 
   /// @brief Copy a cached file to the local file system.
   /// @param hash The cache entry identifier.
