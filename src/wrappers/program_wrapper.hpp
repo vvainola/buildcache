@@ -127,9 +127,12 @@ private:
   /// @brief Add a new entry to the local cache.
   /// @param hash The hash of the cache entry.
   /// @param entry The cache entry description.
+  /// @param file_paths Paths to the actual files in the local file system (map from file ID to
+  /// path).
   /// @param allow_hard_links True if we are allowed to use hard links.
   void add_to_local_cache(const hasher_t::hash_t hash,
                           const cache_entry_t& entry,
+                          const std::map<std::string, std::string>& file_paths,
                           const bool allow_hard_links);
 
   /// @brief Perform a cache lookup in the remote cache.
@@ -141,7 +144,11 @@ private:
   /// @brief Add a new entry to the remote cache.
   /// @param hash The hash of the cache entry.
   /// @param entry The cache entry description.
-  void add_to_remote_cache(const hasher_t::hash_t hash, const cache_entry_t& entry);
+  /// @param file_paths Paths to the actual files in the local file system (map from file ID to
+  /// path).
+  void add_to_remote_cache(const hasher_t::hash_t hash,
+                           const cache_entry_t& entry,
+                           const std::map<std::string, std::string>& file_paths);
 
   local_cache_t m_cache;
   remote_cache_t m_remote_cache;

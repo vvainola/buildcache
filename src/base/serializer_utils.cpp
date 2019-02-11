@@ -37,6 +37,14 @@ std::string from_string(const std::string& x) {
   return from_int(static_cast<int32_t>(x.size())) + x;
 }
 
+std::string from_vector(const std::vector<std::string>& x) {
+  auto result = from_int(static_cast<int32_t>(x.size()));
+  for (const auto& element : x) {
+    result += from_string(element);
+  }
+  return result;
+}
+
 std::string from_map(const std::map<std::string, std::string>& x) {
   auto result = from_int(static_cast<int32_t>(x.size()));
   for (const auto& element : x) {
@@ -63,6 +71,15 @@ std::string to_string(const std::string& data, std::string::size_type& pos) {
   }
   pos += size;
   return std::string(&data[pos - size], size);
+}
+
+std::vector<std::string> to_vector(const std::string& data, std::string::size_type& pos) {
+  const auto size = to_int(data, pos);
+  std::vector<std::string> result;
+  for (int32_t i = 0; i < size; ++i) {
+    result.emplace_back(to_string(data, pos));
+  }
+  return result;
 }
 
 std::map<std::string, std::string> to_map(const std::string& data, std::string::size_type& pos) {

@@ -36,7 +36,9 @@ public:
   bool connect(const std::string& host_description) override;
   bool is_connected() const override;
   cache_entry_t lookup(const hasher_t::hash_t& hash) override;
-  void add(const hasher_t::hash_t& hash, const cache_entry_t& entry) override;
+  void add(const hasher_t::hash_t& hash,
+           const cache_entry_t& entry,
+           const std::map<std::string, std::string>& file_paths) override;
   void get_file(const hasher_t::hash_t& hash,
                 const std::string& source_id,
                 const std::string& target_path,

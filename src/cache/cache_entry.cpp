@@ -27,18 +27,26 @@
 namespace bcache {
 namespace {
 // The version of the entry file serialization data format.
-const int32_t ENTRY_DATA_FORMAT_VERSION = 2;
+const int32_t ENTRY_DATA_FORMAT_VERSION = 3;
+
+std::vector<std::string> v2_files_to_vector(const std::map<std::string, std::string>& files) {
+  std::vector<std::string> result;
+  for (const auto& file : files) {
+    result.emplace_back(file.first);
+  }
+  return result;
+}
 }  // namespace
 
 cache_entry_t::cache_entry_t() {
 }
 
-cache_entry_t::cache_entry_t(const std::map<std::string, std::string>& files,
+cache_entry_t::cache_entry_t(const std::vector<std::string>& file_ids,
                              const cache_entry_t::comp_mode_t compression_mode,
                              const std::string& std_out,
                              const std::string& std_err,
                              const int return_code)
-    : m_files(files),
+    : m_file_ids(file_ids),
       m_compression_mode(compression_mode),
       m_std_out(std_out),
       m_std_err(std_err),
@@ -49,7 +57,7 @@ cache_entry_t::cache_entry_t(const std::map<std::string, std::string>& files,
 std::string cache_entry_t::serialize() const {
   std::string data = serialize::from_int(ENTRY_DATA_FORMAT_VERSION);
   data += serialize::from_int(static_cast<int>(m_compression_mode));
-  data += serialize::from_map(m_files);
+  data += serialize::from_vector(m_file_ids);
   if (m_compression_mode == comp_mode_t::ALL) {
     data += serialize::from_string(comp::compress(m_std_out));
     data += serialize::from_string(comp::compress(m_std_err));
@@ -71,10 +79,11 @@ cache_entry_t cache_entry_t::deserialize(const std::string& data) {
   }
 
   // De-serialize the entry.
-  const auto compression_mode = (format_version > 1)
+  const auto compression_mode = (format_version >= 2)
                                     ? static_cast<comp_mode_t>(serialize::to_int(data, pos))
                                     : comp_mode_t::NONE;
-  const auto files = serialize::to_map(data, pos);
+  const auto file_ids = (format_version >= 3) ? serialize::to_vector(data, pos)
+                                              : v2_files_to_vector(serialize::to_map(data, pos));
   auto std_out = serialize::to_string(data, pos);
   auto std_err = serialize::to_string(data, pos);
   const auto return_code = static_cast<int>(serialize::to_int(data, pos));
@@ -85,7 +94,7 @@ cache_entry_t cache_entry_t::deserialize(const std::string& data) {
     std_err = comp::decompress(std_err);
   }
 
-  return cache_entry_t(files, compression_mode, std_out, std_err, return_code);
+  return cache_entry_t(file_ids, compression_mode, std_out, std_err, return_code);
 }
 
 }  // namespace bcache

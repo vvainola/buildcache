@@ -20,8 +20,8 @@
 #ifndef BUILDCACHE_CACHE_ENTRY_HPP_
 #define BUILDCACHE_CACHE_ENTRY_HPP_
 
-#include <map>
 #include <string>
+#include <vector>
 
 namespace bcache {
 /// @brief Meta data for a single cache entry.
@@ -37,12 +37,12 @@ public:
   cache_entry_t();
 
   /// @brief Construct a valid cache entry.
-  /// @param files ID:s and paths of the cached files.
+  /// @param file_ids ID:s of the cached files.
   /// @param compression_mode Compression mode.
   /// @param std_out stdout from the program run.
   /// @param std_err stderr from the program run.
   /// @param return_code Program return code (0 = success).
-  cache_entry_t(const std::map<std::string, std::string>& files,
+  cache_entry_t(const std::vector<std::string>& file_ids,
                 const comp_mode_t compression_mode,
                 const std::string& std_out,
                 const std::string& std_err,
@@ -63,9 +63,9 @@ public:
   /// @returns the deserialized cache entry.
   static cache_entry_t deserialize(const std::string& data);
 
-  /// @returns the ID:s and paths of the cached files.
-  const std::map<std::string, std::string>& files() const {
-    return m_files;
+  /// @returns the ID:s of the cached files.
+  const std::vector<std::string>& file_ids() const {
+    return m_file_ids;
   }
 
   /// @returns the compression mode.
@@ -89,10 +89,7 @@ public:
   }
 
 private:
-  // TODO(m): The source file paths are only used during addition to the cache, so they can be
-  // kept in a separate map and do not have to be stored in the cache entry. I.e. we only need to
-  // store the file ID:s (e.g. "object") in the cache entry.
-  std::map<std::string, std::string> m_files;
+  std::vector<std::string> m_file_ids;
   comp_mode_t m_compression_mode = comp_mode_t::NONE;
   std::string m_std_out;
   std::string m_std_err;
