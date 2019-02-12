@@ -31,7 +31,8 @@ namespace bcache {
 class remote_cache_t {
 public:
   /// @brief Initialize the remote cache object.
-  remote_cache_t() {}
+  remote_cache_t() {
+  }
 
   /// @brief De-initialzie the remote cache object.
   ~remote_cache_t();

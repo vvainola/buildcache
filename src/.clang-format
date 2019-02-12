@@ -6,7 +6,7 @@ AllowShortFunctionsOnASingleLine: None
 BinPackArguments: false
 ColumnLimit: 100
 IncludeCategories:
-  - Regex:    '^(<(base/|config/|sys/|wrappers/))'
+  - Regex:    '^(<(base/|cache/|config/|sys/|wrappers/).+\.hpp)'
     Priority: 2
   - Regex:    '^<(.*\.h>|c)'
     Priority: 3

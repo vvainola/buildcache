@@ -157,7 +157,6 @@ bool program_wrapper_t::handle_command(int& return_code) {
   return false;
 }
 
-
 //--------------------------------------------------------------------------------------------------
 // Default wrapper interface implementation. Wrappers are expected to override the parts that are
 // relevant.

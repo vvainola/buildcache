@@ -36,10 +36,10 @@
 #undef ERROR
 #undef log
 #else
-#include <sys/types.h>
 #include <chrono>
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <thread>
 #endif
@@ -58,7 +58,7 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
 #if defined(_WIN32)
   // Time values are in milliseconds.
   const DWORD MAX_WAIT_TIME = 10000;  // We'll fail if the lock can't be acquired in 10s.
-  const DWORD MIN_SLEEP_TIME = 0;  // We start with 0, which is essentially just a yield.
+  const DWORD MIN_SLEEP_TIME = 0;     // We start with 0, which is essentially just a yield.
   const DWORD MAX_SLEEP_TIME = 50;
 
   DWORD total_wait_time = 0;

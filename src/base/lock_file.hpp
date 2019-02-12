@@ -32,7 +32,8 @@ namespace file {
 class lock_file_t {
 public:
   /// @brief Create an empty (unlocked) file lock object.
-  lock_file_t() {}
+  lock_file_t() {
+  }
 
   /// @brief Acquire a lock using the specified file path.
   /// @param path The full path to the lock file (will be created).

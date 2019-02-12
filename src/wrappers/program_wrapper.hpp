@@ -48,7 +48,7 @@ public:
 
 protected:
   // This constructor is called by derived classes.
-  program_wrapper_t(const string_list_t &args);
+  program_wrapper_t(const string_list_t& args);
 
   /// @brief Resolve arguments on the command line.
   ///

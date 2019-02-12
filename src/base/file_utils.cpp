@@ -61,10 +61,10 @@
 
 // S_ISDIR/S_ISREG are not defined by MSVC, but _S_IFDIR/_S_IFREG are.
 #if defined(_WIN32) && !defined(S_ISDIR)
-#define S_ISDIR(x) (((x) & _S_IFDIR) != 0)
+#define S_ISDIR(x) (((x)&_S_IFDIR) != 0)
 #endif
 #if defined(_WIN32) && !defined(S_ISREG)
-#define S_ISREG(x) (((x) & _S_IFREG) != 0)
+#define S_ISREG(x) (((x)&_S_IFREG) != 0)
 #endif
 
 namespace bcache {

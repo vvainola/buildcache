@@ -36,7 +36,7 @@ int32_t to_int(const std::string& data, std::string::size_type& pos);
 std::string to_string(const std::string& data, std::string::size_type& pos);
 std::vector<std::string> to_vector(const std::string& data, std::string::size_type& pos);
 std::map<std::string, std::string> to_map(const std::string& data, std::string::size_type& pos);
-}  // namespace ser
+}  // namespace serialize
 }  // namespace bcache
 
 #endif  // BUILDCACHE_SERIALIZER_UTILS_HPP_

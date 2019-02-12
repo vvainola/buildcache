@@ -164,11 +164,11 @@ std::wstring utf8_to_ucs2(const std::string& str8) {
 }
 #endif  // USE_CPP11_CODECVT
 
-std::string lower_case(const std::string &str) {
+std::string lower_case(const std::string& str) {
   std::string result(str.size(), ' ');
   for (std::string::size_type i = 0; i < str.size(); ++i) {
     auto in = str[i];
-    if(('A' <= in) && (in <= 'Z')) {
+    if (('A' <= in) && (in <= 'Z')) {
       in += ('a' - 'A');
     }
     result[i] = in;
