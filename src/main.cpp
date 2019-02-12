@@ -291,7 +291,7 @@ int main(int argc, const char** argv) {
     std::exit(1);
   }
 
-  // Check if we are running any gcache commands.
+  // Check if we are running any BuildCache commands.
   const std::string arg_str(argv[1]);
   if (compare_arg(arg_str, "-C", "--clear")) {
     clear_cache_and_exit();
