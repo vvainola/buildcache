@@ -18,6 +18,8 @@
 #---------------------------------------------------------------------------------------------------
 
 set(CACHE_SRCS
+  cache.cpp
+  cache.hpp
   cache_entry.cpp
   cache_entry.hpp
   local_cache.cpp
