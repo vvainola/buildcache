@@ -185,14 +185,23 @@ private:
   static std::string escape_arg(const std::string& arg) {
     std::string escaped_arg;
 
+    // These escaping rules try to match the most common Un*x shell conventions, e.g. as outlined
+    // here: http://faculty.salina.k-state.edu/tim/unix_sg/shell/metachar.html
     auto needs_quotes = false;
     for (auto c : arg) {
       if (c == '"') {
         escaped_arg += "\\\"";
       } else if (c == '\\') {
         escaped_arg += "\\\\";
+      } else if (c == '$') {
+        escaped_arg += "\\$";
+        needs_quotes = true;
+      } else if (c == '`') {
+        escaped_arg += "\\`";
+        needs_quotes = true;
       } else {
-        if (c == ' ' || c == '&' || c == ';' || c == '>' || c == '<' || c == '|') {
+        if (c == ' ' || c == '&' || c == ';' || c == '>' || c == '<' || c == '|' || c == '(' ||
+            c == ')' || c == '*' || c == '#') {
           needs_quotes = true;
         }
         escaped_arg += c;
