@@ -92,12 +92,12 @@ std::string make_exe_path_suitable_for_icecc(const std::string& path) {
 
 }  // namespace
 
-run_result_t run(const string_list_t& args, const bool quiet) {
+run_result_t run(const string_list_t& args, const bool quiet, const bool redirect_stderr) {
   // Initialize the run result.
   run_result_t result;
 
   auto successfully_launched_program = false;
-  const auto cmd = args.join(" ", true);
+  const auto cmd = args.join(" ", true) + (redirect_stderr ? " 2>&1" : "");
   debug::log(debug::DEBUG) << "Invoking: " << cmd;
 
 #if defined(_WIN32)

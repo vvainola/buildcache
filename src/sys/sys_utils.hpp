@@ -36,9 +36,12 @@ struct run_result_t {
 /// @brief Run the given command.
 /// @param args The command and its arguments (the first item is the command).
 /// @param quiet Supress output to stdout/stderr during execution.
+/// @param redirect_stderr Redirect stderr to stdout.
 /// @returns The result from the command.
 /// @throws runtime_error if the command could not be run.
-run_result_t run(const string_list_t& args, const bool quiet = true);
+run_result_t run(const string_list_t& args,
+                 const bool quiet = true,
+                 const bool redirect_stderr = false);
 
 /// @brief Run the given command with an optional prefix.
 ///
