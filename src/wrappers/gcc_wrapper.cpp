@@ -23,6 +23,7 @@
 #include <base/unicode_utils.hpp>
 #include <sys/sys_utils.hpp>
 
+#include <regex>
 #include <stdexcept>
 
 namespace bcache {
@@ -72,8 +73,23 @@ gcc_wrapper_t::gcc_wrapper_t(const string_list_t& args) : program_wrapper_t(args
 bool gcc_wrapper_t::can_handle_command() {
   // Is this the right compiler?
   const auto cmd = lower_case(file::get_file_part(m_args[0], false));
-  return (cmd.find("gcc") != std::string::npos) || (cmd.find("g++") != std::string::npos) ||
-         (cmd.find("clang++") != std::string::npos) || (cmd == "clang");
+
+  // gcc?
+  if ((cmd.find("gcc") != std::string::npos) || (cmd.find("g++") != std::string::npos)) {
+    return true;
+  }
+
+  // clang?
+  {
+    // We allow things like "clang", "clang++", "clang-5", "x86-clang-6.0", but not "clang-tidy" and
+    // similar.
+    const std::regex clang_re(".*clang(\\+\\+|-cpp)?(-[1-9](\\.[0-9])?)?");
+    if (std::regex_match(cmd, clang_re)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 string_list_t gcc_wrapper_t::get_capabilities() {
