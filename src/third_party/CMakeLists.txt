@@ -123,6 +123,8 @@ if(NOT (WIN32 OR MINGW))
     hiredis/sds.c
     hiredis/sds.h
     hiredis/sdsalloc.h
+    hiredis/sslio.c
+    hiredis/sslio.h
     )
   target_include_directories(hiredis INTERFACE .)
   set_property(TARGET hiredis PROPERTY C_STANDARD 99)
