@@ -105,9 +105,10 @@ endif()
 
 #---------------------------------------------------------------------------------------------------
 # Hiredis
-# Note: hiredis does not build on Windows.
+# Note: Hiredis can currently not be built with MS Visual C++. For Redis support on Windows, use
+# MinGW.
 #---------------------------------------------------------------------------------------------------
-if(NOT (WIN32 OR MINGW))
+if(NOT MSVC)
   add_library(hiredis
     hiredis/async.c
     hiredis/async.h
@@ -131,6 +132,9 @@ if(NOT (WIN32 OR MINGW))
   target_include_directories(hiredis INTERFACE .)
   set_property(TARGET hiredis PROPERTY C_STANDARD 99)
   set(HAS_HIREDIS true PARENT_SCOPE)
+  if(WIN32 OR MINGW)
+    target_link_libraries(lua PRIVATE ws2_32)
+  endif()
 else()
   message(WARNING "Redis is not supported on this platform")
 endif()
