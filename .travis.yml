@@ -36,6 +36,21 @@ matrix:
         - ../test_scripts/run_lock_file_stresstest.sh
         - ../test_scripts/build_with_buildcache.sh
 
+    # Windows MinGW cross compile on Linux
+    - os: linux
+      dist: xenial
+      compiler: mingw
+      addons:
+        apt:
+          packages:
+            - ninja-build
+            - gcc-mingw-w64-x86-64
+            - g++-mingw-w64-x86-64
+      script:
+        - mkdir out && cd out
+        - CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_BUILD_WITH_INSTALL_RPATH=on ../src
+        - cmake --build .
+
     # Windows MSVC 2017
     - os: windows
       compiler: msvc
