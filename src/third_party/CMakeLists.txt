@@ -123,6 +123,8 @@ if(NOT (WIN32 OR MINGW))
     hiredis/sds.c
     hiredis/sds.h
     hiredis/sdsalloc.h
+    hiredis/sockcompat.c
+    hiredis/sockcompat.h
     hiredis/sslio.c
     hiredis/sslio.h
     )
