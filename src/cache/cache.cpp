@@ -60,7 +60,7 @@ void cache_t::add(const hasher_t::hash_t hash,
                                      entry.std_out(),
                                      entry.std_err(),
                                      entry.return_code());
-    m_remote_cache.add(hash, entry, file_paths);
+    m_remote_cache.add(hash, remote_entry, file_paths);
   }
 
   PERF_STOP(ADD_TO_CACHE);
