@@ -17,7 +17,7 @@ It is similar in spirit to [ccache](https://ccache.samba.org/), [sccache](https:
   * Extensible via custom [Lua](https://www.lua.org/) scripts.
   * In addition to caching compilation results, BuildCache can be used for caching almost any reproducible program artifacts (e.g. test results, [rendered images](https://en.wikipedia.org/wiki/Rendering_(computer_graphics)), etc).
 * A fast local file system cache.
-* Can optionally use a remote, centralized [Redis](https://redis.io/)-based server as a second level cache *(experimental, only Linux/macOS)*.
+* Can optionally use a remote, centralized [Redis](https://redis.io/)-based server as a second level cache *(experimental)*.
 * Optional compression with [LZ4](https://github.com/lz4/lz4) (very low performance overhead).
 
 ## Status
