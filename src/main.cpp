@@ -30,6 +30,10 @@
 #include <wrappers/msvc_wrapper.hpp>
 #include <wrappers/program_wrapper.hpp>
 
+#ifdef ENABLE_REDIS
+#include <hiredis/hiredis.h>
+#endif
+
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -162,6 +166,10 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
 
 [[noreturn]] void print_version_and_exit() {
   std::cout << "BuildCache version " BUILDCACHE_VERSION_STRING "\n";
+#ifdef ENABLE_REDIS
+  std::cout << "Redis support via hiredis " << HIREDIS_MAJOR << "." << HIREDIS_MINOR << "."
+            << HIREDIS_PATCH << "\n";
+#endif  // ENABLE_REDIS
   std::exit(0);
 }
 
