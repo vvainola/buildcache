@@ -38,7 +38,13 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
-#include <vector>
+#ifdef USE_MINGW_THREADS
+#include <mingw-std-threads/mingw.thread.h>
+#else
+#include <thread>
+#endif  // USE_MINGW_THREADS
+#undef ERROR
+#undef log
 #else
 #include <errno.h>
 #include <sys/types.h>
@@ -51,29 +57,6 @@ namespace bcache {
 namespace sys {
 namespace {
 const std::string TEMP_FOLDER_NAME = "tmp";
-
-#if defined(_WIN32)
-std::string read_from_win_file(HANDLE file_handle,
-                               std::ostream& stream,
-                               const bool output_to_stream) {
-  std::string result;
-  const size_t BUFSIZE = 4096u;
-  std::vector<char> buf(BUFSIZE);
-  while (true) {
-    DWORD bytes_read;
-    const auto success =
-        ReadFile(file_handle, &buf[0], static_cast<DWORD>(buf.size()), &bytes_read, nullptr);
-    if (!success || (bytes_read == 0)) {
-      break;
-    }
-    if (output_to_stream) {
-      stream.write(buf.data(), static_cast<size_t>(bytes_read));
-    }
-    result.append(buf.data(), static_cast<size_t>(bytes_read));
-  }
-  return result;
-}
-#endif  // _WIN32
 
 // This is a workaround for buggy compiler identification in ICECC: It will not properly identify
 // C++ compilers that do not end with "++", for instance.
@@ -96,8 +79,51 @@ std::string make_exe_path_suitable_for_icecc(const std::string& path) {
   return path;
 }
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
+bool print_raw(const char* str, const DWORD len, HANDLE handle) {
+  // TODO(m): Handle bytes_written != bytes_read?
+  DWORD bytes_written;
+  if (!WriteFile(handle, str, len, &bytes_written, nullptr)) {
+    return false;
+  }
+  return true;
+}
+#endif  // _WIN32
+
 // Helper function for reading data from a child process pipe.
+#if defined(_WIN32)
+bool read_from_pipe(HANDLE pipe_handle,
+                    std::string& data,
+                    const bool quiet,
+                    HANDLE& out_stream) {
+  std::vector<char> buf(4096);
+  auto success = true;
+  auto has_more_data = true;
+  while (has_more_data && success) {
+    DWORD bytes_read = 0;
+    if (!ReadFile(
+            pipe_handle, buf.data(), static_cast<DWORD>(buf.size()), &bytes_read, nullptr)) {
+      const auto err = GetLastError();
+      // ERROR_BROKEN_PIPE indicates that we're done (normal exit path).
+      if (err != ERROR_BROKEN_PIPE) {
+        debug::log(debug::ERROR) << "Error reading output from child process";
+        success = false;
+      }
+      has_more_data = false;
+    } else if (bytes_read > 0) {
+      if (!quiet && out_stream != nullptr) {
+        if (!print_raw(buf.data(), bytes_read, out_stream)) {
+          debug::log(debug::ERROR) << "Error printing output from child process";
+          success = false;
+          has_more_data = false;
+        }
+      }
+      data.append(buf.data(), static_cast<std::string::size_type>(bytes_read));
+    }
+  }
+  return success;
+}
+#else
 bool read_from_pipe(const int pipe_fd,
                     std::string& data,
                     const bool quiet,
@@ -132,18 +158,20 @@ run_result_t run(const string_list_t& args, const bool quiet, const bool redirec
   run_result_t result;
 
   auto successfully_launched_program = false;
-  const auto cmd = args.join(" ", true) + (redirect_stderr ? " 2>&1" : "");
+  const auto cmd = args.join(" ", true);
   debug::log(debug::DEBUG) << "Invoking: " << cmd;
 
 #if defined(_WIN32)
-#if 0
   HANDLE std_out_read_handle = nullptr;
   HANDLE std_out_write_handle = nullptr;
   HANDLE std_err_read_handle = nullptr;
   HANDLE std_err_write_handle = nullptr;
+  HANDLE std_in_read_handle = nullptr;
+  HANDLE std_in_write_handle = nullptr;
 
   try {
     SECURITY_ATTRIBUTES security_attr;
+    ZeroMemory(&security_attr, sizeof(security_attr));
     security_attr.nLength = sizeof(SECURITY_ATTRIBUTES);
     security_attr.bInheritHandle = TRUE;
     security_attr.lpSecurityDescriptor = nullptr;
@@ -164,19 +192,39 @@ run_result_t run(const string_list_t& args, const bool quiet, const bool redirec
       throw std::runtime_error("Unable to create stderr pipe.");
     }
 
+    // Create a pipe for the child process's stdin.
+    if (!CreatePipe(&std_in_read_handle, &std_in_write_handle, &security_attr, 0)) {
+      throw std::runtime_error("Unable to create stdin pipe.");
+    }
+    if (!SetHandleInformation(std_in_write_handle, HANDLE_FLAG_INHERIT, 0)) {
+      throw std::runtime_error("Unable to create stdin pipe.");
+    }
+
+    // Get the standard I/O handles of the BuildCache process.
+    auto stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (stdout_handle == INVALID_HANDLE_VALUE) {
+      throw std::runtime_error("Unable to get the stdout handle.");
+    }
+    auto stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
+    if (stderr_handle == INVALID_HANDLE_VALUE) {
+      throw std::runtime_error("Unable to get the stderr handle.");
+    }
+
     // Set up process information.
-    STARTUPINFOW startup_info = {0};
+    STARTUPINFOW startup_info;
+    ZeroMemory(&startup_info, sizeof(startup_info));
     startup_info.cb = sizeof(STARTUPINFOW);
     startup_info.hStdOutput = std_out_write_handle;
     startup_info.hStdError = std_err_write_handle;
-    startup_info.hStdInput = nullptr;
+    startup_info.hStdInput = std_in_read_handle;
     startup_info.dwFlags |= STARTF_USESTDHANDLES;
 
     // Note: The cmdw string may be modified by CreateProcessW (!) so it must not be const.
     auto cmdw = utf8_to_ucs2(cmd);
 
     // Start the child process.
-    PROCESS_INFORMATION process_info = {0};
+    PROCESS_INFORMATION process_info;
+    ZeroMemory(&process_info, sizeof(process_info));
     if (!CreateProcessW(nullptr,
                         &cmdw[0],
                         nullptr,
@@ -190,31 +238,51 @@ run_result_t run(const string_list_t& args, const bool quiet, const bool redirec
       throw std::runtime_error("Unable to create child process.");
     }
 
-    // Close the write ends of the pipes (to avoid wating forever).
+    // Close the write ends of the pipes (so the child process stops reading).
     CloseHandle(std_out_write_handle);
     std_out_write_handle = nullptr;
     CloseHandle(std_err_write_handle);
     std_err_write_handle = nullptr;
+    CloseHandle(std_in_write_handle);
+    std_in_write_handle = nullptr;
 
-    // Read stdout/stderr.
-    result.std_out = read_from_win_file(std_out_read_handle, std::cout, !quiet);
-    result.std_err = read_from_win_file(std_err_read_handle, std::cerr, !quiet);
+    // Read stdout in a separate thread.
+    auto stdout_read_success = false;
+    std::thread stdout_reader_thread(
+        [&stdout_read_success, &std_out_read_handle, &result, quiet, &stdout_handle]() {
+          try {
+            stdout_read_success =
+                read_from_pipe(std_out_read_handle, result.std_out, quiet, stdout_handle);
+          } catch (...) {
+            stdout_read_success = false;
+          }
+        });
+
+    // Read stderr in the current thread (concurrently with reading stdout).
+    const auto stderr_read_success =
+        read_from_pipe(std_err_read_handle, result.std_err, quiet, stderr_handle);
+
+    // Wait for stdout reading to be finished.
+    stdout_reader_thread.join();
+    const auto read_pipes_failed = !stdout_read_success || !stderr_read_success;
 
     // Wait for the process to finish.
-    WaitForSingleObject(process_info.hProcess, INFINITE);
-
-    // Get process return code.
-    DWORD exit_code = 1;
-    if (!GetExitCodeProcess(process_info.hProcess, &exit_code)) {
-      exit_code = 1;
+    if (WaitForSingleObject(process_info.hProcess, INFINITE) == WAIT_OBJECT_0) {
+      // Get process return code.
+      DWORD exit_code = 1;
+      if (GetExitCodeProcess(process_info.hProcess, &exit_code)) {
+        result.return_code = static_cast<int>(exit_code);
+        successfully_launched_program = true;
+      } else {
+        result.return_code = 1;
+      }
+    } else {
+      result.return_code = 1;
     }
-    result.return_code = static_cast<int>(exit_code);
 
     CloseHandle(process_info.hProcess);
     CloseHandle(process_info.hThread);
-
-    successfully_launched_program = true;
-  } catch (std::exception& e) {
+  } catch (...) {
     successfully_launched_program = false;
   }
 
@@ -230,40 +298,12 @@ run_result_t run(const string_list_t& args, const bool quiet, const bool redirec
   if (std_err_write_handle != nullptr) {
     CloseHandle(std_err_write_handle);
   }
-#else
-  // TODO(m): We should use proper CreateProcess() to get both stdout and stderr etc. Right now the
-  // above code is broken (it occasionally hangs), so we currently use _wpopen() instead.
-
-  // Note: We have to surround the entire string with quotes to avoid accidental stripping of quotes
-  // at the beginning/end of the cmd string (e.g. "C:\Program Files\foo\foo.exe" "hello world" would
-  // become C:\Program Files\foo\foo.exe" "hello world).
-  // See: https://stackoverflow.com/a/43822734/5778708
-  const auto extra_quoted_cmd = std::string("\"") + cmd + "\"";
-  auto* fp = _wpopen(utf8_to_ucs2(extra_quoted_cmd).c_str(), L"r");
-  if (fp != nullptr) {
-    // Collect stdout until the pipe is closed.
-    const size_t BUF_SIZE = 2048;
-    std::vector<char> buf(BUF_SIZE);
-    while (feof(fp) == 0) {
-      const auto bytes_read = fread(buf.data(), 1, buf.size(), fp);
-      if (bytes_read > 0u) {
-        if (!quiet) {
-          std::cout.write(buf.data(), static_cast<std::streamsize>(bytes_read));
-        }
-        result.std_out += std::string(buf.data(), bytes_read);
-      }
-    }
-
-    // Close the pipe and get the exit status.
-    const auto status = _pclose(fp);
-    if (status != -1) {
-      result.return_code = status;
-    } else {
-      result.return_code = 1;
-    }
-    successfully_launched_program = true;
+  if (std_in_read_handle != nullptr) {
+    CloseHandle(std_in_read_handle);
   }
-#endif
+  if (std_in_write_handle != nullptr) {
+    CloseHandle(std_in_write_handle);
+  }
 #else
   // Create pipes for stdout and stderr.
   int pipe_stdout[2], pipe_stderr[2];
@@ -382,6 +422,11 @@ run_result_t run(const string_list_t& args, const bool quiet, const bool redirec
     throw std::runtime_error("Unable to start the child process.");
   }
 
+  if (redirect_stderr) {
+    result.std_out += result.std_err;
+    result.std_err.clear();
+  }
+
   return result;
 }
 
@@ -404,6 +449,34 @@ run_result_t run_with_prefix(const string_list_t& args, const bool quiet) {
 
   // Run the command.
   return run(prefixed_args, quiet);
+}
+
+void print_raw_stdout(const std::string& str) {
+#if defined(_WIN32)
+  auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
+  if (handle == INVALID_HANDLE_VALUE || handle == NULL) {
+    throw std::runtime_error("Unable to get the stdout handle.");
+  }
+  if (!print_raw(str.data(), static_cast<DWORD>(str.size()), handle)) {
+    throw std::runtime_error("Unable to get print to stdout.");
+  }
+#else
+  std::cout << str;
+#endif
+}
+
+void print_raw_stderr(const std::string& str) {
+#if defined(_WIN32)
+  auto handle = GetStdHandle(STD_ERROR_HANDLE);
+  if (handle == INVALID_HANDLE_VALUE || handle == NULL) {
+    throw std::runtime_error("Unable to get the stderr handle.");
+  }
+  if (!print_raw(str.data(), static_cast<DWORD>(str.size()), handle)) {
+    throw std::runtime_error("Unable to get print to stderr.");
+  }
+#else
+  std::cerr << str;
+#endif
 }
 
 const std::string get_local_temp_folder() {

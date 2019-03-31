@@ -22,6 +22,7 @@
 #include <base/debug_utils.hpp>
 #include <base/file_utils.hpp>
 #include <sys/perf_utils.hpp>
+#include <sys/sys_utils.hpp>
 
 #include <iostream>
 
@@ -94,8 +95,8 @@ bool cache_t::lookup_in_local_cache(const hasher_t::hash_t hash,
   PERF_STOP(RETRIEVE_CACHED_FILES);
 
   // Return/print the cached program results.
-  std::cout << cached_entry.std_out();
-  std::cerr << cached_entry.std_err();
+  sys::print_raw_stdout(cached_entry.std_out());
+  sys::print_raw_stderr(cached_entry.std_err());
   return_code = cached_entry.return_code();
 
   return true;
@@ -131,8 +132,8 @@ bool cache_t::lookup_in_remote_cache(const hasher_t::hash_t hash,
   PERF_STOP(RETRIEVE_CACHED_FILES);
 
   // Return/print the cached program results.
-  std::cout << cached_entry.std_out();
-  std::cerr << cached_entry.std_err();
+  sys::print_raw_stdout(cached_entry.std_out());
+  sys::print_raw_stderr(cached_entry.std_err());
   return_code = cached_entry.return_code();
 
   return true;

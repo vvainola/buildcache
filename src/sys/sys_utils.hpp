@@ -54,6 +54,26 @@ run_result_t run(const string_list_t& args,
 /// @throws runtime_error if the command could not be run.
 run_result_t run_with_prefix(const string_list_t& args, const bool quiet = true);
 
+/// @brief Print a string to stdout.
+///
+/// Unlike using standard C++ methods, such as writing to std::cout, this function sends the
+/// string to stdout without any text mode translations (such as LF -> CRLF). This is useful for
+/// correctly reproducing program output 1:1 (especially important on Windows).
+///
+/// @param str The string to be printed.
+/// @throws runtime_error if the string could not be printed.
+void print_raw_stdout(const std::string& str);
+
+/// @brief Print a string to stderr.
+///
+/// Unlike using standard C++ methods, such as writing to std::cerr, this function sends the
+/// string to stderr without any text mode translations (such as LF -> CRLF). This is useful for
+/// correctly reproducing program output 1:1 (especially important on Windows).
+///
+/// @param str The string to be printed.
+/// @throws runtime_error if the string could not be printed.
+void print_raw_stderr(const std::string& str);
+
 /// @brief Get the temporary folder for this BuildCache instance.
 ///
 /// The temporary folder is located somewhere under $BUILDCACHE_DIR, and as such is suitable for

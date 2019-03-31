@@ -27,7 +27,10 @@ set(SYS_SRCS
 add_library(sys ${SYS_SRCS})
 target_link_libraries(sys base config)
 
-if(NOT (WIN32 OR MINGW))
+if(MINGW)
+  target_link_libraries(sys mingw_std_threads)
+  target_compile_definitions(sys PRIVATE USE_MINGW_THREADS)
+else()
   find_package(Threads REQUIRED)
   target_link_libraries(sys Threads::Threads)
 endif()
