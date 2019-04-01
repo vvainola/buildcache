@@ -150,7 +150,7 @@ static int redisSetBlocking(redisContext *c, int blocking) {
 #else
     u_long mode = blocking ? 0 : 1;
     if (ioctl(c->fd, FIONBIO, &mode) == -1) {
-        __redisSetErrorFromErrno(c, REDIS_ERR_IO, "ioctlsocket(FIONBIO)");
+        __redisSetErrorFromErrno(c, REDIS_ERR_IO, "ioctl(FIONBIO)");
         redisNetClose(c);
         return REDIS_ERR;
     }
