@@ -32,11 +32,79 @@
 #include "sockcompat.h"
 
 #ifdef _WIN32
+static int _wsaErrorToErrno(int err) {
+    switch (err) {
+        case WSAEWOULDBLOCK:
+            return EWOULDBLOCK;
+        case WSAEINPROGRESS:
+            return EINPROGRESS;
+        case WSAEALREADY:
+            return EALREADY;
+        case WSAENOTSOCK:
+            return ENOTSOCK;
+        case WSAEDESTADDRREQ:
+            return EDESTADDRREQ;
+        case WSAEMSGSIZE:
+            return EMSGSIZE;
+        case WSAEPROTOTYPE:
+            return EPROTOTYPE;
+        case WSAENOPROTOOPT:
+            return ENOPROTOOPT;
+        case WSAEPROTONOSUPPORT:
+            return EPROTONOSUPPORT;
+        case WSAEOPNOTSUPP:
+            return EOPNOTSUPP;
+        case WSAEAFNOSUPPORT:
+            return EAFNOSUPPORT;
+        case WSAEADDRINUSE:
+            return EADDRINUSE;
+        case WSAEADDRNOTAVAIL:
+            return EADDRNOTAVAIL;
+        case WSAENETDOWN:
+            return ENETDOWN;
+        case WSAENETUNREACH:
+            return ENETUNREACH;
+        case WSAENETRESET:
+            return ENETRESET;
+        case WSAECONNABORTED:
+            return ECONNABORTED;
+        case WSAECONNRESET:
+            return ECONNRESET;
+        case WSAENOBUFS:
+            return ENOBUFS;
+        case WSAEISCONN:
+            return EISCONN;
+        case WSAENOTCONN:
+            return ENOTCONN;
+        case WSAETIMEDOUT:
+            return ETIMEDOUT;
+        case WSAECONNREFUSED:
+            return ECONNREFUSED;
+        case WSAELOOP:
+            return ELOOP;
+        case WSAENAMETOOLONG:
+            return ENAMETOOLONG;
+        case WSAEHOSTUNREACH:
+            return EHOSTUNREACH;
+        case WSAENOTEMPTY:
+            return ENOTEMPTY;
+        default:
+            /* We just return a generic I/O error if we could not find a relevant error. */
+            return EIO;
+    }
+}
+
+static void _updateErrno(int success) {
+    errno = success ? 0 : _wsaErrorToErrno(WSAGetLastError());
+}
+
 static int _initWinsock() {
     static int s_initialized = 0;
     if (!s_initialized) {
         static WSADATA wsadata;
-        if (WSAStartup(MAKEWORD(2,2), &wsadata) != 0) {
+        int err = WSAStartup(MAKEWORD(2,2), &wsadata);
+        if (err != 0) {
+            errno = _wsaErrorToErrno(err);
             return 0;
         }
         s_initialized = 1;
@@ -44,107 +112,38 @@ static int _initWinsock() {
     return 1;
 }
 
-static void _updateErrno() {
-    const int err = WSAGetLastError();
-    switch (err) {
-        case WSAEWOULDBLOCK:
-            errno = EWOULDBLOCK;
-            break;
-        case WSAEINPROGRESS:
-            errno = EINPROGRESS;
-            break;
-        case WSAEALREADY:
-            errno = EALREADY;
-            break;
-        case WSAENOTSOCK:
-            errno = ENOTSOCK;
-            break;
-        case WSAEDESTADDRREQ:
-            errno = EDESTADDRREQ;
-            break;
-        case WSAEMSGSIZE:
-            errno = EMSGSIZE;
-            break;
-        case WSAEPROTOTYPE:
-            errno = EPROTOTYPE;
-            break;
-        case WSAENOPROTOOPT:
-            errno = ENOPROTOOPT;
-            break;
-        case WSAEPROTONOSUPPORT:
-            errno = EPROTONOSUPPORT;
-            break;
-        case WSAEOPNOTSUPP:
-            errno = EOPNOTSUPP;
-            break;
-        case WSAEAFNOSUPPORT:
-            errno = EAFNOSUPPORT;
-            break;
-        case WSAEADDRINUSE:
-            errno = EADDRINUSE;
-            break;
-        case WSAEADDRNOTAVAIL:
-            errno = EADDRNOTAVAIL;
-            break;
-        case WSAENETDOWN:
-            errno = ENETDOWN;
-            break;
-        case WSAENETUNREACH:
-            errno = ENETUNREACH;
-            break;
-        case WSAENETRESET:
-            errno = ENETRESET;
-            break;
-        case WSAECONNABORTED:
-            errno = ECONNABORTED;
-            break;
-        case WSAECONNRESET:
-            errno = ECONNRESET;
-            break;
-        case WSAENOBUFS:
-            errno = ENOBUFS;
-            break;
-        case WSAEISCONN:
-            errno = EISCONN;
-            break;
-        case WSAENOTCONN:
-            errno = ENOTCONN;
-            break;
-        case WSAETIMEDOUT:
-            errno = ETIMEDOUT;
-            break;
-        case WSAECONNREFUSED:
-            errno = ECONNREFUSED;
-            break;
-        case WSAELOOP:
-            errno = ELOOP;
-            break;
-        case WSAENAMETOOLONG:
-            errno = ENAMETOOLONG;
-            break;
-        case WSAEHOSTUNREACH:
-            errno = EHOSTUNREACH;
-            break;
-        case WSAENOTEMPTY:
-            errno = ENOTEMPTY;
-            break;
-        default:
-            /* We just set a generic I/O error if we could not find a relevant error. */
-            errno = EIO;
-            break;
+int win32_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res) {
+    /* Note: This function is likely to be called before other functions, so run init here. */
+    if (!_initWinsock()) {
+        return EAI_FAIL;
+    }
+
+    switch (getaddrinfo(node, service, hints, res)) {
+        case 0:                     return 0;
+        case WSATRY_AGAIN:          return EAI_AGAIN;
+        case WSAEINVAL:             return EAI_BADFLAGS;
+        case WSAEAFNOSUPPORT:       return EAI_FAMILY;
+        case WSA_NOT_ENOUGH_MEMORY: return EAI_MEMORY;
+        case WSAHOST_NOT_FOUND:     return EAI_NONAME;
+        case WSATYPE_NOT_FOUND:     return EAI_SERVICE;
+        case WSAESOCKTNOSUPPORT:    return EAI_SOCKTYPE;
+        default:                    return EAI_FAIL;     /* Including WSANO_RECOVERY */
     }
 }
 
-int win32_getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res) {
-    int ret = WSANO_RECOVERY;
-
-    /* Note: This function is likely to be called before other functions, so run init here. */
-    if (_initWinsock()) {
-        ret = getaddrinfo(node, service, hints, res);
+const char *win32_gai_strerror(int errcode) {
+    switch (errcode) {
+        case 0:            errcode = 0;                     break;
+        case EAI_AGAIN:    errcode = WSATRY_AGAIN;          break;
+        case EAI_BADFLAGS: errcode = WSAEINVAL;             break;
+        case EAI_FAMILY:   errcode = WSAEAFNOSUPPORT;       break;
+        case EAI_MEMORY:   errcode = WSA_NOT_ENOUGH_MEMORY; break;
+        case EAI_NONAME:   errcode = WSAHOST_NOT_FOUND;     break;
+        case EAI_SERVICE:  errcode = WSATYPE_NOT_FOUND;     break;
+        case EAI_SOCKTYPE: errcode = WSAESOCKTNOSUPPORT;    break;
+        default:           errcode = WSANO_RECOVERY;        break; /* Including EAI_FAIL */
     }
-
-    /* TODO(m): Do we need to convert the result? */
-    return ret;
+    return gai_strerror(errcode);
 }
 
 void win32_freeaddrinfo(struct addrinfo *res) {
@@ -159,63 +158,69 @@ SOCKET win32_socket(int domain, int type, int protocol) {
         return INVALID_SOCKET;
     }
 
-    if ((s = socket(domain, type, protocol)) == INVALID_SOCKET) {
-        _updateErrno();
-    }
+    _updateErrno((s = socket(domain, type, protocol)) != INVALID_SOCKET);
     return s;
+}
+
+int win32_ioctl(SOCKET fd, unsigned long request, unsigned long *argp) {
+    int ret = ioctlsocket(fd, (long)request, argp);
+    _updateErrno(ret != SOCKET_ERROR);
+    return ret != SOCKET_ERROR ? ret : -1;
+}
+
+int win32_bind(SOCKET sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+    int ret = bind(sockfd, addr, addrlen);
+    _updateErrno(ret != SOCKET_ERROR);
+    return ret != SOCKET_ERROR ? ret : -1;
+}
+
+int win32_connect(SOCKET sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+    int ret = connect(sockfd, addr, addrlen);
+    _updateErrno(ret != SOCKET_ERROR);
+
+    /* For Winsock connect(), the WSAEWOULDBLOCK error means the same thing as
+     * EINPROGRESS for POSIX connect(), so we do that translation to keep POSIX
+     * logic consistent. */
+    if (errno == EWOULDBLOCK) {
+        errno = EINPROGRESS;
+    }
+
+    return ret != SOCKET_ERROR ? ret : -1;
 }
 
 int win32_getsockopt(SOCKET sockfd, int level, int optname, void *optval, socklen_t *optlen) {
     int ret = getsockopt(sockfd, level, optname, (char*)optval, optlen);
-    if (ret == SOCKET_ERROR) {
-        _updateErrno();
-        return -1;
-    }
-    return ret;
+    _updateErrno(ret != SOCKET_ERROR);
+    return ret != SOCKET_ERROR ? ret : -1;
 }
 
 int win32_setsockopt(SOCKET sockfd, int level, int optname, const void *optval, socklen_t optlen) {
     int ret = setsockopt(sockfd, level, optname, (const char*)optval, optlen);
-    if (ret == SOCKET_ERROR) {
-        _updateErrno();
-        return -1;
-    }
-    return ret;
+    _updateErrno(ret != SOCKET_ERROR);
+    return ret != SOCKET_ERROR ? ret : -1;
 }
 
 int win32_close(SOCKET fd) {
     int ret = closesocket(fd);
-    if (ret == SOCKET_ERROR) {
-        _updateErrno();
-        return -1;
-    }
-    return ret;
+    _updateErrno(ret != SOCKET_ERROR);
+    return ret != SOCKET_ERROR ? ret : -1;
 }
 
 ssize_t win32_recv(SOCKET sockfd, void *buf, size_t len, int flags) {
     int ret = recv(sockfd, (char*)buf, (int)len, flags);
-    if (ret == SOCKET_ERROR) {
-        _updateErrno();
-        return -1;
-    }
-    return ret;
+    _updateErrno(ret != SOCKET_ERROR);
+    return ret != SOCKET_ERROR ? ret : -1;
 }
 
 ssize_t win32_send(SOCKET sockfd, const void *buf, size_t len, int flags) {
     int ret = send(sockfd, (const char*)buf, (int)len, flags);
-    if (ret == SOCKET_ERROR) {
-        _updateErrno();
-        return -1;
-    }
-    return ret;
+    _updateErrno(ret != SOCKET_ERROR);
+    return ret != SOCKET_ERROR ? ret : -1;
 }
 
 int win32_poll(struct pollfd *fds, nfds_t nfds, int timeout) {
     int ret = WSAPoll(fds, nfds, timeout);
-    if (ret == SOCKET_ERROR) {
-        _updateErrno();
-        return -1;
-    }
-    return ret;
+    _updateErrno(ret != SOCKET_ERROR);
+    return ret != SOCKET_ERROR ? ret : -1;
 }
 #endif /* _WIN32 */

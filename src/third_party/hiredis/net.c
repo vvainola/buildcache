@@ -148,17 +148,12 @@ static int redisSetBlocking(redisContext *c, int blocking) {
         return REDIS_ERR;
     }
 #else
-    /* TODO(m): The below code gives seemingly unrelated secondary "No such file or directory"
-     * faults. Figure out what's wrong. Without the code below, at least the BuildCache use case
-     * seems to be working correctly. */
-#if 0
     u_long mode = blocking ? 0 : 1;
-    if (ioctlsocket(c->fd, FIONBIO, &mode) != NO_ERROR) {
+    if (ioctl(c->fd, FIONBIO, &mode) == -1) {
         __redisSetErrorFromErrno(c, REDIS_ERR_IO, "ioctlsocket(FIONBIO)");
         redisNetClose(c);
         return REDIS_ERR;
     }
-#endif
 #endif /* _WIN32 */
     return REDIS_OK;
 }
