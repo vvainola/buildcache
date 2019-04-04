@@ -153,7 +153,7 @@ bool read_from_pipe(const int pipe_fd,
 #endif  // _WIN32
 }  // namespace
 
-run_result_t run(const string_list_t& args, const bool quiet, const bool redirect_stderr) {
+run_result_t run(const string_list_t& args, const bool quiet) {
   // Initialize the run result.
   run_result_t result;
 
@@ -420,11 +420,6 @@ run_result_t run(const string_list_t& args, const bool quiet, const bool redirec
 
   if (!successfully_launched_program) {
     throw std::runtime_error("Unable to start the child process.");
-  }
-
-  if (redirect_stderr) {
-    result.std_out += result.std_err;
-    result.std_err.clear();
   }
 
   return result;
