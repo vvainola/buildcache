@@ -59,7 +59,7 @@ set(BUILDCACHE_SRCS
 # On Windows we want to include an application resource (for version information).
 if(WIN32 OR MINGW)
   list(APPEND BUILDCACHE_SRCS buildcache.rc)
-  if(MINGW)
+  if(MINGW AND NOT CMAKE_RC_COMPILER)
     # This is an ugly hack to find and use the MinGW resource compiler.
     string(REGEX REPLACE "g\\+\\+$" "windres" CMAKE_RC_COMPILER "${CMAKE_CXX_COMPILER}")
     if(EXISTS "${CMAKE_RC_COMPILER}")
