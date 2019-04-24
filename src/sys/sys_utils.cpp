@@ -44,6 +44,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <thread>
 #endif
 
 namespace bcache {
@@ -95,6 +96,35 @@ std::string make_exe_path_suitable_for_icecc(const std::string& path) {
   return path;
 }
 
+#if !defined(_WIN32)
+// Helper function for reading data from a child process pipe.
+bool read_from_pipe(const int pipe_fd,
+                    std::string& data,
+                    const bool quiet,
+                    std::ostream& out_stream) {
+  std::vector<char> buf(4096);
+  auto success = true;
+  auto has_more_data = true;
+  while (has_more_data && success) {
+    const auto bytes_read = read(pipe_fd, buf.data(), buf.size());
+    if (bytes_read == -1) {
+      if (errno != EINTR) {
+        debug::log(debug::ERROR) << "Error reading output from child process (errno: " << errno
+                                 << ")";
+        success = false;
+      }
+    } else if (bytes_read == 0) {
+      has_more_data = false;
+    } else {
+      if (!quiet) {
+        out_stream.write(buf.data(), static_cast<std::streamsize>(bytes_read));
+      }
+      data += std::string(buf.data(), static_cast<std::string::size_type>(bytes_read));
+    }
+  }
+  return success;
+};
+#endif  // _WIN32
 }  // namespace
 
 run_result_t run(const string_list_t& args, const bool quiet, const bool redirect_stderr) {
@@ -291,37 +321,23 @@ run_result_t run(const string_list_t& args, const bool quiet, const bool redirec
     close(pipe_stdout[1]);
     close(pipe_stderr[1]);
 
-    // Read stdout & stderr from the child process.
-    auto read_pipes_failed = false;
-    const size_t BUF_SIZE = 4096;
-    std::vector<char> buf(BUF_SIZE);
-
-    auto read_pipe = [&buf, &read_pipes_failed, quiet](
-                         int fd, std::string& data, std::ostream& out) -> bool {
-      bool has_more_data = true;
-      const auto bytes_read = read(fd, buf.data(), BUF_SIZE);
-      if (bytes_read == -1) {
-        if (errno != EINTR) {
-          debug::log(debug::ERROR)
-              << "Error reading output from child process (errno: " << errno << ")";
-          read_pipes_failed = true;
-        }
-      } else if (bytes_read == 0) {
-        has_more_data = false;
-      } else {
-        if (!quiet) {
-          out.write(buf.data(), static_cast<std::streamsize>(bytes_read));
-        }
-        data += std::string(buf.data(), static_cast<std::string::size_type>(bytes_read));
+    // Read stdout in a separate thread.
+    auto stdout_read_success = false;
+    std::thread stdout_reader_thread([&stdout_read_success, quiet, &pipe_stdout, &result]() {
+      try {
+        stdout_read_success = read_from_pipe(pipe_stdout[0], result.std_out, quiet, std::cout);
+      } catch (...) {
+        stdout_read_success = false;
       }
-      return has_more_data;
-    };
+    });
 
-    // Read stdout, then stderr.
-    while ((!read_pipes_failed) && read_pipe(pipe_stdout[0], result.std_out, std::cout))
-      ;
-    while ((!read_pipes_failed) && read_pipe(pipe_stderr[0], result.std_err, std::cerr))
-      ;
+    // Read stderr in the current thread (concurrently with reading stdout).
+    const auto stderr_read_success =
+        read_from_pipe(pipe_stderr[0], result.std_err, quiet, std::cerr);
+
+    // Wait for stdout reading to be finished.
+    stdout_reader_thread.join();
+    const auto read_pipes_failed = !stdout_read_success || !stderr_read_success;
 
     // We're done with the pipes in the parent process.
     close(pipe_stdout[0]);
