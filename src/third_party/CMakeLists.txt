@@ -138,3 +138,11 @@ if(NOT MSVC)
 else()
   message(WARNING "Redis is not supported on this platform")
 endif()
+
+#---------------------------------------------------------------------------------------------------
+# mingw-std-threads (implements std::thread for MinGW).
+#---------------------------------------------------------------------------------------------------
+if(MINGW)
+  add_library(mingw_std_threads INTERFACE)
+  target_include_directories(mingw_std_threads INTERFACE .)
+endif()
