@@ -163,15 +163,15 @@ std::string msvc_wrapper_t::get_program_id() {
 
   // Get the version string for the compiler.
   // Just calling "cl.exe" will return the version information. Note, though, that the version
-  // information is given on stderr, so we need to redirect stderr to stdout.
+  // information is given on stderr.
   string_list_t version_args;
   version_args += m_args[0];
-  const auto result = sys::run(version_args, true, true);
-  if (result.std_out.empty()) {
+  const auto result = sys::run(version_args, true);
+  if (result.std_err.empty()) {
     throw std::runtime_error("Unable to get the compiler version information string.");
   }
 
-  return result.std_out;
+  return result.std_err;
 }
 
 std::map<std::string, std::string> msvc_wrapper_t::get_build_files() {
