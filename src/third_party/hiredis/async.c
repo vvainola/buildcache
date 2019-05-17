@@ -32,7 +32,9 @@
 #include "fmacros.h"
 #include <stdlib.h>
 #include <string.h>
+#ifndef _MSC_VER
 #include <strings.h>
+#endif
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -41,6 +43,7 @@
 #include "dict.c"
 #include "sds.h"
 #include "sslio.h"
+#include "win32.h"
 
 #define _EL_ADD_READ(ctx)                                         \
     do {                                                          \

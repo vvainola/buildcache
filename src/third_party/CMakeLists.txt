@@ -19,7 +19,12 @@
 
 # Disable all warnings for third party code.
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+elseif(MSVC)
+  # Remove any /W flags from the compiler options.
+  string(REGEX REPLACE "(^| )([/-])W[0-9]( |$)" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+  string(REGEX REPLACE "(^| )([/-])W[0-9]( |$)" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
 
 #---------------------------------------------------------------------------------------------------
@@ -105,38 +110,32 @@ endif()
 
 #---------------------------------------------------------------------------------------------------
 # Hiredis
-# Note: Hiredis can currently not be built with MS Visual C++. For Redis support on Windows, use
-# MinGW.
 #---------------------------------------------------------------------------------------------------
-if(NOT MSVC)
-  add_library(hiredis
-    hiredis/async.c
-    hiredis/async.h
-    hiredis/dict.c
-    hiredis/dict.h
-    hiredis/fmacros.h
-    hiredis/hiredis.c
-    hiredis/hiredis.h
-    hiredis/net.c
-    hiredis/net.h
-    hiredis/read.c
-    hiredis/read.h
-    hiredis/sds.c
-    hiredis/sds.h
-    hiredis/sdsalloc.h
-    hiredis/sockcompat.c
-    hiredis/sockcompat.h
-    hiredis/sslio.c
-    hiredis/sslio.h
-    )
-  target_include_directories(hiredis INTERFACE .)
-  set_property(TARGET hiredis PROPERTY C_STANDARD 99)
-  set(HAS_HIREDIS true PARENT_SCOPE)
-  if(WIN32 OR MINGW)
-    target_link_libraries(hiredis PRIVATE ws2_32)
-  endif()
-else()
-  message(WARNING "Redis is not supported on this platform")
+add_library(hiredis
+  hiredis/async.c
+  hiredis/async.h
+  hiredis/dict.c
+  hiredis/dict.h
+  hiredis/fmacros.h
+  hiredis/hiredis.c
+  hiredis/hiredis.h
+  hiredis/net.c
+  hiredis/net.h
+  hiredis/read.c
+  hiredis/read.h
+  hiredis/sds.c
+  hiredis/sds.h
+  hiredis/sdsalloc.h
+  hiredis/sockcompat.c
+  hiredis/sockcompat.h
+  hiredis/sslio.c
+  hiredis/sslio.h
+  )
+target_include_directories(hiredis INTERFACE .)
+set_property(TARGET hiredis PROPERTY C_STANDARD 99)
+set(HAS_HIREDIS true PARENT_SCOPE)
+if(WIN32 OR MINGW)
+  target_link_libraries(hiredis PRIVATE ws2_32)
 endif()
 
 #---------------------------------------------------------------------------------------------------
