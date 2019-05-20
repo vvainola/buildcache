@@ -32,7 +32,9 @@ namespace {
 // Various constants.
 const std::string ROOT_FOLDER_NAME = ".buildcache";
 const std::string CONFIGURATION_FILE_NAME = "config.json";
-const int64_t DEFAULT_MAX_CACHE_SIZE = 5368709120L;  // 5 GB
+const int64_t DEFAULT_MAX_CACHE_SIZE = 5368709120L;         // 5 GiB
+const int64_t DEFAULT_MAX_LOCAL_ENTRY_SIZE = 134217728L;    // 128 MiB
+const int64_t DEFAULT_MAX_REMOTE_ENTRY_SIZE = 134217728L;   // 128 MiB
 
 // Configuration options.
 std::string s_dir;
@@ -41,6 +43,8 @@ string_list_t s_lua_paths;
 std::string s_prefix;
 std::string s_remote;
 int64_t s_max_cache_size = DEFAULT_MAX_CACHE_SIZE;
+int64_t s_max_local_entry_size = DEFAULT_MAX_LOCAL_ENTRY_SIZE;
+int64_t s_max_remote_entry_size = DEFAULT_MAX_REMOTE_ENTRY_SIZE;
 int32_t s_debug = -1;
 bool s_hard_links = true;
 bool s_compress = false;
@@ -169,6 +173,22 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
+  // Get "max_local_entry_size".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "max_local_entry_size");
+    if (cJSON_IsNumber(node)) {
+      s_max_local_entry_size = static_cast<int64_t>(node->valuedouble);
+    }
+  }
+
+  // Get "max_remote_entry_size".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "max_remote_entry_size");
+    if (cJSON_IsNumber(node)) {
+      s_max_remote_entry_size = static_cast<int64_t>(node->valuedouble);
+    }
+  }
+
   // Get "debug".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "debug");
@@ -279,6 +299,30 @@ void init() {
       }
     }
 
+    // Get the max local cache entry size from the environment.
+    {
+      const env_var_t max_local_entry_size_env("BUILDCACHE_MAX_LOCAL_ENTRY_SIZE");
+      if (max_local_entry_size_env) {
+        try {
+          s_max_local_entry_size = max_local_entry_size_env.as_int64();
+        } catch (...) {
+          // Ignore...
+        }
+      }
+    }
+
+    // Get the max remote cache entry size from the environment.
+    {
+      const env_var_t max_remote_entry_size_env("BUILDCACHE_MAX_REMOTE_ENTRY_SIZE");
+      if (max_remote_entry_size_env) {
+        try {
+          s_max_remote_entry_size = max_remote_entry_size_env.as_int64();
+        } catch (...) {
+          // Ignore...
+        }
+      }
+    }
+
     // Get the debug level from the environment.
     {
       const env_var_t debug_env("BUILDCACHE_DEBUG");
@@ -351,6 +395,14 @@ const std::string& remote() {
 
 int64_t max_cache_size() {
   return s_max_cache_size;
+}
+
+int64_t max_local_entry_size() {
+  return s_max_local_entry_size;
+}
+
+int64_t max_remote_entry_size() {
+  return s_max_remote_entry_size;
 }
 
 int32_t debug() {
