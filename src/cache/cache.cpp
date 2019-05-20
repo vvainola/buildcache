@@ -21,12 +21,26 @@
 
 #include <base/debug_utils.hpp>
 #include <base/file_utils.hpp>
+#include <config/configuration.hpp>
 #include <sys/perf_utils.hpp>
 #include <sys/sys_utils.hpp>
 
 #include <iostream>
 
 namespace bcache {
+namespace {
+// Return the total size (uncompressed bytes) for a cache entry.
+int64_t get_total_entry_size(const cache_entry_t& entry,
+                            const std::map<std::string, std::string>& file_paths) {
+  int64_t total_size =
+      static_cast<int64_t>(entry.std_out().size()) + static_cast<int64_t>(entry.std_err().size());
+  for (const auto& item : file_paths) {
+    total_size += file::get_file_info(item.second).size();
+  }
+  return total_size;
+}
+}  // namespace
+
 bool cache_t::lookup(const hasher_t::hash_t hash,
                      const std::map<std::string, std::string>& file_paths,
                      const bool allow_hard_links,
@@ -50,18 +64,31 @@ void cache_t::add(const hasher_t::hash_t hash,
                   const bool allow_hard_links) {
   PERF_START(ADD_TO_CACHE);
 
+  // We need the size of the cache entry for checking against the configured limits.
+  const auto size = get_total_entry_size(entry, file_paths);
+
   // Add the entry to the local cache.
-  m_local_cache.add(hash, entry, file_paths, allow_hard_links);
+  const auto max_local_size = config::max_local_entry_size();
+  if (size < max_local_size || max_local_size <= 0) {
+    m_local_cache.add(hash, entry, file_paths, allow_hard_links);
+  } else {
+    debug::log(debug::INFO) << "Cache entry too large for the local cache: " << size << " bytes";
+  }
 
   // Add the entry to the remote cache.
   if (m_remote_cache.is_connected()) {
-    // Note: We always compress entries for the remote cache.
-    const cache_entry_t remote_entry(entry.file_ids(),
-                                     cache_entry_t::comp_mode_t::ALL,
-                                     entry.std_out(),
-                                     entry.std_err(),
-                                     entry.return_code());
-    m_remote_cache.add(hash, remote_entry, file_paths);
+    const auto max_remote_size = config::max_remote_entry_size();
+    if (size < max_remote_size || max_remote_size <= 0) {
+      // Note: We always compress entries for the remote cache.
+      const cache_entry_t remote_entry(entry.file_ids(),
+                                       cache_entry_t::comp_mode_t::ALL,
+                                       entry.std_out(),
+                                       entry.std_err(),
+                                       entry.return_code());
+      m_remote_cache.add(hash, remote_entry, file_paths);
+    } else {
+      debug::log(debug::INFO) << "Cache entry too large for the remote cache: " << size << " bytes";
+    }
   }
 
   PERF_STOP(ADD_TO_CACHE);
