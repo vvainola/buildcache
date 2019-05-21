@@ -132,14 +132,14 @@ bool program_wrapper_t::handle_command(int& return_code) {
     // Note: We do not want to create cache entries for failed program runs. We could, but that
     // would run the risk of caching intermittent faults for instance.
     if (result.return_code == 0) {
-      // Add the entry to the local cache.
-      const cache_entry_t local_entry(
+      // Add the entry to the cache.
+      const cache_entry_t entry(
           file_ids,
           config::compress() ? cache_entry_t::comp_mode_t::ALL : cache_entry_t::comp_mode_t::NONE,
           result.std_out,
           result.std_err,
           result.return_code);
-      m_cache.add(hash, local_entry, build_files, allow_hard_links);
+      m_cache.add(hash, entry, build_files, allow_hard_links);
     }
 
     // Everything's ok!

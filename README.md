@@ -152,6 +152,8 @@ The following options control the behavior of BuildCache:
 | `BUILDCACHE_LUA_PATH` | `lua_paths` | Extra path(s) to Lua wrappers | None |
 | `BUILDCACHE_DEBUG` | `debug` | Debug level | None |
 | `BUILDCACHE_MAX_CACHE_SIZE` | `max_cache_size` | Cache size limit in bytes | 5368709120 |
+| `BUILDCACHE_MAX_LOCAL_ENTRY_SIZE` | `max_local_entry_size` | Local cache entry size limit in bytes (uncompressed) | 134217728 |
+| `BUILDCACHE_MAX_REMOTE_ENTRY_SIZE` | `max_remote_entry_size` | Remote cache entry size limit in bytes (uncompressed) | 134217728 |
 | `BUILDCACHE_HARD_LINKS` | `hard_links` | Allow the use of hard links when caching | true |
 | `BUILDCACHE_COMPRESS` | `compress` | Allow the use of compression when caching (overrides hard links) | true |
 | `BUILDCACHE_PERF` | `perf` | Enable performance logging | false |

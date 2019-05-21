@@ -49,6 +49,12 @@ const std::string& remote();
 /// @returns the maximum cache size (in bytes).
 int64_t max_cache_size();
 
+/// @returns the maximum local cache entry size (in bytes).
+int64_t max_local_entry_size();
+
+/// @returns the maximum remote cache entry size (in bytes).
+int64_t max_remote_entry_size();
+
 /// @returns the debug level (-1 for no debugging).
 int32_t debug();
 
