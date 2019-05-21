@@ -180,17 +180,16 @@ void local_cache_t::show_stats() {
     num_entries++;
     total_size += dir.size();
   }
-  const auto total_size_mib = static_cast<double>(total_size) / (1024.0 * 1024.0);
-  const auto max_size_mib = static_cast<double>(config::max_cache_size()) / (1024.0 * 1024.0);
-  const auto full_percentage = 100.0 * total_size_mib / max_size_mib;
+  const auto full_percentage =
+      100.0 * static_cast<double>(total_size) / static_cast<double>(config::max_cache_size());
 
   // Print stats.
   std::ios old_fmt(nullptr);
   old_fmt.copyfmt(std::cout);
   std::cout << std::setiosflags(std::ios::fixed) << std::setprecision(1);
-  std::cout << "  Entries in cache:          " << num_entries << "\n";
-  std::cout << "  Cache size:                " << total_size_mib << " MiB (" << full_percentage
-            << "%)\n";
+  std::cout << "  Entries in cache:  " << num_entries << "\n";
+  std::cout << "  Cache size:        " << file::human_readable_size(total_size) << " ("
+            << full_percentage << "%)\n";
   std::cout.copyfmt(old_fmt);
 }
 

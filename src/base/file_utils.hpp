@@ -158,6 +158,11 @@ std::string find_executable(const std::string& path, const std::string& exclude 
 /// @returns a file information object.
 file_info_t get_file_info(const std::string& path);
 
+/// @brief Convert a size to a human readable string.
+/// @param byte_size The size (number of bytes).
+/// @returns a string containing a human readable version of the size, e.g. "4.7 MiB".
+std::string human_readable_size(const int64_t byte_size);
+
 /// @brief Walk a directory and its subdirectories.
 /// @param path The path to the directory.
 /// @returns a vector of file information objects.

@@ -644,6 +644,25 @@ file_info_t get_file_info(const std::string& path) {
   throw std::runtime_error("Unable to get file information.");
 }
 
+std::string human_readable_size(const int64_t byte_size) {
+  static const char* SUFFIX[6] = {"bytes", "KiB", "MiB", "GiB", "TiB", "PiB"};
+  static const int MAX_SUFFIX_IDX = (sizeof(SUFFIX) / sizeof(SUFFIX[0])) - 1;
+
+  double scaled_size = static_cast<double>(byte_size);
+  int suffix_idx = 0;
+  for (; scaled_size >= 1024.0 && suffix_idx < MAX_SUFFIX_IDX; ++suffix_idx) {
+    scaled_size /= 1024.0;
+  }
+
+  char buf[20];
+  if (suffix_idx >= 1) {
+    std::snprintf(buf, sizeof(buf), "%.1f %s", scaled_size, SUFFIX[suffix_idx]);
+  } else {
+    std::snprintf(buf, sizeof(buf), "%d %s", static_cast<int>(byte_size), SUFFIX[suffix_idx]);
+  }
+  return std::string(buf);
+}
+
 std::vector<file_info_t> walk_directory(const std::string& path) {
   std::vector<file_info_t> files;
 
