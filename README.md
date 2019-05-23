@@ -148,7 +148,9 @@ The following options control the behavior of BuildCache:
 | --- | --- | --- | --- |
 | `BUILDCACHE_DIR` | - | The cache root directory | `$HOME/.buildcache` |
 | `BUILDCACHE_PREFIX` | `prefix` | Prefix command for cache misses | None |
-| `BUILDCACHE_REMOTE` | `remote` | Address of remote cache server (`redis://host:port`) | None |
+| `BUILDCACHE_REMOTE` | `remote` | Address of remote cache server (`protocol://host:port`, where `protocol` can be `redis` or `s3`) | None |
+| `BUILDCACHE_S3_ACCESS` | `s3_access` | S3 access key | None |
+| `BUILDCACHE_S3_SECRET` | `s3_secret` | S3 secret key | None |
 | `BUILDCACHE_LUA_PATH` | `lua_paths` | Extra path(s) to Lua wrappers | None |
 | `BUILDCACHE_DEBUG` | `debug` | Debug level | None |
 | `BUILDCACHE_MAX_CACHE_SIZE` | `max_cache_size` | Cache size limit in bytes | 5368709120 |

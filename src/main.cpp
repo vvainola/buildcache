@@ -142,6 +142,10 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
       std::cout << "  BUILDCACHE_REMOTE:                 "
                 << (bcache::config::remote().empty() ? "(disabled)" : bcache::config::remote())
                 << "\n";
+      std::cout << "  BUILDCACHE_S3_ACCESS:              "
+                << (bcache::config::s3_access().empty() ? "" : "*******") << "\n";
+      std::cout << "  BUILDCACHE_S3_SECRET:              "
+                << (bcache::config::s3_secret().empty() ? "" : "*******") << "\n";
       std::cout << "  BUILDCACHE_MAX_CACHE_SIZE:         " << bcache::config::max_cache_size()
                 << " (" << bcache::file::human_readable_size(bcache::config::max_cache_size())
                 << ")\n";
