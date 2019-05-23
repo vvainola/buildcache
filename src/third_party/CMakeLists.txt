@@ -144,3 +144,12 @@ if(MINGW)
   add_library(mingw_std_threads INTERFACE)
   target_include_directories(mingw_std_threads INTERFACE .)
 endif()
+
+#---------------------------------------------------------------------------------------------------
+# HTTPRequest
+#---------------------------------------------------------------------------------------------------
+add_library(HTTPRequest INTERFACE)
+target_include_directories(HTTPRequest INTERFACE HTTPRequest/include)
+if(WIN32 OR MINGW)
+  target_link_libraries(HTTPRequest INTERFACE ws2_32)
+endif()
