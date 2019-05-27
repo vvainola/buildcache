@@ -30,7 +30,7 @@ local function make_preprocessor_cmd (args, preprocessed_file)
     if (arg == "--compile_only") or
        starts_with(arg, "--output_file=") or
        starts_with(arg, "-pp") or
-       starts_with(arg, "---preproc_") then
+       starts_with(arg, "--preproc_") then
       drop_this_arg = true
     end
     if not drop_this_arg then
