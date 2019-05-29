@@ -133,7 +133,6 @@ add_library(hiredis
   )
 target_include_directories(hiredis INTERFACE .)
 set_property(TARGET hiredis PROPERTY C_STANDARD 99)
-set(HAS_HIREDIS true PARENT_SCOPE)
 if(WIN32 OR MINGW)
   target_link_libraries(hiredis PRIVATE ws2_32)
 endif()

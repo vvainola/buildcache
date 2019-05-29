@@ -20,11 +20,8 @@
 #include <cache/remote_cache.hpp>
 
 #include <base/debug_utils.hpp>
-#include <config/configuration.hpp>
-
-#ifdef ENABLE_REDIS
 #include <cache/redis_cache_provider.hpp>
-#endif
+#include <config/configuration.hpp>
 
 namespace bcache {
 namespace {
@@ -70,11 +67,9 @@ bool remote_cache_t::connect() {
 
   // Select an apropriate cache provider.
   m_provider = nullptr;
-#ifdef ENABLE_REDIS
   if (protocol == "redis") {
     m_provider = new redis_cache_provider_t();
   }
-#endif
   if (m_provider == nullptr) {
     debug::log(debug::log_level_t::ERROR) << "Unsupported remote protocol: " << protocol;
     return false;

@@ -24,22 +24,13 @@ set(CACHE_SRCS
   cache_entry.hpp
   local_cache.cpp
   local_cache.hpp
+  redis_cache_provider.cpp
+  redis_cache_provider.hpp
   remote_cache.cpp
   remote_cache.hpp
   remote_cache_provider.cpp
   remote_cache_provider.hpp
   )
 
-if(HAS_HIREDIS)
-  list(APPEND CACHE_SRCS
-    redis_cache_provider.cpp
-    redis_cache_provider.hpp
-    )
-endif()
-
 add_library(cache ${CACHE_SRCS})
-target_link_libraries(cache base config)
-if(HAS_HIREDIS)
-  target_link_libraries(cache hiredis)
-  target_compile_definitions(cache PUBLIC ENABLE_REDIS)
-endif()
+target_link_libraries(cache base config hiredis)
