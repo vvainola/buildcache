@@ -30,7 +30,11 @@
 #include <wrappers/msvc_wrapper.hpp>
 #include <wrappers/program_wrapper.hpp>
 
+// These 3rd party includes are used for getting the version numbers.
+#include <cjson/cJSON.h>
 #include <hiredis/hiredis.h>
+#include <lua.h>
+#include <lz4/lz4.h>
 
 #include <iostream>
 #include <memory>
@@ -190,9 +194,23 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
 
   // Print a list of third party components.
   std::cout << "\nThird party components:\n";
+#ifdef ENABLE_S3
+  std::cout << "  cpp-base64 1.01.00\n";
+#endif
+  std::cout << "  cJSON " << CJSON_VERSION_MAJOR << "." << CJSON_VERSION_MINOR << "."
+            << CJSON_VERSION_PATCH << "\n";
   std::cout << "  hiredis " << HIREDIS_MAJOR << "." << HIREDIS_MINOR << "." << HIREDIS_PATCH
             << "\n";
-  // TODO(m): Add a complete list of third party components here.
+#ifdef ENABLE_S3
+  std::cout << "  HTTPRequest\n";
+#endif
+  std::cout << "  lua " << LUA_VERSION_MAJOR << "." << LUA_VERSION_MINOR << "."
+            << LUA_VERSION_RELEASE << "\n";
+  std::cout << "  lz4 " << LZ4_VERSION_STRING << "\n";
+  std::cout << "  md4\n";
+#ifdef USE_MINGW_THREADS
+  std::cout << "  mingw-std-threads\n";
+#endif
 
   std::exit(0);
 }
