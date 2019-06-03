@@ -34,3 +34,8 @@ set(CACHE_SRCS
 
 add_library(cache ${CACHE_SRCS})
 target_link_libraries(cache base config hiredis)
+
+buildcache_add_test(NAME remote_cache_provider_test
+                    SOURCES remote_cache_provider_test.cpp
+                    LIBRARIES cache)
+
