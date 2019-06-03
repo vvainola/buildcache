@@ -212,7 +212,7 @@ void redis_cache_provider_t::set_data(const std::string& key, const std::string&
     freeReplyObject(reply);
   } else {
     // The command failed.
-    err = std::string("Remote cache GET error: ") + std::string(m_ctx->errstr);
+    err = std::string("Remote cache SET error: ") + std::string(m_ctx->errstr);
     disconnect();
   }
 
