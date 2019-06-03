@@ -51,7 +51,7 @@ bool cache_t::lookup(const hasher_t::hash_t hash,
   }
 
   // Then try the remote cache.
-  if (lookup_in_remote_cache(hash, file_paths, return_code)) {
+  if (lookup_in_remote_cache(hash, file_paths, allow_hard_links, return_code)) {
     return true;
   }
 
@@ -131,6 +131,7 @@ bool cache_t::lookup_in_local_cache(const hasher_t::hash_t hash,
 
 bool cache_t::lookup_in_remote_cache(const hasher_t::hash_t hash,
                                      const std::map<std::string, std::string>& file_paths,
+                                     const bool allow_hard_links,
                                      int& return_code) {
   // Start by trying to connect to the remote cache.
   if (!m_remote_cache.connect()) {
@@ -162,6 +163,29 @@ bool cache_t::lookup_in_remote_cache(const hasher_t::hash_t hash,
   sys::print_raw_stdout(cached_entry.std_out());
   sys::print_raw_stderr(cached_entry.std_err());
   return_code = cached_entry.return_code();
+
+  // Add the remote entry to the local cache (for faster cache hits and reduced network traffic).
+  PERF_START(ADD_TO_CACHE);
+  try {
+    const auto size = get_total_entry_size(cached_entry, file_paths);
+    const auto max_local_size = config::max_local_entry_size();
+    if (size < max_local_size || max_local_size <= 0) {
+      // Remote entries are likely to be compressed. We only turn on compression for the local cache
+      // if the configuration tells us to.
+      const cache_entry_t entry(
+          cached_entry.file_ids(),
+          config::compress() ? cache_entry_t::comp_mode_t::ALL : cache_entry_t::comp_mode_t::NONE,
+          cached_entry.std_out(),
+          cached_entry.std_err(),
+          cached_entry.return_code());
+      m_local_cache.add(hash, entry, file_paths, allow_hard_links);
+    } else {
+      debug::log(debug::INFO) << "Cache entry too large for the local cache: " << size << " bytes";
+    }
+  } catch (std::exception& e) {
+    debug::log(debug::ERROR) << "Unable to add remote entry to the local cache: " << e.what();
+  }
+  PERF_STOP(ADD_TO_CACHE);
 
   return true;
 }

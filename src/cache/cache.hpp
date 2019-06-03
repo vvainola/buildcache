@@ -63,6 +63,7 @@ private:
 
   bool lookup_in_remote_cache(const hasher_t::hash_t hash,
                               const std::map<std::string, std::string>& file_paths,
+                              const bool allow_hard_links,
                               int& return_code);
 
   local_cache_t m_local_cache;
