@@ -46,6 +46,12 @@ const std::string& prefix();
 /// @returns the remote cache service address.
 const std::string& remote();
 
+/// @returns the S3 access key for the remote cache.
+const std::string& s3_access();
+
+/// @returns the S3 secret key for the remote cache.
+const std::string& s3_secret();
+
 /// @returns the maximum cache size (in bytes).
 int64_t max_cache_size();
 

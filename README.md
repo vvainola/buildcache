@@ -37,6 +37,8 @@ $ cmake -DCMAKE_BUILD_TYPE=Release ../src
 $ cmake --build .
 ```
 
+Note: For S3 support on non-macOS/Windows systems you need OpenSSL (e.g. install `libssl-dev` on Ubuntu before running CMake).
+
 ## Usage
 
 To use BuildCache for your builds, simply prefix the build command with
@@ -83,6 +85,45 @@ distributed compilation. To use icecream you can set the environment variable
 
 ```bash
 $ BUILDCACHE_PREFIX=/usr/bin/icecc buildcache g++ -c -O2 hello.cpp -o hello.o
+```
+
+## Using a shared remote cache
+
+To improve the cache hit ratio in a cluster of machines that often perform
+the same or similar build tasks, you can use a shared remote cache (in
+addition to the local cache).
+
+To do so, set `BUILDCACHE_REMOTE` to a valid remote server address (see below).
+
+### Redis
+
+[Redis](https://redis.io/) is a fast, in-memory data store with built in
+[LRU](https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU))
+eviction policies. It is suitable for build systems that produce many small
+object files, such as is typical for C/C++ compilation.
+
+Example:
+```bash
+$ BUILDCACHE_REMOTE=redis://my-redis-server:6379 buildcache g++ -c -O2 hello.cpp -o hello.o
+```
+
+### S3
+
+[S3](https://en.wikipedia.org/wiki/Amazon_S3) is an open HTTP based protocol
+that is often provided by [object storage](https://en.wikipedia.org/wiki/Object_storage)
+solutions. [Amazon AWS](https://aws.amazon.com/) is one such service. An open
+source alternative is [MinIO](https://min.io/).
+
+Compared to a Redis cache, an S3 object store usually has a higher capacity and a slightly higher performance overhead. Thus it is better suited for larger build artifacts.
+
+When using an S3 remote, you also need to define `BUILDCACHE_S3_ACCESS` and
+`BUILDCACHE_S3_SECRET`. You will also need to create a bucket for BuildCache
+in your S3 storage, and configure some retention policy (e.g. periodic LRU
+eviction).
+
+Example:
+```bash
+$ BUILDCACHE_REMOTE=s3://my-minio-server:9000/my-buildcache-bucket BUILDCACHE_S3_ACCESS="ABCDEFGHIJKL01234567" BUILDCACHE_S3_SECRET="sOMloNgSecretKeyThatsh0uldnotBeshownatAll" buildcache g++ -c -O2 hello.cpp -o hello.o
 ```
 
 ## Supported compilers and languages
@@ -148,7 +189,9 @@ The following options control the behavior of BuildCache:
 | --- | --- | --- | --- |
 | `BUILDCACHE_DIR` | - | The cache root directory | `$HOME/.buildcache` |
 | `BUILDCACHE_PREFIX` | `prefix` | Prefix command for cache misses | None |
-| `BUILDCACHE_REMOTE` | `remote` | Address of remote cache server (`redis://host:port`) | None |
+| `BUILDCACHE_REMOTE` | `remote` | Address of remote cache server (`protocol://host:port/path`, where `protocol` can be `redis` or `s3`, and `port` and `path` are optional) | None |
+| `BUILDCACHE_S3_ACCESS` | `s3_access` | S3 access key | None |
+| `BUILDCACHE_S3_SECRET` | `s3_secret` | S3 secret key | None |
 | `BUILDCACHE_LUA_PATH` | `lua_paths` | Extra path(s) to Lua wrappers | None |
 | `BUILDCACHE_DEBUG` | `debug` | Debug level | None |
 | `BUILDCACHE_MAX_CACHE_SIZE` | `max_cache_size` | Cache size limit in bytes | 5368709120 |

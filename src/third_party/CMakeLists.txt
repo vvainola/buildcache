@@ -109,6 +109,14 @@ elseif(UNIX AND NOT (WIN32 OR MINGW))
 endif()
 
 #---------------------------------------------------------------------------------------------------
+# cpp-base64
+#---------------------------------------------------------------------------------------------------
+add_library(cpp-base64
+  cpp-base64/base64.cpp
+  )
+target_include_directories(cpp-base64 INTERFACE .)
+
+#---------------------------------------------------------------------------------------------------
 # Hiredis
 #---------------------------------------------------------------------------------------------------
 add_library(hiredis
@@ -133,7 +141,6 @@ add_library(hiredis
   )
 target_include_directories(hiredis INTERFACE .)
 set_property(TARGET hiredis PROPERTY C_STANDARD 99)
-set(HAS_HIREDIS true PARENT_SCOPE)
 if(WIN32 OR MINGW)
   target_link_libraries(hiredis PRIVATE ws2_32)
 endif()
@@ -144,4 +151,13 @@ endif()
 if(MINGW)
   add_library(mingw_std_threads INTERFACE)
   target_include_directories(mingw_std_threads INTERFACE .)
+endif()
+
+#---------------------------------------------------------------------------------------------------
+# HTTPRequest
+#---------------------------------------------------------------------------------------------------
+add_library(HTTPRequest INTERFACE)
+target_include_directories(HTTPRequest INTERFACE HTTPRequest/include)
+if(WIN32 OR MINGW)
+  target_link_libraries(HTTPRequest INTERFACE ws2_32)
 endif()

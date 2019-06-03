@@ -42,6 +42,8 @@ std::string s_config_file;
 string_list_t s_lua_paths;
 std::string s_prefix;
 std::string s_remote;
+std::string s_s3_access;
+std::string s_s3_secret;
 int64_t s_max_cache_size = DEFAULT_MAX_CACHE_SIZE;
 int64_t s_max_local_entry_size = DEFAULT_MAX_LOCAL_ENTRY_SIZE;
 int64_t s_max_remote_entry_size = DEFAULT_MAX_REMOTE_ENTRY_SIZE;
@@ -162,6 +164,22 @@ void load_from_file(const std::string& file_name) {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "remote");
     if (cJSON_IsString(node) && node->valuestring != nullptr) {
       s_remote = std::string(node->valuestring);
+    }
+  }
+
+  // Get "s3_access".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "s3_access");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_s3_access = std::string(node->valuestring);
+    }
+  }
+
+  // Get "s3_secret".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "s3_secret");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_s3_secret = std::string(node->valuestring);
     }
   }
 
@@ -287,6 +305,18 @@ void init() {
       }
     }
 
+    // Get the S3 credentials from the environment.
+    {
+      const env_var_t s3_access_env("BUILDCACHE_S3_ACCESS");
+      if (s3_access_env) {
+        s_s3_access = s3_access_env.as_string();
+      }
+      const env_var_t s3_secret_env("BUILDCACHE_S3_SECRET");
+      if (s3_secret_env) {
+        s_s3_secret= s3_secret_env.as_string();
+      }
+    }
+
     // Get the max cache size from the environment.
     {
       const env_var_t max_cache_size_env("BUILDCACHE_MAX_CACHE_SIZE");
@@ -391,6 +421,14 @@ const std::string& prefix() {
 
 const std::string& remote() {
   return s_remote;
+}
+
+const std::string& s3_access() {
+  return s_s3_access;
+}
+
+const std::string& s3_secret() {
+  return s_s3_secret;
 }
 
 int64_t max_cache_size() {

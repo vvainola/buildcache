@@ -37,34 +37,6 @@ const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 // The prefix (namespace) for BuildCache database keys.
 const std::string DB_PREFIX = "buildcache";
 
-bool get_remote_server(const std::string& host_description, std::string& host, int& port) {
-  // Split the host_id into host and port.
-  auto parts = string_list_t(host_description, ":");
-  if (parts.size() != 2) {
-    debug::log(debug::log_level_t::ERROR)
-        << "Invalid remote address: \"" << host_description << "\"";
-    return false;
-  }
-
-  // Extract the host name / IP.
-  host = std::move(parts[0]);
-  if (host.size() < 1) {
-    debug::log(debug::log_level_t::ERROR) << "Invalid remote host name: \"" << host << "\"";
-    return false;
-  }
-
-  // Extract the port.
-  try {
-    port = std::stoi(parts[1]);
-  } catch (std::exception& e) {
-    debug::log(debug::log_level_t::ERROR)
-        << "Invalid remote address port: \"" << parts[1] << "\" (" << e.what() << ")";
-    return false;
-  }
-
-  return true;
-}
-
 std::string remote_key_name(const std::string& hash_str, const std::string& file) {
   return DB_PREFIX + "_" + hash_str + "_" + file;
 }
@@ -78,15 +50,21 @@ redis_cache_provider_t::~redis_cache_provider_t() {
 }
 
 bool redis_cache_provider_t::connect(const std::string& host_description) {
-  if (is_connected()) {
-    return true;
-  }
-
   // Decode the host description.
   std::string host;
   int port;
-  if (!get_remote_server(host_description, host, port)) {
+  std::string path;
+  if (!parse_host_description(host_description, host, port, path)) {
     return false;
+  }
+
+  // Sanity check.
+  if (port < 0) {
+    // The default port for Redis is 6379.
+    port = 6379;
+  }
+  if (path != "") {
+    debug::log(debug::INFO) << "Ignoring path part: " << path;
   }
 
   // Connect to the remote Redis instance.
@@ -234,7 +212,7 @@ void redis_cache_provider_t::set_data(const std::string& key, const std::string&
     freeReplyObject(reply);
   } else {
     // The command failed.
-    err = std::string("Remote cache GET error: ") + std::string(m_ctx->errstr);
+    err = std::string("Remote cache SET error: ") + std::string(m_ctx->errstr);
     disconnect();
   }
 

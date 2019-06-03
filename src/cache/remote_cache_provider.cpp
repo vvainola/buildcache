@@ -19,12 +19,67 @@
 
 #include <cache/remote_cache_provider.hpp>
 
+#include <base/debug_utils.hpp>
+#include <base/string_list.hpp>
+
 namespace bcache {
 
 remote_cache_provider_t::remote_cache_provider_t() {
 }
 
 remote_cache_provider_t::~remote_cache_provider_t() {
+}
+
+bool remote_cache_provider_t::parse_host_description(const std::string& host_description,
+                                                     std::string& host,
+                                                     int& port,
+                                                     std::string& path) {
+  const auto colon_pos = host_description.find(":");
+  const auto slash_pos = host_description.find("/");
+
+  // The slash, if any, must come after the colon, if any.
+  if (slash_pos != std::string::npos && colon_pos != std::string::npos && slash_pos < colon_pos) {
+    debug::log(debug::ERROR) << "Invalid remote address: \"" << host_description << "\"";
+    return false;
+  }
+
+  // Extract the host name / IP address.
+  auto host_end = colon_pos;
+  if (host_end == std::string::npos) {
+    host_end = slash_pos;
+  }
+  if (host_end == std::string::npos) {
+    host_end = host_description.size();
+  }
+  host = host_description.substr(0, host_end);
+  if (host.size() == 0) {
+    debug::log(debug::ERROR) << "Invalid remote address: \"" << host_description << "\"";
+    return false;
+  }
+
+  // Extract the port.
+  if (colon_pos != std::string::npos) {
+    const auto port_end = (slash_pos != std::string::npos) ? slash_pos : host_description.size();
+    const auto port_str = host_description.substr(colon_pos + 1, port_end - (colon_pos + 1));
+    try {
+      port = std::stoi(port_str);
+    } catch (std::exception& e) {
+      debug::log(debug::ERROR) << "Invalid remote address port: \"" << port_str << "\" ("
+                               << e.what() << ")";
+      return false;
+    }
+  } else {
+    port = -1;
+  }
+
+  // Extract the path.
+  if (slash_pos != std::string::npos) {
+    path = host_description.substr(slash_pos + 1);
+  } else {
+    path = "";
+  }
+
+  return true;
 }
 
 }  // namespace bcache

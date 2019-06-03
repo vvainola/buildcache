@@ -24,22 +24,34 @@ set(CACHE_SRCS
   cache_entry.hpp
   local_cache.cpp
   local_cache.hpp
+  redis_cache_provider.cpp
+  redis_cache_provider.hpp
   remote_cache.cpp
   remote_cache.hpp
   remote_cache_provider.cpp
   remote_cache_provider.hpp
   )
 
-if(HAS_HIREDIS)
+# In order to enable S3, we need HMAC support.
+if(HAS_HMAC)
+  set(HAS_S3 true)
+endif()
+
+if(HAS_S3)
   list(APPEND CACHE_SRCS
-    redis_cache_provider.cpp
-    redis_cache_provider.hpp
+    s3_cache_provider.cpp
+    s3_cache_provider.hpp
     )
 endif()
 
 add_library(cache ${CACHE_SRCS})
-target_link_libraries(cache base config)
-if(HAS_HIREDIS)
-  target_link_libraries(cache hiredis)
-  target_compile_definitions(cache PUBLIC ENABLE_REDIS)
+target_link_libraries(cache base config hiredis)
+if(HAS_S3)
+  target_link_libraries(cache cpp-base64 HTTPRequest)
+  target_compile_definitions(cache PUBLIC ENABLE_S3)
 endif()
+
+buildcache_add_test(NAME remote_cache_provider_test
+                    SOURCES remote_cache_provider_test.cpp
+                    LIBRARIES cache)
+

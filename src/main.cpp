@@ -30,9 +30,11 @@
 #include <wrappers/msvc_wrapper.hpp>
 #include <wrappers/program_wrapper.hpp>
 
-#ifdef ENABLE_REDIS
+// These 3rd party includes are used for getting the version numbers.
+#include <cjson/cJSON.h>
 #include <hiredis/hiredis.h>
-#endif
+#include <lua.h>
+#include <lz4/lz4.h>
 
 #include <iostream>
 #include <memory>
@@ -144,6 +146,10 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
       std::cout << "  BUILDCACHE_REMOTE:                 "
                 << (bcache::config::remote().empty() ? "(disabled)" : bcache::config::remote())
                 << "\n";
+      std::cout << "  BUILDCACHE_S3_ACCESS:              "
+                << (bcache::config::s3_access().empty() ? "" : "*******") << "\n";
+      std::cout << "  BUILDCACHE_S3_SECRET:              "
+                << (bcache::config::s3_secret().empty() ? "" : "*******") << "\n";
       std::cout << "  BUILDCACHE_MAX_CACHE_SIZE:         " << bcache::config::max_cache_size()
                 << " (" << bcache::file::human_readable_size(bcache::config::max_cache_size())
                 << ")\n";
@@ -175,11 +181,37 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
 }
 
 [[noreturn]] void print_version_and_exit() {
+  // Print the BuildCache version.
   std::cout << "BuildCache version " BUILDCACHE_VERSION_STRING "\n";
-#ifdef ENABLE_REDIS
-  std::cout << "Redis support via hiredis " << HIREDIS_MAJOR << "." << HIREDIS_MINOR << "."
-            << HIREDIS_PATCH << "\n";
-#endif  // ENABLE_REDIS
+
+  // Print the supported cache back ends.
+  std::cout << "\nSupported back ends:\n";
+  std::cout << "  local - Local file system based cache (level 1)\n";
+  std::cout << "  Redis - Remote in-memory cache (level 2)\n";
+#ifdef ENABLE_S3
+  std::cout << "  S3    - Remote object storage based cache (level 2)\n";
+#endif
+
+  // Print a list of third party components.
+  std::cout << "\nThird party components:\n";
+#ifdef ENABLE_S3
+  std::cout << "  cpp-base64 1.01.00\n";
+#endif
+  std::cout << "  cJSON " << CJSON_VERSION_MAJOR << "." << CJSON_VERSION_MINOR << "."
+            << CJSON_VERSION_PATCH << "\n";
+  std::cout << "  hiredis " << HIREDIS_MAJOR << "." << HIREDIS_MINOR << "." << HIREDIS_PATCH
+            << "\n";
+#ifdef ENABLE_S3
+  std::cout << "  HTTPRequest\n";
+#endif
+  std::cout << "  lua " << LUA_VERSION_MAJOR << "." << LUA_VERSION_MINOR << "."
+            << LUA_VERSION_RELEASE << "\n";
+  std::cout << "  lz4 " << LZ4_VERSION_STRING << "\n";
+  std::cout << "  md4\n";
+#ifdef USE_MINGW_THREADS
+  std::cout << "  mingw-std-threads\n";
+#endif
+
   std::exit(0);
 }
 

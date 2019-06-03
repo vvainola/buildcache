@@ -17,7 +17,7 @@
 #  3. This notice may not be removed or altered from any source distribution.
 #---------------------------------------------------------------------------------------------------
 
-add_library(base
+set(BASE_SRC
   compressor.cpp
   compressor.hpp
   debug_utils.cpp
@@ -34,9 +34,31 @@ add_library(base
   unicode_utils.cpp
   unicode_utils.hpp
   )
+
+# For Windows and macOS we use native API:s to implement HMAC. For all other
+# systems (e.g. Linux) we need OpenSSL.
+set(HAS_HMAC true)
+if(NOT (WIN32 OR MINGW OR APPLE))
+  find_package(OpenSSL)
+  if(NOT OPENSSL_FOUND)
+    set(HAS_HMAC false)
+  endif()
+endif()
+if(HAS_HMAC)
+  set(HAS_HMAC true PARENT_SCOPE)
+  list(APPEND BASE_SRC
+    hmac.cpp
+    hmac.hpp
+    )
+endif()
+
+add_library(base ${BASE_SRC})
 target_link_libraries(base md4 lz4)
 if(WIN32 OR MINGW)
   target_link_libraries(base userenv)
+elseif(OPENSSL_FOUND)
+  target_link_libraries(base ${OPENSSL_LIBRARIES})
+  target_compile_definitions(base PRIVATE HAS_OPENSSL)
 endif()
 
 buildcache_add_test(NAME lock_file_test
@@ -46,6 +68,12 @@ buildcache_add_test(NAME lock_file_test
 buildcache_add_test(NAME string_list_test
                     SOURCES string_list_test.cpp
                     LIBRARIES base)
+
+if(HAS_HMAC)
+  buildcache_add_test(NAME hmac_test
+                      SOURCES hmac_test.cpp
+                      LIBRARIES base)
+endif()
 
 # This is a special test executable. It is meant to be run as multiple concurrent instances.
 add_executable(lock_file_stresstest

@@ -68,6 +68,17 @@ protected:
   // Constructor called by child classes.
   remote_cache_provider_t();
 
+  /// @brief Parse a host description string.
+  /// @param host_desciption The host description string.
+  /// @param[out] host The host name.
+  /// @param[out] port The port (optional - defaults to -1).
+  /// @param[out] path The path (optional - defaults to "").
+  /// @returns true if the parser was successful, or false if it failed.
+  static bool parse_host_description(const std::string& host_description,
+                                     std::string& host,
+                                     int& port,
+                                     std::string& path);
+
 private:
   // Prohibit copy & assignment.
   remote_cache_provider_t(const remote_cache_provider_t&) = delete;
