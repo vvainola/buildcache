@@ -46,8 +46,11 @@ namespace {
 // Name of the cache entry file.
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 
+// The prefix (namespace) for BuildCache keys.
+const std::string KEY_PREFIX = "buildcache";
+
 std::string remote_key_name(const std::string& hash_str, const std::string& file) {
-  return hash_str + "_" + file;
+  return KEY_PREFIX + "_" + hash_str + "_" + file;
 }
 
 std::string get_date_rfc2616_gmt() {
