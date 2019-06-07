@@ -215,6 +215,30 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
   std::exit(0);
 }
 
+[[noreturn]] void edit_config_and_exit() {
+  int return_code = 0;
+  try {
+    // This will ensure that the local cache directory exists.
+    bcache::local_cache_t cache;
+
+    // Get the name of the config file, and create an empty file if it does not already exist.
+    const auto config_file = bcache::config::config_file();
+    if (!bcache::file::file_exists(config_file)) {
+      bcache::file::write("{\n}\n", config_file);
+    }
+
+    // Open the editor.
+    bcache::sys::open_in_default_editor(config_file);
+  } catch (const std::exception& e) {
+    std::cerr << "*** Unexpected error: " << e.what() << "\n";
+    return_code = 1;
+  } catch (...) {
+    std::cerr << "*** Unexpected error.\n";
+    return_code = 1;
+  }
+  std::exit(0);
+}
+
 [[noreturn]] void wrap_compiler_and_exit(int argc, const char** argv) {
   auto args = bcache::string_list_t(argc, argv);
   bool was_wrapped = false;
@@ -307,6 +331,7 @@ void print_help(const char* program_name) {
   std::cout << "Options:\n";
   std::cout << "    -C, --clear           clear the local cache (except configuration)\n";
   std::cout << "    -s, --show-stats      show statistics summary and configuration\n";
+  std::cout << "    -e, --edit-config     edit the configuration file\n";
   std::cout << "\n";
   std::cout << "    -h, --help            print this help text\n";
   std::cout << "    -V, --version         print version and copyright information\n";
@@ -349,6 +374,8 @@ int main(int argc, const char** argv) {
     show_stats_and_exit();
   } else if (compare_arg(arg_str, "-V", "--version")) {
     print_version_and_exit();
+  } else if (compare_arg(arg_str, "-e", "--edit-config")) {
+    edit_config_and_exit();
   } else if (compare_arg(arg_str, "-h", "--help")) {
     print_help(argv[0]);
     std::exit(0);

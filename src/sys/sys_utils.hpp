@@ -52,6 +52,10 @@ run_result_t run(const string_list_t& args,
 /// @throws runtime_error if the command could not be run.
 run_result_t run_with_prefix(const string_list_t& args, const bool quiet = true);
 
+/// @brief Open a file in the user default editor.
+/// @param path Path to the file to edit.
+void open_in_default_editor(const std::string& path);
+
 /// @brief Print a string to stdout.
 ///
 /// Unlike using standard C++ methods, such as writing to std::cout, this function sends the
