@@ -38,6 +38,7 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <shellapi.h>
 #ifdef USE_MINGW_THREADS
 #include <mingw-std-threads/mingw.thread.h>
 #else
@@ -78,6 +79,23 @@ std::string make_exe_path_suitable_for_icecc(const std::string& path) {
 
   return path;
 }
+
+#if !defined(_WIN32)
+std::string getenv_str(const char* var) {
+  const auto* value = std::getenv(var);
+  return value != nullptr ? std::string(value) : std::string();
+}
+
+bool try_start_editor(const std::string& program, const std::string& file) {
+  try {
+    const auto& real_path = file::find_executable(program);
+    execl(real_path.c_str(), program.c_str(), file.c_str(), (char*)0);
+    return true;
+  } catch (...) {
+  }
+  return false;
+}
+#endif  // !_WIN32
 
 #if defined(_WIN32)
 bool print_raw(const char* str, const DWORD len, HANDLE handle) {
@@ -444,6 +462,77 @@ run_result_t run_with_prefix(const string_list_t& args, const bool quiet) {
 
   // Run the command.
   return run(prefixed_args, quiet);
+}
+
+void open_in_default_editor(const std::string& path) {
+#if defined(_WIN32)
+  const auto result =
+      ShellExecuteW(nullptr, L"edit", utf8_to_ucs2(path).c_str(), nullptr, nullptr, SW_SHOW);
+  const auto result_code = reinterpret_cast<intptr_t>(result);
+  if (result_code <= 32) {
+    if (result_code == SE_ERR_NOASSOC) {
+      throw std::runtime_error("No editor associated with the file type for " + path);
+    } else {
+      debug::log(debug::ERROR) << "ShellExecuteW() returned with error code: " << result_code;
+      throw std::runtime_error("Unable to open an editor for file " + path);
+    }
+  }
+#else
+  const auto pid = fork();
+  if (pid == 0) {
+    bool started_editor = false;
+
+#if defined(__APPLE__) && defined(__MACH__)
+    // For macOS we try "open" first.
+    if (try_start_editor("open", path)) {
+      started_editor = true;
+    }
+#endif
+
+    // Try an X11 based GUI editor.
+    if (!started_editor) {
+      if (!getenv_str("DISPLAY").empty()) {
+        if (try_start_editor("xdg-open", path)) {
+          started_editor = true;
+        } else if (try_start_editor("gvfs-open", path)) {
+          started_editor = true;
+        } else if (try_start_editor("kde-open", path)) {
+          started_editor = true;
+        }
+      }
+    }
+
+    // Fall back to the user configured console editor.
+    if (!started_editor) {
+      if (try_start_editor("sensible-editor", path)) {
+        started_editor = true;
+      }
+      if (!started_editor) {
+        const auto env_editor = getenv_str("EDITOR");
+        if (!env_editor.empty() && try_start_editor(env_editor, path)) {
+          started_editor = true;
+        }
+      }
+      if (!started_editor) {
+        if (try_start_editor("nano", path)) {
+          started_editor = true;
+        } else if (try_start_editor("vim", path)) {
+          started_editor = true;
+        } else if (try_start_editor("vi", path)) {
+          started_editor = true;
+        }
+      }
+    }
+
+    std::exit(started_editor ? 0 : 1);
+  } else {
+    int exit_code = 1;
+    (void)waitpid(pid, &exit_code, 0);
+    if (exit_code != 0) {
+      throw std::runtime_error("Unable to open an editor for file " + path);
+    }
+  }
+#endif
 }
 
 void print_raw_stdout(const std::string& str) {
