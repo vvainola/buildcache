@@ -39,6 +39,7 @@
 #endif
 #include <windows.h>
 #include <shellapi.h>
+#include <shlobj.h>
 #ifdef USE_MINGW_THREADS
 #include <mingw-std-threads/mingw.thread.h>
 #else
@@ -466,15 +467,18 @@ run_result_t run_with_prefix(const string_list_t& args, const bool quiet) {
 
 void open_in_default_editor(const std::string& path) {
 #if defined(_WIN32)
-  const auto result =
-      ShellExecuteW(nullptr, L"edit", utf8_to_ucs2(path).c_str(), nullptr, nullptr, SW_SHOW);
-  const auto result_code = reinterpret_cast<intptr_t>(result);
+  const auto path_w = utf8_to_ucs2(path);
+  const auto result_code = reinterpret_cast<intptr_t>(
+      ShellExecuteW(nullptr, L"edit", path_w.c_str(), nullptr, nullptr, SW_SHOW));
   if (result_code <= 32) {
-    if (result_code == SE_ERR_NOASSOC) {
-      throw std::runtime_error("No editor associated with the file type for " + path);
-    } else {
-      debug::log(debug::ERROR) << "ShellExecuteW() returned with error code: " << result_code;
-      throw std::runtime_error("Unable to open an editor for file " + path);
+    // Something went wrong (e.g. there was no default association for the given file type), so let
+    // the user decide.
+    OPENASINFO oi;
+    ZeroMemory(&oi, sizeof(oi));
+    oi.pcszFile = path_w.c_str();
+    oi.oaifInFlags = OAIF_EXEC;
+    if (SHOpenWithDialog(nullptr, &oi) != S_OK) {
+      throw std::runtime_error("Unable to open file " + path);
     }
   }
 #else
