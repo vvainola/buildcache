@@ -61,6 +61,10 @@ elseif(OPENSSL_FOUND)
   target_compile_definitions(base PRIVATE HAS_OPENSSL)
 endif()
 
+buildcache_add_test(NAME file_utils_test
+                    SOURCES file_utils_test.cpp
+                    LIBRARIES base)
+
 buildcache_add_test(NAME lock_file_test
                     SOURCES lock_file_test.cpp
                     LIBRARIES base)

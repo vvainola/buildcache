@@ -179,6 +179,9 @@ file_info_t::file_info_t(const std::string& path,
 }
 
 std::string append_path(const std::string& path, const std::string& append) {
+  if (path.empty() || append.empty()) {
+    return path + append;
+  }
   return path + PATH_SEPARATOR + append;
 }
 
@@ -221,7 +224,7 @@ std::string get_file_part(const std::string& path, const bool include_ext) {
 
 std::string get_dir_part(const std::string& path) {
   const auto pos = get_last_path_separator_pos(path);
-  return (pos != std::string::npos) ? path.substr(0, pos) : path;
+  return (pos != std::string::npos) ? path.substr(0, pos) : std::string();
 }
 
 std::string get_temp_dir() {
@@ -371,7 +374,7 @@ void create_dir_with_parents(const std::string& path) {
   }
 
   // Create the requested directory unless it already exists.
-  if (!dir_exists(path)) {
+  if (!path.empty() && !dir_exists(path)) {
     create_dir(path);
   }
 }

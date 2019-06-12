@@ -69,7 +69,7 @@ protected:
   remote_cache_provider_t();
 
   /// @brief Parse a host description string.
-  /// @param host_desciption The host description string.
+  /// @param host_description The host description string.
   /// @param[out] host The host name.
   /// @param[out] port The port (optional - defaults to -1).
   /// @param[out] path The path (optional - defaults to "").
