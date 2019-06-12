@@ -101,6 +101,7 @@ private:
 /// @param path The base path.
 /// @param append The path to be appended (e.g. a file name).
 /// @returns the concatenated paths, using the system path separator.
+/// @note If @c path is empty or @c append is empty, the result will not contain any path separator.
 std::string append_path(const std::string& path, const std::string& append);
 std::string append_path(const std::string& path, const char* append);
 ///@}
@@ -127,7 +128,7 @@ std::string get_file_part(const std::string& path, const bool include_ext = true
 /// @brief Get the directory part of a path.
 /// @param path The path to a file.
 /// @returns The part of the path before the final path separator. If the path does not contain a
-/// separator, the entire path is returned.
+/// separator, an empty string is returned.
 std::string get_dir_part(const std::string& path);
 
 /// @brief Get a temporary directory for this user and process.
