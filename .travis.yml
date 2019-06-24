@@ -24,6 +24,7 @@ matrix:
     # macOS clang
     - os: osx
       compiler: clang
+      osx_image: xcode10.2
       addons:
         homebrew:
           packages:
