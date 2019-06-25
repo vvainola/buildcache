@@ -33,6 +33,7 @@ public:
   bool can_handle_command() override;
 
 private:
+  string_list_t get_relevant_arguments() override;
   std::map<std::string, std::string> get_relevant_env_vars() override;
   std::string get_program_id() override;
 };
