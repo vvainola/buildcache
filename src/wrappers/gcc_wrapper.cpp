@@ -72,7 +72,9 @@ gcc_wrapper_t::gcc_wrapper_t(const string_list_t& args) : program_wrapper_t(args
 
 bool gcc_wrapper_t::can_handle_command() {
   // Is this the right compiler?
-  const auto cmd = lower_case(file::get_file_part(m_args[0], false));
+  // Note: We keep the file extension part to support version strings in the executable file name,
+  // such as "aarch64-unknown-nto-qnx7.0.0-g++".
+  const auto cmd = lower_case(file::get_file_part(m_args[0], true));
 
   // gcc?
   if ((cmd.find("gcc") != std::string::npos) || (cmd.find("g++") != std::string::npos)) {
