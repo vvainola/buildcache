@@ -12,17 +12,23 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <cstdint>
 #include <cctype>
 #include <cstddef>
+#include <cstdint>
 
 #ifdef _WIN32
-#  define WIN32_LEAN_AND_MEAN
-#  define NOMINMAX
+#  pragma push_macro("WIN32_LEAN_AND_MEAN")
+#  pragma push_macro("NOMINMAX")
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
-#  undef NOMINMAX
-#  undef WIN32_LEAN_AND_MEAN
+#  pragma pop_macro("WIN32_LEAN_AND_MEAN")
+#  pragma pop_macro("NOMINMAX")
 #else
 #  include <sys/socket.h>
 #  include <netinet/in.h>
@@ -58,13 +64,13 @@ namespace http
         WinSock(const WinSock&) = delete;
         WinSock& operator=(const WinSock&) = delete;
 
-        WinSock(WinSock&& other):
+        WinSock(WinSock&& other) noexcept:
             started(other.started)
         {
             other.started = false;
         }
 
-        WinSock& operator=(WinSock&& other)
+        WinSock& operator=(WinSock&& other) noexcept
         {
             if (&other != this)
             {
@@ -81,7 +87,7 @@ namespace http
     };
 #endif
 
-    inline int getLastError()
+    inline int getLastError() noexcept
     {
 #ifdef _WIN32
         return WSAGetLastError();
@@ -96,113 +102,86 @@ namespace http
         V6
     };
 
-    inline int getAddressFamily(InternetProtocol internetProtocol)
+    constexpr int getAddressFamily(InternetProtocol internetProtocol)
     {
-        switch (internetProtocol)
-        {
-            case InternetProtocol::V4: return AF_INET;
-            case InternetProtocol::V6: return AF_INET6;
-        }
+        return (internetProtocol == InternetProtocol::V4) ? AF_INET :
+            (internetProtocol == InternetProtocol::V6) ? AF_INET6 :
+            throw std::runtime_error("Unsupported protocol");
     }
 
     class Socket final
     {
     public:
+#ifdef _WIN32
+        using Type = SOCKET;
+        static constexpr Type INVALID = INVALID_SOCKET;
+#else
+        using Type = int;
+        static constexpr Type INVALID = -1;
+#endif
+
         Socket(InternetProtocol internetProtocol):
             endpoint(socket(getAddressFamily(internetProtocol), SOCK_STREAM, IPPROTO_TCP))
         {
-#ifdef _WIN32
-            if (endpoint == INVALID_SOCKET)
-                throw std::system_error(WSAGetLastError(), std::system_category(), "Failed to create socket");
-#else
-            if (endpoint == -1)
-                throw std::system_error(errno, std::system_category(), "Failed to create socket");
-#endif
+            if (endpoint == INVALID)
+                throw std::system_error(getLastError(), std::system_category(), "Failed to create socket");
         }
 
-#ifdef _WIN32
-        Socket(SOCKET s):
+        Socket(Type s) noexcept:
             endpoint(s)
         {
         }
-#else
-        Socket(int s):
-            endpoint(s)
-        {
-        }
-#endif
+
         ~Socket()
         {
-#ifdef _WIN32
-            if (endpoint != INVALID_SOCKET) closesocket(endpoint);
-#else
-            if (endpoint != -1) close(endpoint);
-#endif
+            if (endpoint != INVALID) close();
         }
 
         Socket(const Socket&) = delete;
         Socket& operator=(const Socket&) = delete;
 
-        Socket(Socket&& other):
-#ifdef _WIN32
-            winSock(std::move(other.winSock)),
-#endif
+        Socket(Socket&& other) noexcept:
             endpoint(other.endpoint)
         {
-#ifdef _WIN32
-            other.endpoint = INVALID_SOCKET;
-#else
-            other.endpoint = -1;
-#endif
+            other.endpoint = INVALID;
         }
 
-        Socket& operator=(Socket&& other)
+        Socket& operator=(Socket&& other) noexcept
         {
             if (&other != this)
             {
-#ifdef _WIN32
-                winSock = std::move(other.winSock);
-                if (endpoint != INVALID_SOCKET) closesocket(endpoint);
-#else
-                if (endpoint != -1) close(endpoint);
-#endif
-
+                if (endpoint != INVALID) close();
                 endpoint = other.endpoint;
-
-#ifdef _WIN32
-                other.endpoint = INVALID_SOCKET;
-#else
-                other.endpoint = -1;
-#endif
+                other.endpoint = INVALID;
             }
 
             return *this;
         }
 
-#ifdef _WIN32
-        operator SOCKET() const { return endpoint; }
-#else
-        operator int() const { return endpoint; }
-#endif
+        inline operator Type() const noexcept { return endpoint; }
 
     private:
+        inline void close() noexcept
+        {
 #ifdef _WIN32
-        WinSock winSock;
-        SOCKET endpoint = INVALID_SOCKET;
+            closesocket(endpoint);
 #else
-        int endpoint = -1;
+            ::close(endpoint);
 #endif
+        }
+
+        Type endpoint = INVALID;
     };
 
     inline std::string urlEncode(const std::string& str)
     {
-        static const char hexChars[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+        static const char hexChars[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
         std::string result;
 
         for (auto i = str.begin(); i != str.end(); ++i)
         {
-            uint8_t cp = *i & 0xFF;
+            const uint8_t cp = *i & 0xFF;
 
             if ((cp >= 0x30 && cp <= 0x39) || // 0-9
                 (cp >= 0x41 && cp <= 0x5A) || // A-Z
@@ -243,6 +222,76 @@ namespace http
     struct Response final
     {
         int code = 0;
+        enum Status
+        {
+            STATUS_CONTINUE = 100,
+            STATUS_SWITCHINGPROTOCOLS = 101,
+            STATUS_PROCESSING = 102,
+            STATUS_EARLYHINTS = 103,
+
+            STATUS_OK = 200,
+            STATUS_CREATED = 201,
+            STATUS_ACCEPTED = 202,
+            STATUS_NONAUTHORITATIVEINFORMATION = 203,
+            STATUS_NOCONTENT = 204,
+            STATUS_RESETCONTENT = 205,
+            STATUS_PARTIALCONTENT = 206,
+            STATUS_MULTISTATUS = 207,
+            STATUS_ALREADYREPORTED = 208,
+            STATUS_IMUSED = 226,
+
+            STATUS_MULTIPLECHOICES = 300,
+            STATUS_MOVEDPERMANENTLY = 301,
+            STATUS_FOUND = 302,
+            STATUS_SEEOTHER = 303,
+            STATUS_NOTMODIFIED = 304,
+            STATUS_USEPROXY = 305,
+            STATUS_TEMPORARYREDIRECT = 307,
+            STATUS_PERMANENTREDIRECT = 308,
+
+            STATUS_BADREQUEST = 400,
+            STATUS_UNAUTHORIZED = 401,
+            STATUS_PAYMENTREQUIRED = 402,
+            STATUS_FORBIDDEN = 403,
+            STATUS_NOTFOUND = 404,
+            STATUS_METHODNOTALLOWED = 405,
+            STATUS_NOTACCEPTABLE = 406,
+            STATUS_PROXYAUTHENTICATIONREQUIRED = 407,
+            STATUS_REQUESTTIMEOUT = 408,
+            STATUS_CONFLICT = 409,
+            STATUS_GONE = 410,
+            STATUS_LENGTHREQUIRED = 411,
+            STATUS_PRECONDITIONFAILED = 412,
+            STATUS_PAYLOADTOOLARGE = 413,
+            STATUS_URITOOLONG = 414,
+            STATUS_UNSUPPORTEDMEDIATYPE = 415,
+            STATUS_RANGENOTSATISFIABLE = 416,
+            STATUS_EXPECTATIONFAILED = 417,
+            STATUS_IMATEAPOT = 418,
+            STATUS_MISDIRECTEDREQUEST = 421,
+            STATUS_UNPROCESSABLEENTITY = 422,
+            STATUS_LOCKED = 423,
+            STATUS_FAILEDDEPENDENCY = 424,
+            STATUS_TOOEARLY = 425,
+            STATUS_UPGRADEREQUIRED = 426,
+            STATUS_PRECONDITIONREQUIRED = 428,
+            STATUS_TOOMANYREQUESTS = 429,
+            STATUS_REQUESTHEADERFIELDSTOOLARGE = 431,
+            STATUS_UNAVAILABLEFORLEGALREASONS = 451,
+
+            STATUS_INTERNALSERVERERROR = 500,
+            STATUS_NOTIMPLEMENTED = 501,
+            STATUS_BADGATEWAY = 502,
+            STATUS_SERVICEUNAVAILABLE = 503,
+            STATUS_GATEWAYTIMEOUT = 504,
+            STATUS_HTTPVERSIONNOTSUPPORTED = 505,
+            STATUS_VARIANTALSONEGOTIATES = 506,
+            STATUS_INSUFFICIENTSTORAGE = 507,
+            STATUS_LOOPDETECTED = 508,
+            STATUS_NOTEXTENDED = 510,
+            STATUS_NETWORKAUTHENTICATIONREQUIRED = 511
+        };
+
         std::vector<std::string> headers;
         std::vector<uint8_t> body;
     };
@@ -253,36 +302,47 @@ namespace http
         Request(const std::string& url, InternetProtocol protocol = InternetProtocol::V4):
             internetProtocol(protocol)
         {
-            size_t schemeEndPosition = url.find("://");
+            const auto schemeEndPosition = url.find("://");
 
             if (schemeEndPosition != std::string::npos)
             {
                 scheme = url.substr(0, schemeEndPosition);
-                std::transform(scheme.begin(), scheme.end(), scheme.begin(), ::tolower);
-
-                std::string::size_type pathPosition = url.find('/', schemeEndPosition + 3);
-
-                if (pathPosition == std::string::npos)
-                {
-                    domain = url.substr(schemeEndPosition + 3);
-                    path = "/";
-                }
-                else
-                {
-                    domain = url.substr(schemeEndPosition + 3, pathPosition - schemeEndPosition - 3);
-                    path = url.substr(pathPosition);
-                }
-
-                std::string::size_type portPosition = domain.find(':');
-
-                if (portPosition != std::string::npos)
-                {
-                    port = domain.substr(portPosition + 1);
-                    domain.resize(portPosition);
-                }
-                else
-                    port = "80";
+                path = url.substr(schemeEndPosition + 3);
             }
+            else
+            {
+                scheme = "http";
+                path = url;
+            }
+
+            const auto fragmentPosition = path.find('#');
+
+            // remove the fragment part
+            if (fragmentPosition != std::string::npos)
+                path.resize(fragmentPosition);
+
+            const auto pathPosition = path.find('/');
+
+            if (pathPosition == std::string::npos)
+            {
+                domain = path;
+                path = "/";
+            }
+            else
+            {
+                domain = path.substr(0, pathPosition);
+                path = path.substr(pathPosition);
+            }
+
+            const auto portPosition = domain.find(':');
+
+            if (portPosition != std::string::npos)
+            {
+                port = domain.substr(portPosition + 1);
+                domain.resize(portPosition);
+            }
+            else
+                port = "80";
         }
 
         Response send(const std::string& method,
@@ -343,24 +403,23 @@ namespace http
             requestData += body;
 
 #if defined(__APPLE__) || defined(_WIN32)
-            int flags = 0;
+            constexpr int flags = 0;
 #else
-            int flags = MSG_NOSIGNAL;
+            constexpr int flags = MSG_NOSIGNAL;
 #endif
 
 #ifdef _WIN32
-            int remaining = static_cast<int>(requestData.size());
+            auto remaining = static_cast<int>(requestData.size());
             int sent = 0;
-            int size;
 #else
-            ssize_t remaining = static_cast<ssize_t>(requestData.size());
+            auto remaining = static_cast<ssize_t>(requestData.size());
             ssize_t sent = 0;
-            ssize_t size;
 #endif
 
+            // send the request
             do
             {
-                size = ::send(socket, requestData.data() + sent, static_cast<size_t>(remaining), flags);
+                const auto size = ::send(socket, requestData.data() + sent, static_cast<size_t>(remaining), flags);
 
                 if (size < 0)
                     throw std::system_error(getLastError(), std::system_category(), "Failed to send data to " + domain + ":" + port);
@@ -370,7 +429,7 @@ namespace http
             }
             while (remaining > 0);
 
-            uint8_t TEMP_BUFFER[65536];
+            uint8_t TEMP_BUFFER[4096];
             static const uint8_t clrf[] = {'\r', '\n'};
             std::vector<uint8_t> responseData;
             bool firstLine = true;
@@ -380,9 +439,10 @@ namespace http
             size_t expectedChunkSize = 0;
             bool removeCLRFAfterChunk = false;
 
-            do
+            // read the response
+            for (;;)
             {
-                size = recv(socket, reinterpret_cast<char*>(TEMP_BUFFER), sizeof(TEMP_BUFFER), flags);
+                const auto size = recv(socket, reinterpret_cast<char*>(TEMP_BUFFER), sizeof(TEMP_BUFFER), flags);
 
                 if (size < 0)
                     throw std::system_error(getLastError(), std::system_category(), "Failed to read data from " + domain + ":" + port);
@@ -395,12 +455,12 @@ namespace http
                 {
                     for (;;)
                     {
-                        auto i = std::search(responseData.begin(), responseData.end(), std::begin(clrf), std::end(clrf));
+                        const auto i = std::search(responseData.begin(), responseData.end(), std::begin(clrf), std::end(clrf));
 
                         // didn't find a newline
                         if (i == responseData.end()) break;
 
-                        std::string line(responseData.begin(), i);
+                        const std::string line(responseData.begin(), i);
                         responseData.erase(responseData.begin(), i + 2);
 
                         // empty line indicates the end of the header section
@@ -413,18 +473,19 @@ namespace http
                         {
                             firstLine = false;
 
-                            std::string::size_type pos, lastPos = 0, length = line.length();
+                            std::string::size_type lastPos = 0;
+                            const auto length = line.length();
                             std::vector<std::string> parts;
 
                             // tokenize first line
                             while (lastPos < length + 1)
                             {
-                                pos = line.find(' ', lastPos);
+                                auto pos = line.find(' ', lastPos);
                                 if (pos == std::string::npos) pos = length;
 
                                 if (pos != lastPos)
-                                    parts.push_back(std::string(line.data() + lastPos,
-                                                                static_cast<std::vector<std::string>::size_type>(pos) - lastPos));
+                                    parts.emplace_back(line.data() + lastPos,
+                                                       static_cast<std::vector<std::string>::size_type>(pos) - lastPos);
 
                                 lastPos = pos + 1;
                             }
@@ -436,7 +497,7 @@ namespace http
                         {
                             response.headers.push_back(line);
 
-                            std::string::size_type pos = line.find(':');
+                            const auto pos = line.find(':');
 
                             if (pos != std::string::npos)
                             {
@@ -446,11 +507,11 @@ namespace http
                                 // ltrim
                                 headerValue.erase(headerValue.begin(),
                                                   std::find_if(headerValue.begin(), headerValue.end(),
-                                                               std::not1(std::ptr_fun<int, int>(std::isspace))));
+                                                               [](int c) {return !std::isspace(c);}));
 
                                 // rtrim
                                 headerValue.erase(std::find_if(headerValue.rbegin(), headerValue.rend(),
-                                                               std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
+                                                               [](int c) {return !std::isspace(c);}).base(),
                                                   headerValue.end());
 
                                 if (headerName == "Content-Length")
@@ -471,7 +532,7 @@ namespace http
                         {
                             if (expectedChunkSize > 0)
                             {
-                                auto toWrite = std::min(expectedChunkSize, responseData.size());
+                                const auto toWrite = std::min(expectedChunkSize, responseData.size());
                                 response.body.insert(response.body.end(), responseData.begin(), responseData.begin() + static_cast<ptrdiff_t>(toWrite));
                                 responseData.erase(responseData.begin(), responseData.begin() + static_cast<ptrdiff_t>(toWrite));
                                 expectedChunkSize -= toWrite;
@@ -491,14 +552,14 @@ namespace http
                                     else break;
                                 }
 
-                                auto i = std::search(responseData.begin(), responseData.end(), std::begin(clrf), std::end(clrf));
+                                const auto i = std::search(responseData.begin(), responseData.end(), std::begin(clrf), std::end(clrf));
 
                                 if (i == responseData.end()) break;
 
-                                std::string line(responseData.begin(), i);
+                                const std::string line(responseData.begin(), i);
                                 responseData.erase(responseData.begin(), i + 2);
 
-                                expectedChunkSize = std::stoul(line, 0, 16);
+                                expectedChunkSize = std::stoul(line, nullptr, 16);
 
                                 if (expectedChunkSize == 0)
                                 {
@@ -522,12 +583,14 @@ namespace http
                     }
                 }
             }
-            while (size > 0);
 
             return response;
         }
 
     private:
+#ifdef _WIN32
+        WinSock winSock;
+#endif
         InternetProtocol internetProtocol;
         std::string scheme;
         std::string domain;

@@ -68,7 +68,7 @@ std::string get_date_rfc2616_gmt() {
 
   // Format the date & time according to RFC2616.
   char buf[100];
-  if (strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %Z", &tm) == 0) {
+  if (strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &tm) == 0) {
     throw std::runtime_error("strftime failed");
   }
 
