@@ -726,7 +726,7 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
         file_info_t::time_t access_time = 0;
         int64_t size = 0;
         bool is_dir = false;
-        if (entity->d_type == DT_DIR) {
+        if (S_ISDIR(file_stat.st_mode)) {
           auto subdir_files = walk_directory(file_path);
           for (const auto& entry : subdir_files) {
             files.emplace_back(entry);
@@ -735,7 +735,7 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
             access_time = std::max(access_time, entry.access_time());
           }
           is_dir = true;
-        } else if (entity->d_type == DT_REG) {
+        } else if (S_ISREG(file_stat.st_mode)) {
           size = static_cast<int64_t>(file_stat.st_size);
 #ifdef __APPLE__
           modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtimespec.tv_sec);
