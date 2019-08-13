@@ -22,6 +22,8 @@ set(CACHE_SRCS
   cache.hpp
   cache_entry.cpp
   cache_entry.hpp
+  cache_stats.cpp
+  cache_stats.hpp
   local_cache.cpp
   local_cache.hpp
   redis_cache_provider.cpp

@@ -24,6 +24,7 @@
 #include <base/hasher.hpp>
 #include <base/lock_file.hpp>
 #include <cache/cache_entry.hpp>
+#include <cache/cache_stats.hpp>
 
 #include <string>
 #include <utility>
@@ -72,6 +73,9 @@ public:
                 const std::string& target_path,
                 const bool is_compressed,
                 const bool allow_hard_links);
+
+  /// @brief Update statistics associated with the given entry
+  bool update_stats(const hasher_t::hash_t& hash, const cache_stats_t& delta) const noexcept;
 
 private:
   const std::string hash_to_cache_entry_path(const hasher_t::hash_t& hash) const;
