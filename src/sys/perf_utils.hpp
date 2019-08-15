@@ -56,11 +56,27 @@ void stop(const int64_t start_time, const id_t id);
 
 /// @brief Report the results.
 void report();
+
+/// @brief A scoped perf logger.
+class perf_scope_t {
+public:
+  perf_scope_t(const id_t id) : m_id(id), m_t0(start()) {
+  }
+
+  ~perf_scope_t() {
+    stop(m_t0, m_id);
+  }
+
+private:
+  const id_t m_id;
+  const int64_t m_t0;
+};
 }  // namespace perf
 }  // namespace bcache
 
 // Convenience macros.
 #define PERF_START(id) const auto t0_ID_##id = bcache::perf::start()
 #define PERF_STOP(id) bcache::perf::stop(t0_ID_##id, bcache::perf::ID_##id);
+#define PERF_SCOPE(id) bcache::perf::perf_scope_t p_ID_##id(bcache::perf::ID_##id);
 
 #endif  // BUILDCACHE_PERF_UTILS_HPP_
