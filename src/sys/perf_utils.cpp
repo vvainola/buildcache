@@ -66,6 +66,7 @@ void report() {
     std::cerr << "Run cmd (miss):        " << s_perf_log[ID_RUN_FOR_MISS] << " us\n";
     std::cerr << "Add to cache:          " << s_perf_log[ID_ADD_TO_CACHE] << " us\n";
     std::cerr << "Run cmd (fallback):    " << s_perf_log[ID_RUN_FOR_FALLBACK] << " us\n";
+    std::cerr << "Update stats:          " << s_perf_log[ID_UPDATE_STATS] << " us\n";
   }
 }
 }  // namespace perf

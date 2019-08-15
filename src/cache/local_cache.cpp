@@ -51,6 +51,7 @@
 #include <base/file_utils.hpp>
 #include <base/serializer_utils.hpp>
 #include <config/configuration.hpp>
+#include <sys/perf_utils.hpp>
 
 #include <chrono>
 #include <cstdlib>
@@ -314,6 +315,7 @@ std::pair<cache_entry_t, file::lock_file_t> local_cache_t::lookup(const hasher_t
 
 bool local_cache_t::update_stats(const hasher_t::hash_t& hash, const cache_stats_t& delta) const
     noexcept {
+  PERF_SCOPE(UPDATE_STATS);
   try {
     const auto cache_entry_path = hash_to_cache_entry_path(hash);
     const auto cache_subdir = file::get_dir_part(cache_entry_path);

@@ -42,6 +42,7 @@ enum id_t {
   ID_RUN_FOR_MISS = 13,
   ID_ADD_TO_CACHE = 14,
   ID_RUN_FOR_FALLBACK = 15,
+  ID_UPDATE_STATS = 16,
   NUM_PERF_IDS
 };
 
