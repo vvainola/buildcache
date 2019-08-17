@@ -143,6 +143,7 @@ bool cache_t::lookup_in_remote_cache(const hasher_t::hash_t hash,
   PERF_STOP(CACHE_LOOKUP);
 
   if (!cached_entry) {
+    m_local_cache.update_stats(hash, cache_stats_t::remote_miss());
     return false;
   }
 
@@ -179,6 +180,7 @@ bool cache_t::lookup_in_remote_cache(const hasher_t::hash_t hash,
           cached_entry.std_err(),
           cached_entry.return_code());
       m_local_cache.add(hash, entry, file_paths, allow_hard_links);
+      m_local_cache.update_stats(hash, cache_stats_t::remote_hit());
     } else {
       debug::log(debug::INFO) << "Cache entry too large for the local cache: " << size << " bytes";
     }

@@ -57,6 +57,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <set>
 #include <stdexcept>
 
 namespace bcache {
@@ -64,6 +65,7 @@ namespace {
 const std::string CACHE_FILES_FOLDER_NAME = "c";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 const std::string LOCK_FILE_SUFFIX = ".lock";
+const std::string STATS_FILE_NAME = "stats.json";
 
 // The version of the entry file serialization data format.
 const int32_t ENTRY_DATA_FORMAT_VERSION = 2;
@@ -154,7 +156,10 @@ void local_cache_t::clear() {
 
   // Remove all cache entries.
   auto dirs = get_cache_entry_dirs(config::dir());
+  std::set<std::string> first_level_dirs;
+
   for (const auto& dir : dirs) {
+    first_level_dirs.insert(file::get_dir_part(dir.path()));
     try {
       // We acquire an exclusive lock for the cache entry before deleting it.
       file::lock_file_t lock(cache_entry_lock_file_path(dir.path()));
@@ -163,6 +168,17 @@ void local_cache_t::clear() {
       }
     } catch (const std::exception& e) {
       debug::log(debug::DEBUG) << "Failed: " << e.what();
+    }
+  }
+  for (const auto& dir : first_level_dirs) {
+    try {
+      const auto stats_path = file::append_path(dir, STATS_FILE_NAME);
+      file::lock_file_t lock{stats_path + LOCK_FILE_SUFFIX};
+      if (lock.has_lock()) {
+        file::remove_file(stats_path);
+      }
+    } catch (const std::exception& e) {
+      debug::log(debug::DEBUG) << "Failed to remove stats file: " << e.what();
     }
   }
 
@@ -176,9 +192,34 @@ void local_cache_t::show_stats() {
   const auto dirs = get_cache_entry_dirs(config::dir());
   int num_entries = 0;
   int64_t total_size = 0;
+  cache_stats_t overall_stats;
+  std::set<std::string> visitedDirs;
+  auto process_stats = [&visitedDirs, &overall_stats](const std::string& dir) {
+    const auto firstLevelDirPath = file::get_dir_part(dir);
+    if (visitedDirs.find(firstLevelDirPath) != visitedDirs.end()) {
+      return;
+    }
+    visitedDirs.insert(firstLevelDirPath);
+    const auto stats_path = file::append_path(firstLevelDirPath, STATS_FILE_NAME);
+    cache_stats_t stats;
+    file::lock_file_t lock{stats_path + LOCK_FILE_SUFFIX};
+    if (!lock.has_lock()) {
+      overall_stats.set_reliable(false);
+      debug::log(debug::DEBUG) << "failed to lock stats, skipping";
+      return;
+    }
+    if (stats.from_file(stats_path)) {
+      overall_stats += stats;
+    } else {
+      debug::log(debug::DEBUG) << "failed to load stats for dir " << firstLevelDirPath;
+      overall_stats.set_reliable(false);
+    }
+  };
+
   for (const auto& dir : dirs) {
     num_entries++;
     total_size += dir.size();
+    process_stats(dir.path());
   }
   const auto full_percentage =
       100.0 * static_cast<double>(total_size) / static_cast<double>(config::max_cache_size());
@@ -190,6 +231,7 @@ void local_cache_t::show_stats() {
   std::cout << "  Entries in cache:  " << num_entries << "\n";
   std::cout << "  Cache size:        " << file::human_readable_size(total_size) << " ("
             << full_percentage << "%)\n";
+  overall_stats.dump(std::cout, "  ");
   std::cout.copyfmt(old_fmt);
 }
 
@@ -262,9 +304,45 @@ std::pair<cache_entry_t, file::lock_file_t> local_cache_t::lookup(const hasher_t
     // cache miss).
     const auto cache_entry_file_name = file::append_path(cache_entry_path, CACHE_ENTRY_FILE_NAME);
     const auto entry_data = file::read(cache_entry_file_name);
+    update_stats(hash, cache_stats_t::local_hit());
     return std::make_pair(cache_entry_t::deserialize(entry_data), std::move(lock));
   } catch (...) {
+    update_stats(hash, cache_stats_t::local_miss());
     return std::make_pair(cache_entry_t(), file::lock_file_t());
+  }
+}
+
+bool local_cache_t::update_stats(const hasher_t::hash_t& hash, const cache_stats_t& delta) const
+    noexcept {
+  try {
+    const auto cache_entry_path = hash_to_cache_entry_path(hash);
+    const auto cache_subdir = file::get_dir_part(cache_entry_path);
+    if (!file::dir_exists(cache_subdir)) {
+      file::create_dir_with_parents(cache_subdir);
+    }
+    const auto stats_file_path = file::append_path(cache_subdir, STATS_FILE_NAME);
+    file::lock_file_t lock(stats_file_path + LOCK_FILE_SUFFIX);
+    if (!lock.has_lock()) {
+      debug::log(debug::INFO) << "failed to lock stats, skipping update";
+      return false;
+    }
+
+    cache_stats_t stats;
+    if (file::file_exists(stats_file_path)) {
+      stats.from_file(stats_file_path);
+    }
+    if (!stats.reliable()) {
+      debug::log(debug::DEBUG) << "failed to parse stats object for dir " << cache_subdir;
+      return false;
+    }
+    stats += delta;
+    if (!stats.to_file(stats_file_path)) {
+      debug::log(debug::DEBUG) << "failed to save stats object for dir " << cache_subdir;
+      return false;
+    }
+    return true;
+  } catch (...) {
+    return false;
   }
 }
 
