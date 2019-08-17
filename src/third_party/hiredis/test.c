@@ -360,7 +360,8 @@ static void test_reply_reader(void) {
     freeReplyObject(reply);
     redisReaderFree(reader);
 
-    test("Set error when array > INT_MAX: ");
+#if LLONG_MAX > SIZE_MAX
+    test("Set error when array > SIZE_MAX: ");
     reader = redisReaderCreate();
     redisReaderFeed(reader, "*9223372036854775807\r\n+asdf\r\n",29);
     ret = redisReaderGetReply(reader,&reply);
@@ -369,7 +370,6 @@ static void test_reply_reader(void) {
     freeReplyObject(reply);
     redisReaderFree(reader);
 
-#if LLONG_MAX > SIZE_MAX
     test("Set error when bulk > SIZE_MAX: ");
     reader = redisReaderCreate();
     redisReaderFeed(reader, "$9223372036854775807\r\nasdf\r\n",28);
@@ -450,6 +450,7 @@ static void test_blocking_connection_errors(void) {
             c->err == REDIS_ERR_OTHER &&
             (strcmp(c->errstr, "Name or service not known") == 0 ||
              strcmp(c->errstr, "Can't resolve: " HIREDIS_BAD_DOMAIN) == 0 ||
+             strcmp(c->errstr, "Name does not resolve") == 0 ||
              strcmp(c->errstr,
                     "nodename nor servname provided, or not known") == 0 ||
              strcmp(c->errstr, "No address associated with hostname") == 0 ||
