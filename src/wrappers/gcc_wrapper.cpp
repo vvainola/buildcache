@@ -146,8 +146,9 @@ string_list_t gcc_wrapper_t::get_relevant_arguments() {
       // Generally unwanted argument (things that will not change how we go from preprocessed code
       // to binary object files)?
       const auto first_two_chars = arg.substr(0, 2);
-      const bool is_unwanted_arg = ((first_two_chars == "-I") || (first_two_chars == "-D") ||
-                                    (first_two_chars == "-M") || is_source_file(arg));
+      const bool is_unwanted_arg =
+          ((first_two_chars == "-I") || (first_two_chars == "-D") || (first_two_chars == "-M") ||
+           (arg.substr(0, 10) == "--sysroot=") || is_source_file(arg));
 
       if (is_arg_plus_file_name) {
         skip_next_arg = true;
