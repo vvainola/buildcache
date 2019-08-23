@@ -12,6 +12,7 @@ function is_windows() {
 function cleanup() {
     [[ ! -z "${PROJDIR}" ]] && rm -rf "${PROJDIR}"
     [[ ! -z "${BUILDCACHE_DIR}" ]] && rm -rf "${BUILDCACHE_DIR}"
+    [[ ! -z "${LOG_DIR}" ]] && rm -rf "${LOG_DIR}"
     [[ ! -z "${SYMLINKSDIR}" ]] && rm -rf "${SYMLINKSDIR}"
 }
 
@@ -55,6 +56,8 @@ export PATH="${SYMLINKSDIR}:${BUILDCACHEDIR}:${PATH}"
 export BUILDCACHE_DIR=/tmp/.buildcache-$$
 rm -rf "${BUILDCACHE_DIR}" ; mkdir -p "${BUILDCACHE_DIR}"
 export BUILDCACHE_DEBUG=2
+export LOG_DIR=/tmp/.buildcache-logs-$$
+rm -rf "${LOG_DIR}" ; mkdir -p "${LOG_DIR}"
 
 # Clone the project.
 PROJDIR="/tmp/proj-$$"
@@ -73,8 +76,10 @@ rm -rf "${BUILDDIR}" ; mkdir -p "${BUILDDIR}"
 cd "${BUILDDIR}"
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release "${SRCDIR}"
 
-time ninja
+time BUILDCACHE_LOG_FILE="${LOG_DIR}/test-pass-1.log" ninja
 buildcache -s
+echo "--- LOG (pass 1) ---"
+cat "${LOG_DIR}/test-pass-1.log"
 
 echo "======== Second build (warm cache) ========"
 cd "${PROJDIR}"
@@ -82,8 +87,21 @@ rm -rf "${BUILDDIR}" ; mkdir -p "${BUILDDIR}"
 cd "${BUILDDIR}"
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release "${SRCDIR}"
 
-time ninja
+time BUILDCACHE_LOG_FILE="${LOG_DIR}/test-pass-2.log" ninja
 buildcache -s
+echo "--- LOG (pass 2) ---"
+cat "${LOG_DIR}/test-pass-2.log"
 
-echo "======== Cleaning up ========"
+# Make sure that there were no cache misses during the second pass.
+EXIT_CODE=0
+if grep -q "Cache miss" "${LOG_DIR}/test-pass-2.log"; then
+    echo "*** FAIL: The second build pass contained cache misses."
+    EXIT_CODE=1
+else
+    echo "The test passed!"
+fi
+
+# Clean up.
 cleanup
+
+exit ${EXIT_CODE}

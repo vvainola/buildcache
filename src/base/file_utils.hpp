@@ -237,6 +237,13 @@ std::string read(const std::string& path);
 /// @param path The path to the file.
 /// @throws runtime_error if the operation could not be completed.
 void write(const std::string& data, const std::string& path);
+
+/// @brief Append a string to a file.
+/// @param data The data string to write.
+/// @param path The path to the file.
+/// @throws runtime_error if the operation could not be completed.
+/// @note Multiple processes may append to the same file concurrently.
+void append(const std::string& data, const std::string& path);
 }  // namespace file
 }  // namespace bcache
 

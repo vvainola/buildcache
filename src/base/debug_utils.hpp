@@ -33,6 +33,11 @@ enum log_level_t { DEBUG = 1, INFO = 2, ERROR = 3, FATAL = 4, NONE = 5 };
 /// @note If level is not a valid log level, the global log level is set to NONE.
 void set_log_level(const int level);
 
+/// @brief Set the global log file.
+/// @param file Path to a log file, or an empty string (indicating stdout).
+/// @note If the log file is not writable, output will be directed to stdout.
+void set_log_file(const std::string& file);
+
 /// @brief A simple log stream object.
 ///
 /// Usage:

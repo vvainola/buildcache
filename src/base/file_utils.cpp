@@ -583,10 +583,8 @@ void write(const std::string& data, const std::string& path) {
   }
 #endif
 
-  // Get file size.
-  const auto file_size = data.size();
-
   // Write the data to the file.
+  const auto file_size = data.size();
   auto bytes_left = file_size;
   while ((bytes_left != 0u) && !std::ferror(f)) {
     const auto* ptr = &data[file_size - bytes_left];
@@ -600,6 +598,67 @@ void write(const std::string& data, const std::string& path) {
   if (bytes_left != 0u) {
     throw std::runtime_error("Unable to write the file.");
   }
+}
+
+void append(const std::string& data, const std::string& path) {
+  if (path.empty()) {
+    throw std::runtime_error("No file path given.");
+  }
+
+#ifdef _WIN32
+  // Open the file.
+  auto handle = CreateFileW(utf8_to_ucs2(path).c_str(),
+                            FILE_APPEND_DATA,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            nullptr,
+                            OPEN_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL,
+                            nullptr);
+  if (handle == INVALID_HANDLE_VALUE) {
+    throw std::runtime_error("Unable to open the file.");
+  }
+
+  // Move to the end of the file.
+  const auto moved = SetFilePointer(handle, 0, nullptr, FILE_END);
+  if (moved == INVALID_SET_FILE_POINTER) {
+    CloseHandle(handle);
+    throw std::runtime_error("Unable to set file pointer to end-of-file.");
+  }
+
+  // Write the data.
+  DWORD bytes_written;
+  const auto success =
+      (WriteFile(handle, data.c_str(), data.size(), &bytes_written, nullptr) != FALSE);
+  if (!success || bytes_written != static_cast<DWORD>(data.size())) {
+    CloseHandle(handle);
+    throw std::runtime_error("Unable to write to the file.");
+  }
+
+  // Close the file.
+  CloseHandle(handle);
+#else
+  // Open the file (write pointer is at the end of the file).
+  auto f = std::fopen(path.c_str(), "ab");
+  if (f == nullptr) {
+    throw std::runtime_error("Unable to open the file.");
+  }
+
+  // Write the data to the file.
+  const auto file_size = data.size();
+  auto bytes_left = file_size;
+  while ((bytes_left != 0u) && !std::ferror(f)) {
+    const auto* ptr = &data[file_size - bytes_left];
+    const auto bytes_written = std::fwrite(ptr, 1, bytes_left, f);
+    bytes_left -= bytes_written;
+  }
+
+  // Close the file.
+  std::fclose(f);
+
+  if (bytes_left != 0u) {
+    throw std::runtime_error("Unable to write the file.");
+  }
+#endif
 }
 
 file_info_t get_file_info(const std::string& path) {

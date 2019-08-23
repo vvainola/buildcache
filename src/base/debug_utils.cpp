@@ -19,6 +19,8 @@
 
 #include <base/debug_utils.hpp>
 
+#include <base/file_utils.hpp>
+
 #include <iostream>
 #include <string>
 
@@ -46,6 +48,9 @@ namespace {
 // parsing etc. Once the configuration has been read, the log level will be reset to the user
 // selected level (NONE by default).
 log_level_t s_log_level = ERROR;
+
+// The target file for logs.
+std::string s_log_file;
 
 std::string get_level_string(const log_level_t level) {
   switch (level) {
@@ -84,16 +89,30 @@ void set_log_level(const int level) {
   }
 }
 
+void set_log_file(const std::string& file) {
+  s_log_file = file;
+}
+
 log::log(const log_level_t level) : m_level(level) {
 }
 
 log::~log() {
   if (m_level >= s_log_level) {
+    std::ostringstream ss;
     const auto level_str = std::string("(") + get_level_string(m_level) + ")";
-    std::cout << "BuildCache[" << get_process_id() << "] " << pad_string(level_str, 7) << " "
-              << m_stream.str() << "\n"
-              << std::flush;
+    ss << "BuildCache[" << get_process_id() << "] " << pad_string(level_str, 7) << " "
+       << m_stream.str() << "\n";
+    bool write_to_stdout = false;
+    try {
+      file::append(ss.str(), s_log_file);
+    } catch (const std::runtime_error&) {
+      write_to_stdout = true;
+    }
+    if (write_to_stdout) {
+      std::cout << ss.str() << std::flush;
+    }
   }
 }
+
 }  // namespace debug
 }  // namespace bcache

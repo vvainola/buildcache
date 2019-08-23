@@ -161,6 +161,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
                 << bcache::file::human_readable_size(bcache::config::max_remote_entry_size())
                 << ")\n";
       std::cout << "  BUILDCACHE_DEBUG:                  " << bcache::config::debug() << "\n";
+      std::cout << "  BUILDCACHE_LOG_FILE:               " << bcache::config::log_file() << "\n";
       std::cout << "  BUILDCACHE_HARD_LINKS:             "
                 << (bcache::config::hard_links() ? "true" : "false") << "\n";
       std::cout << "  BUILDCACHE_COMPRESS:               "
@@ -346,8 +347,9 @@ int main(int argc, const char** argv) {
     // Initialize the configuration.
     bcache::config::init();
 
-    // Set the debug log level to what is given by the configuration.
+    // Set up debug logging acccording to what is given by the configuration.
     bcache::debug::set_log_level(bcache::config::debug());
+    bcache::debug::set_log_file(bcache::config::log_file());
   } catch (const std::exception& e) {
     bcache::debug::log(bcache::debug::FATAL) << e.what();
   } catch (...) {
