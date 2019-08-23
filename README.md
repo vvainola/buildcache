@@ -194,6 +194,7 @@ The following options control the behavior of BuildCache:
 | `BUILDCACHE_S3_SECRET` | `s3_secret` | S3 secret key | None |
 | `BUILDCACHE_LUA_PATH` | `lua_paths` | Extra path(s) to Lua wrappers | None |
 | `BUILDCACHE_DEBUG` | `debug` | Debug level | None |
+| `BUILDCACHE_LOG_FILE` | `log_file` | Log file path (empty for stdout) | None |
 | `BUILDCACHE_MAX_CACHE_SIZE` | `max_cache_size` | Cache size limit in bytes | 5368709120 |
 | `BUILDCACHE_MAX_LOCAL_ENTRY_SIZE` | `max_local_entry_size` | Local cache entry size limit in bytes (uncompressed) | 134217728 |
 | `BUILDCACHE_MAX_REMOTE_ENTRY_SIZE` | `max_remote_entry_size` | Remote cache entry size limit in bytes (uncompressed) | 134217728 |
@@ -242,3 +243,6 @@ For instance:
 ```bash
 $ BUILDCACHE_DEBUG=2 buildcache g++ -c -O2 hello.cpp -o hello.o
 ```
+
+It is also possible to redirect the log output to a file using the
+`BUILDCACHE_LOG_FILE` setting.

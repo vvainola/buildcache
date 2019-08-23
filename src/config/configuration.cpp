@@ -48,6 +48,7 @@ int64_t s_max_cache_size = DEFAULT_MAX_CACHE_SIZE;
 int64_t s_max_local_entry_size = DEFAULT_MAX_LOCAL_ENTRY_SIZE;
 int64_t s_max_remote_entry_size = DEFAULT_MAX_REMOTE_ENTRY_SIZE;
 int32_t s_debug = -1;
+std::string s_log_file;
 bool s_hard_links = false;
 bool s_compress = false;
 bool s_perf = false;
@@ -215,6 +216,14 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
+  // Get "log_file".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "log_file");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_log_file = std::string(node->valuestring);
+    }
+  }
+
   // Get "hard_links".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "hard_links");
@@ -365,6 +374,14 @@ void init() {
       }
     }
 
+    // Get the log file from the environment.
+    {
+      const env_var_t log_file_env("BUILDCACHE_LOG_FILE");
+      if (log_file_env) {
+        s_log_file = log_file_env.as_string();
+      }
+    }
+
     // Get the hard_links flag from the environment.
     {
       const env_var_t hard_links_env("BUILDCACHE_HARD_LINKS");
@@ -445,6 +462,10 @@ int64_t max_remote_entry_size() {
 
 int32_t debug() {
   return s_debug;
+}
+
+const std::string& log_file() {
+  return s_log_file;
 }
 
 bool hard_links() {

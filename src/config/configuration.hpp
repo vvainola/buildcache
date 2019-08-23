@@ -64,6 +64,9 @@ int64_t max_remote_entry_size();
 /// @returns the debug level (-1 for no debugging).
 int32_t debug();
 
+/// @returns the log file (empty string for stdout).
+const std::string& log_file();
+
 /// @returns true if BuildCache should use hard links when possible.
 bool hard_links();
 
