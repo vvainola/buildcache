@@ -29,6 +29,20 @@
 
 #include <stdexcept>
 
+#ifdef _MSC_VER
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <winsock2.h>  // For struct timeval
+#undef ERROR
+#undef log
+#else
+#include <sys/time.h>  // For struct timeval
+#endif
+
 namespace bcache {
 namespace {
 // Name of the cache entry file.
@@ -39,6 +53,13 @@ const std::string KEY_PREFIX = "buildcache";
 
 std::string remote_key_name(const std::string& hash_str, const std::string& file) {
   return KEY_PREFIX + "_" + hash_str + "_" + file;
+}
+
+struct timeval ms_to_timeval(const int time_in_ms) {
+  struct timeval result;
+  result.tv_sec = time_in_ms / 1000;
+  result.tv_usec = (time_in_ms % 1000) * 1000;
+  return result;
 }
 }  // namespace
 
@@ -68,14 +89,21 @@ bool redis_cache_provider_t::connect(const std::string& host_description) {
   }
 
   // Connect to the remote Redis instance.
-  m_ctx = redisConnect(host.c_str(), port);
+  m_ctx = redisConnectWithTimeout(host.c_str(), port,  ms_to_timeval(connection_timeout_ms()));
   if (m_ctx == nullptr || m_ctx->err) {
     if (m_ctx != nullptr) {
-      debug::log(debug::log_level_t::ERROR) << "Failed Connection: " << m_ctx->errstr;
+      debug::log(debug::log_level_t::ERROR) << "Failed connection: " << m_ctx->errstr;
       disconnect();
     } else {
-      debug::log(debug::log_level_t::ERROR) << "Unable to allocate redis context";
+      debug::log(debug::log_level_t::ERROR) << "Unable to allocate Redis context";
     }
+    return false;
+  }
+
+  // Set the timeout for read/write operations.
+  if (redisSetTimeout(m_ctx, ms_to_timeval(transfer_timeout_ms())) != REDIS_OK) {
+    debug::log(debug::log_level_t::ERROR) << "Unable to set timeout: " << m_ctx->errstr;
+    disconnect();
     return false;
   }
 

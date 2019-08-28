@@ -82,4 +82,17 @@ bool remote_cache_provider_t::parse_host_description(const std::string& host_des
   return true;
 }
 
+int remote_cache_provider_t::connection_timeout_ms() {
+  // We set this relatively low, since a high timeout value would defeat the purpose of BuildCache.
+  // TODO(m): Make this configurable.
+  return 100;
+}
+
+int remote_cache_provider_t::transfer_timeout_ms() {
+  // Since we need to support large cache entries (hundreds of MiB), and we don't know the network
+  // connection speed, set this high.
+  // TODO(m): Make this configurable.
+  return 10000;
+}
+
 }  // namespace bcache

@@ -23,6 +23,7 @@
 #include <config/configuration.hpp>
 
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 
 namespace bcache {
@@ -37,6 +38,28 @@ int64_t get_time_in_us() {
           .count();
   return t;
 }
+
+struct perf_us_t {
+  perf_us_t(const int id) : value(s_perf_log[id]) {
+  }
+  const int64_t value;
+};
+
+struct perf_ms_t {
+  perf_ms_t(const int id) : value(static_cast<double>(s_perf_log[id]) / 1000.0) {
+  }
+  const double value;
+};
+
+std::ostream& operator<<(std::ostream& out, const perf_us_t& p) {
+  out << std::setw(10) << p.value << " us";
+  return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const perf_ms_t& p) {
+  out << std::setw(10) << p.value << " ms";
+  return out;
+}
 }  // namespace
 
 int64_t start() {
@@ -50,23 +73,33 @@ void stop(const int64_t start_time, const id_t id) {
 
 void report() {
   if (config::perf()) {
-    std::cerr << "Find exectuable:       " << s_perf_log[ID_FIND_EXECUTABLE] << " us\n";
-    std::cerr << "Find wrapper:          " << s_perf_log[ID_FIND_WRAPPER] << " us\n";
-    std::cerr << "Lua - Init:            " << s_perf_log[ID_LUA_INIT] << " us\n";
-    std::cerr << "Lua - Load script:     " << s_perf_log[ID_LUA_LOAD_SCRIPT] << " us\n";
-    std::cerr << "Lua - Run:             " << s_perf_log[ID_LUA_RUN] << " us\n";
-    std::cerr << "Resolve args:          " << s_perf_log[ID_RESOLVE_ARGS] << " us\n";
-    std::cerr << "Get capabilities:      " << s_perf_log[ID_GET_CAPABILITIES] << " us\n";
-    std::cerr << "Preprocess:            " << s_perf_log[ID_PREPROCESS] << " us\n";
-    std::cerr << "Filter arguments:      " << s_perf_log[ID_FILTER_ARGS] << " us\n";
-    std::cerr << "Get program id:        " << s_perf_log[ID_GET_PRG_ID] << " us\n";
-    std::cerr << "Cache lookup:          " << s_perf_log[ID_CACHE_LOOKUP] << " us\n";
-    std::cerr << "Retreive cached files: " << s_perf_log[ID_RETRIEVE_CACHED_FILES] << " us\n";
-    std::cerr << "Get build files:       " << s_perf_log[ID_GET_BUILD_FILES] << " us\n";
-    std::cerr << "Run cmd (miss):        " << s_perf_log[ID_RUN_FOR_MISS] << " us\n";
-    std::cerr << "Add to cache:          " << s_perf_log[ID_ADD_TO_CACHE] << " us\n";
-    std::cerr << "Run cmd (fallback):    " << s_perf_log[ID_RUN_FOR_FALLBACK] << " us\n";
-    std::cerr << "Update stats:          " << s_perf_log[ID_UPDATE_STATS] << " us\n";
+    // Set format.
+    std::ios old_fmt(nullptr);
+    old_fmt.copyfmt(std::cerr);
+    std::cerr << std::setiosflags(std::ios::fixed) << std::setprecision(1);
+
+    std::cerr << "Find exectuable:       " << perf_us_t(ID_FIND_EXECUTABLE) << "\n";
+    std::cerr << "Find wrapper:          " << perf_us_t(ID_FIND_WRAPPER) << "\n";
+    std::cerr << "Lua - Init:            " << perf_us_t(ID_LUA_INIT) << "\n";
+    std::cerr << "Lua - Load script:     " << perf_us_t(ID_LUA_LOAD_SCRIPT) << "\n";
+    std::cerr << "Lua - Run:             " << perf_us_t(ID_LUA_RUN) << "\n";
+    std::cerr << "Resolve args:          " << perf_us_t(ID_RESOLVE_ARGS) << "\n";
+    std::cerr << "Get capabilities:      " << perf_us_t(ID_GET_CAPABILITIES) << "\n";
+    std::cerr << "Preprocess:            " << perf_us_t(ID_PREPROCESS) << "\n";
+    std::cerr << "Filter arguments:      " << perf_us_t(ID_FILTER_ARGS) << "\n";
+    std::cerr << "Get program id:        " << perf_us_t(ID_GET_PRG_ID) << "\n";
+    std::cerr << "Cache lookup:          " << perf_us_t(ID_CACHE_LOOKUP) << "\n";
+    std::cerr << "Retreive cached files: " << perf_us_t(ID_RETRIEVE_CACHED_FILES) << "\n";
+    std::cerr << "Get build files:       " << perf_us_t(ID_GET_BUILD_FILES) << "\n";
+    std::cerr << "Run cmd (miss):        " << perf_us_t(ID_RUN_FOR_MISS) << "\n";
+    std::cerr << "Add to cache:          " << perf_us_t(ID_ADD_TO_CACHE) << "\n";
+    std::cerr << "Run cmd (fallback):    " << perf_us_t(ID_RUN_FOR_FALLBACK) << "\n";
+    std::cerr << "Update stats:          " << perf_us_t(ID_UPDATE_STATS) << "\n";
+    std::cerr << "\n";
+    std::cerr << "TOTAL:                 " << perf_ms_t(ID_TOTAL) << "\n";
+
+    // Restore format.
+    std::cerr.copyfmt(old_fmt);
   }
 }
 }  // namespace perf

@@ -245,6 +245,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
   bool was_wrapped = false;
   int return_code = 0;
 
+  PERF_START(TOTAL);
+
   try {
     if (args.size() < 1) {
       // Should never happen.
@@ -309,6 +311,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
     bcache::debug::log(bcache::debug::FATAL) << "Unexpected error.";
     return_code = 1;
   }
+
+  PERF_STOP(TOTAL);
 
   // Report performance timings.
   if (!bcache::config::disable()) {

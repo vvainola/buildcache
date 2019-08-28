@@ -79,6 +79,14 @@ protected:
                                      int& port,
                                      std::string& path);
 
+  /// @brief Get the timeout for remote connections.
+  /// @returns the timeout, in milliseconds.
+  static int connection_timeout_ms();
+
+  /// @brief Get the timeout for remote transfers.
+  /// @returns the timeout, in milliseconds.
+  static int transfer_timeout_ms();
+
 private:
   // Prohibit copy & assignment.
   remote_cache_provider_t(const remote_cache_provider_t&) = delete;
