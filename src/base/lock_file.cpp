@@ -99,7 +99,7 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
 #else
   // Time values are in microseconds.
   const int64_t MAX_WAIT_TIME = 10000000;  // We'll fail if the lock can't be acquired in 10s.
-  const int64_t TIME_BETWEEN_LOCK_BREAKS = 1000000;  // We try to break the lock every second.
+  const int64_t TIME_BETWEEN_LOCK_BREAKS = 100000;  // We try to break the lock every 100ms.
   const int64_t MIN_SLEEP_TIME = 10;
   const int64_t MAX_SLEEP_TIME = 50000;
 
@@ -156,6 +156,7 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
               break;
             } else {
               bytes_left -= static_cast<size_t>(bytes);
+              bytes_read += static_cast<size_t>(bytes);
             }
           }
           close(fd);
