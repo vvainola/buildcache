@@ -20,6 +20,7 @@
 #include <base/lock_file.hpp>
 
 #include <base/debug_utils.hpp>
+#include <base/file_utils.hpp>
 #include <base/unicode_utils.hpp>
 
 #include <cstdint>
@@ -39,6 +40,7 @@
 #include <chrono>
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <thread>
@@ -46,6 +48,34 @@
 
 namespace bcache {
 namespace file {
+namespace {
+#if !defined(_WIN32)
+// The max lock file age before it is considered *definitely* stale, in seconds.
+// Note: We set this high to accomodate for time zone differences, clock errors, etc.
+const file_info_t::time_t MAX_LOCK_FILE_AGE = 24 * 3600;
+
+file_info_t::time_t get_system_time() {
+  struct timeval now;
+  if (::gettimeofday(&now, nullptr) == 0) {
+    return static_cast<file_info_t::time_t>(now.tv_sec);
+  } else {
+    throw std::runtime_error("Could not get system time.");
+  }
+}
+
+bool file_is_too_old(const std::string& path) {
+  try {
+    const auto age = get_system_time() - get_file_info(path).modify_time();
+    return age > MAX_LOCK_FILE_AGE;
+  } catch (const std::exception& e) {
+    // Note: This is not necessarily an error, since the lock file may no longer exist.
+    debug::log(debug::DEBUG) << "Unable to determine file age for " << path << ": " << e.what();
+    return false;
+  }
+}
+#endif  // !_WIN32
+}  // namespace
+
 lock_file_t::handle_t lock_file_t::invalid_handle() {
 #if defined(_WIN32)
   return INVALID_HANDLE_VALUE;
@@ -109,14 +139,14 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
 
   while (total_wait_time < MAX_WAIT_TIME) {
     // Try to create the lock file in exclusive mode.
-    m_handle = open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
+    m_handle = ::open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
     if (m_handle >= 0) {
       // We got the lock! Write our PID to the file.
       const auto pid_str = std::to_string(getpid());
-      const auto bytes_written = write(m_handle, pid_str.data(), pid_str.size());
+      const auto bytes_written = ::write(m_handle, pid_str.data(), pid_str.size());
       if (bytes_written != static_cast<ssize_t>(pid_str.size())) {
-        unlink(path.c_str());
-        close(m_handle);
+        ::unlink(path.c_str());
+        ::close(m_handle);
         m_handle = invalid_handle();
         debug::log(debug::ERROR) << "Failed to write our PID to the lock file " << path;
       }
@@ -130,7 +160,7 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
 
     // Time to check if we can break the lock if it's stale.
     if (time_until_lock_break < 0) {
-      auto fd = open(path.c_str(), O_RDONLY);
+      auto fd = ::open(path.c_str(), O_RDONLY);
       if (fd < 0) {
         if (errno != ENOENT) {
           debug::log(debug::ERROR) << "Unable to open possibly stale lock for reading: " << path;
@@ -148,7 +178,7 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
           ssize_t bytes_read = 0;
           bool finished_reading = false;
           while (!finished_reading) {
-            const auto bytes = read(fd, &buf[bytes_read], bytes_left);
+            const auto bytes = ::read(fd, &buf[bytes_read], bytes_left);
             if (bytes == 0) {
               finished_reading = true;
             } else if (bytes < 0) {
@@ -174,14 +204,16 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
                                   << owner_pid_str;
         }
 
-        // If we have the PID of the owner process, we can check if it's still alive.
-        // TODO(m): This only works for local file systems. For remote file systems we'd have to
-        // consider things like hostname too.
-        const auto owner_process_is_dead = (owner_pid >= 0 && kill(owner_pid, 0) == -1);
+        // If we have the PID of the owner process, we can check if it's still alive. We also check
+        // if the file is too old to reasonably be held at the moment (this should also work across
+        // different nodes sharing locks on a network drive, provided that their clocks are not
+        // wildly out of sync).
+        const auto owner_process_is_dead =
+            (owner_pid >= 0 && ::kill(owner_pid, 0) == -1) || file_is_too_old(path);
         if (owner_process_is_dead) {
           // Ok, the process is dead. Let's remove the lock file and hope for better luck during
           // the next iteration.
-          const auto file_removed = (unlink(m_path.c_str()) != -1);
+          const auto file_removed = (::unlink(m_path.c_str()) != -1);
           if (file_removed) {
             debug::log(debug::INFO) << "Removed stale lock " << path << " for PID " << owner_pid;
           } else {
@@ -238,8 +270,8 @@ lock_file_t::~lock_file_t() {
 #else
   if (m_handle >= 0) {
     // 1) Delete and close the lock file.
-    unlink(m_path.c_str());
-    close(m_handle);
+    ::unlink(m_path.c_str());
+    ::close(m_handle);
   }
 #endif
 }
