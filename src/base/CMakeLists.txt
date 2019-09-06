@@ -57,7 +57,7 @@ target_link_libraries(base md4 lz4)
 if(WIN32 OR MINGW)
   target_link_libraries(base userenv)
 elseif(OPENSSL_FOUND)
-  target_link_libraries(base ${OPENSSL_LIBRARIES})
+  target_link_libraries(base ${OPENSSL_CRYPTO_LIBRARIES})
   target_compile_definitions(base PRIVATE HAS_OPENSSL)
 endif()
 
