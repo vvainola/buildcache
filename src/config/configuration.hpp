@@ -28,6 +28,19 @@
 
 namespace bcache {
 namespace config {
+
+/// @brief The cache accuracy.
+enum class cache_accuracy_t {
+  SLOPPY,   ///< Maximize cache hit ratio, but may produce incorrect results for certain use cases.
+  DEFAULT,  ///< For most users.
+  STRICT    ///< Be as strict as possible.
+};
+
+/// @brief Convert a cache accuracy enum value to a string.
+/// @param accuracy The cache accuracy.
+/// @returns an upper case string representing the cache accuracy.
+std::string to_string(const cache_accuracy_t accuracy);
+
 /// @brief Initialize the configuration based on environment variables etc.
 void init();
 
@@ -78,6 +91,9 @@ bool perf();
 
 /// @returns true if BuildCache is disabled.
 bool disable();
+
+/// @returns the cache accuracy.
+cache_accuracy_t accuracy();
 
 }  // namespace config
 }  // namespace bcache

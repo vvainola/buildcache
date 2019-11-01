@@ -202,6 +202,7 @@ The following options control the behavior of BuildCache:
 | `BUILDCACHE_COMPRESS` | `compress` | Allow the use of compression when caching (overrides hard links) | false |
 | `BUILDCACHE_PERF` | `perf` | Enable performance logging | false |
 | `BUILDCACHE_DISABLE` | `disable` | Disable caching (bypass BuildCache) | false |
+| `BUILDCACHE_ACCURACY` | `accuracy` | Caching accuracy (see below) | DEFAULT |
 
 An example configuration file:
 
@@ -246,3 +247,35 @@ $ BUILDCACHE_DEBUG=2 buildcache g++ -c -O2 hello.cpp -o hello.o
 
 It is also possible to redirect the log output to a file using the
 `BUILDCACHE_LOG_FILE` setting.
+
+## Caching accuracy
+
+With the caching accuracy setting, `BUILDCACHE_ACCURACY`, it is possible to control
+how strict BuildCache is when checking for cache hits. This gives an opportunity to
+trade correctness for performance.
+
+| BUILDCACHE_ACCURACY | Comment                                       |
+| ------------------- | --------------------------------------------- |
+| STRICT              | Maximum correctness                           |
+| DEFAULT             | A balance between performance and correctness |
+| SLOPPY              | Optimize for maximum cache hit ratio          |
+
+The default accuracy mode is `DEFAULT`.
+
+### STRICT
+
+In `STRICT` accuracy mode, the cache lookup will consider absolute file paths and line numbers whenever debugging symbols or coverage info is generated. This means that when your build includes debugging symbols or coverage info, you will get a cache miss if the absolute file path or any line number has changed.
+
+This mode is suitable if you intend to use the final executable for running code coverage tests or for debugging. The downside is that you may often get cache misses, especially in a shared centralized cache that contains objects from different machines with different build paths.
+
+### DEFAULT
+
+The `DEFAULT` mode is similar to the `STRICT` mode, except that it will ignore file path and line number information for debug builds.
+
+Note that in many situations it is still possible to use the generated executables for debugging. For instance, with GDB you can [specify a custom source code path](https://sourceware.org/gdb/current/onlinedocs/gdb/Source-Path.html) during a debugging session.
+
+Binaries built with this mode can be used for code coverage generation.
+
+### SLOPPY
+
+With the `SLOPPY` mode, absolute file paths and line number information are always ignored during cache lookup, which improves cache hit ratio. The downside is that you may not be able to use the binaries for code coverage.

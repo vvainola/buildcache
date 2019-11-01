@@ -170,6 +170,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
                 << (bcache::config::perf() ? "true" : "false") << "\n";
       std::cout << "  BUILDCACHE_DISABLE:                "
                 << (bcache::config::disable() ? "true" : "false") << "\n";
+      std::cout << "  BUILDCACHE_ACCURACY:               " << to_string(bcache::config::accuracy())
+                << "\n";
     }
   } catch (const std::exception& e) {
     std::cerr << "*** Unexpected error: " << e.what() << "\n";
