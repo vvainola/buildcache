@@ -21,6 +21,7 @@
 
 #include <base/debug_utils.hpp>
 #include <base/unicode_utils.hpp>
+#include <config/configuration.hpp>
 #include <sys/sys_utils.hpp>
 
 #include <cstdlib>
@@ -48,23 +49,44 @@ bool arg_equals(const std::string& str, const std::string& sub_str) {
 string_list_t make_preprocessor_cmd(const string_list_t& args) {
   string_list_t preprocess_args;
 
-  // Drop arguments that we do not want/need.
+  // Drop arguments that we do not want/need, and check if the build will produce debug/coverage
+  // info.
   bool drop_next_arg = false;
+  bool has_debug_symbols = false;
+  bool has_coverage_output = false;
   for (auto it = args.begin(); it != args.end(); ++it) {
     auto arg = *it;
     auto drop_this_arg = drop_next_arg;
     drop_next_arg = false;
     if (arg_equals(arg, "c") || arg_starts_with(arg, "Fo") || arg_equals(arg, "C") ||
-        arg_equals(arg, "E")) {
+        arg_equals(arg, "E") || arg_equals(arg, "EP")) {
       drop_this_arg = true;
+    }
+    if (arg_equals(arg, "Z7") || arg_equals(arg, "Zi") || arg_equals(arg, "ZI")) {
+      has_debug_symbols = true;
+    }
+    if (arg_equals(arg, "DEBUG") || arg_equals(arg, "DEBUG:FULL") || arg_equals(arg, "Zi") ||
+        arg_equals(arg, "ZI")) {
+      has_coverage_output = true;
     }
     if (!drop_this_arg) {
       preprocess_args += arg;
     }
   }
 
+  // Should we inhibit line info in the preprocessed output?
+  const bool debug_symbols_required =
+      has_debug_symbols && (config::accuracy() >= config::cache_accuracy_t::STRICT);
+  const bool coverage_symbols_required =
+      has_coverage_output && (config::accuracy() >= config::cache_accuracy_t::DEFAULT);
+  const bool inhibit_line_info = !(debug_symbols_required || coverage_symbols_required);
+
   // Append the required arguments for producing preprocessed output.
-  preprocess_args += std::string("/EP");
+  if (inhibit_line_info) {
+    preprocess_args += std::string("/EP");
+  } else {
+    preprocess_args += std::string("/E");
+  }
 
   return preprocess_args;
 }
