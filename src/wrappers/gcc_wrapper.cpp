@@ -21,9 +21,11 @@
 
 #include <base/debug_utils.hpp>
 #include <base/unicode_utils.hpp>
+#include <config/configuration.hpp>
 #include <sys/sys_utils.hpp>
 
 #include <regex>
+#include <set>
 #include <stdexcept>
 
 namespace bcache {
@@ -34,6 +36,41 @@ const std::string HASH_VERSION = "3";
 bool is_source_file(const std::string& arg) {
   const auto ext = lower_case(file::get_extension(arg));
   return ((ext == ".cpp") || (ext == ".cc") || (ext == ".cxx") || (ext == ".c"));
+}
+
+bool has_debug_symbols(const string_list_t& args) {
+  // TODO(m): Handle more debug options (e.g. -g0, -gxcoff3, ...).
+  const std::set<std::string> debug_options = {"-g",
+                                               "-ggdb",
+                                               "-gdwarf",
+                                               "-gdwarf-2",
+                                               "-gdwarf-3",
+                                               "-gdwarf-4",
+                                               "-gdwarf-5",
+                                               "-gstabs",
+                                               "-gstabs+",
+                                               "-gxcoff",
+                                               "-gxcoff+",
+                                               "-gvms"};
+
+  for (auto arg : args) {
+    if (debug_options.find(arg) != debug_options.end()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool has_coverage_output(const string_list_t& args) {
+  const std::set<std::string> coverage_options = {
+      "-ftest-coverage", "-fprofile-arcs", "--coverage"};
+
+  for (auto arg : args) {
+    if (coverage_options.find(arg) != coverage_options.end()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 string_list_t make_preprocessor_cmd(const string_list_t& args,
@@ -57,9 +94,18 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
     }
   }
 
+  // Should we inhibit line info in the preprocessed output?
+  const bool debug_symbols_required =
+      has_debug_symbols(args) && (config::accuracy() >= config::cache_accuracy_t::STRICT);
+  const bool coverage_symbols_required =
+      has_coverage_output(args) && (config::accuracy() >= config::cache_accuracy_t::DEFAULT);
+  const bool inhibit_line_info = !(debug_symbols_required || coverage_symbols_required);
+
   // Append the required arguments for producing preprocessed output.
   preprocess_args += std::string("-E");
-  preprocess_args += std::string("-P");
+  if (inhibit_line_info) {
+    preprocess_args += std::string("-P");
+  }
   preprocess_args += std::string("-o");
   preprocess_args += preprocessed_file;
 

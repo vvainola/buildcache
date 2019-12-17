@@ -53,6 +53,7 @@ bool s_hard_links = false;
 bool s_compress = false;
 bool s_perf = false;
 bool s_disable = false;
+config::cache_accuracy_t s_accuracy = config::cache_accuracy_t::DEFAULT;
 
 std::string to_lower(const std::string& str) {
   std::string str_lower(str.size(), ' ');
@@ -118,6 +119,17 @@ std::string get_dir() {
 
 std::string get_config_file(const std::string& dir) {
   return file::append_path(dir, CONFIGURATION_FILE_NAME);
+}
+
+config::cache_accuracy_t to_cache_accuracy(const std::string& str) {
+  const auto s = to_lower(str);
+  if (s == "strict") {
+    return config::cache_accuracy_t::STRICT;
+  } else if (s == "sloppy") {
+    return config::cache_accuracy_t::SLOPPY;
+  } else {
+    return config::cache_accuracy_t::DEFAULT;
+  }
 }
 
 void load_from_file(const std::string& file_name) {
@@ -256,11 +268,32 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
+  // Get "accuracy".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "accuracy");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_accuracy = to_cache_accuracy(std::string(node->valuestring));
+    }
+  }
+
   cJSON_Delete(root);
 }
 }  // namespace
 
 namespace config {
+std::string to_string(const cache_accuracy_t accuracy) {
+  switch (accuracy) {
+    case cache_accuracy_t::STRICT:
+      return "STRICT";
+    case cache_accuracy_t::DEFAULT:
+      return "DEFAULT";
+    case cache_accuracy_t::SLOPPY:
+      return "SLOPPY";
+    default:
+      return "?";
+  }
+}
+
 void init() {
   // Guard: Only initialize once.
   static bool s_initialized = false;
@@ -413,6 +446,14 @@ void init() {
         s_disable = disable_env.as_bool();
       }
     }
+
+    // Get the cache accuracy from the environment.
+    {
+      const env_var_t accuracy_env("BUILDCACHE_ACCURACY");
+      if (accuracy_env) {
+        s_accuracy = to_cache_accuracy(accuracy_env.as_string());
+      }
+    }
   } catch (...) {
     // If we could not initialize the configuration, we can't proceed. We need to disable the cache.
     s_disable = true;
@@ -483,5 +524,11 @@ bool perf() {
 bool disable() {
   return s_disable;
 }
+
+cache_accuracy_t accuracy()
+{
+  return s_accuracy;
+}
+
 }  // namespace config
 }  // namespace bcache
