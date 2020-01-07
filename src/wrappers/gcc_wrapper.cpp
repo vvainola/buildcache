@@ -246,12 +246,13 @@ std::map<std::string, std::string> gcc_wrapper_t::get_build_files() {
       }
       files["object"] = m_args[next_idx];
       found_object_file = true;
-    } else if (m_args[i] == "-ftest-coverage") {
-      throw std::runtime_error("Code coverage data is currently not supported.");
     }
   }
   if (!found_object_file) {
     throw std::runtime_error("Unable to get the target object file.");
+  }
+  if (has_coverage_output(m_args)) {
+    files["coverage"] = file::change_extension(files["object"], ".gcno");
   }
   return files;
 }
