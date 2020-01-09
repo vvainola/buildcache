@@ -22,8 +22,11 @@ It is similar in spirit to [ccache](https://ccache.samba.org/), [sccache](https:
 
 ## Status
 
-**NOTE:** BuildCache is still in early development and should not be considered
-ready for production projects yet!
+BuildCache has been used daily in production environments for years with near
+zero issues (any problem that has emereged has of course been fixed), which
+gives it a good track record.
+
+With that said, BuildCache is still considered to be under development.
 
 ## Building
 
