@@ -49,18 +49,26 @@ bool arg_equals(const std::string& str, const std::string& sub_str) {
   return is_flag && ((str.size() >= (size + 1)) && (str.substr(1) == sub_str));
 }
 
+// Apparently some cl.exe arguments can be specified with an optional colon separator (e.g.
+// both "/Fooutput.obj" and "/Fo:output.obj" are valid).
+std::string drop_leading_colon(const std::string& s) {
+  if (s.length() > 0 && s[0] == ':') {
+    return s.substr(1);
+  } else {
+    return s;
+  }
+}
+
 string_list_t make_preprocessor_cmd(const string_list_t& args) {
   string_list_t preprocess_args;
 
   // Drop arguments that we do not want/need, and check if the build will produce debug/coverage
   // info.
-  bool drop_next_arg = false;
   bool has_debug_symbols = false;
   bool has_coverage_output = false;
   for (auto it = args.begin(); it != args.end(); ++it) {
     auto arg = *it;
-    auto drop_this_arg = drop_next_arg;
-    drop_next_arg = false;
+    bool drop_this_arg = false;
     if (arg_equals(arg, "c") || arg_starts_with(arg, "Fo") || arg_equals(arg, "C") ||
         arg_equals(arg, "E") || arg_equals(arg, "EP")) {
       drop_this_arg = true;
@@ -207,7 +215,7 @@ std::map<std::string, std::string> msvc_wrapper_t::get_build_files() {
       if (found_object_file) {
         throw std::runtime_error("Only a single target object file can be specified.");
       }
-      files["object"] = arg.substr(3);
+      files["object"] = drop_leading_colon(arg.substr(3));
       found_object_file = true;
     }
   }
