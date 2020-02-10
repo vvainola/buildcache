@@ -46,6 +46,9 @@ public:
   /// @brief Show cache statistics (print to standard out).
   void show_stats();
 
+  /// @brief Clear the cache statistics.
+  void zero_stats();
+
   /// @brief Add a set of files to the cache
   /// @param hash The cache entry identifier.
   /// @param entry The cache entry data (files, stdout, etc).
