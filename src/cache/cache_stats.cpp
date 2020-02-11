@@ -48,7 +48,6 @@ using JSONPtr = std::unique_ptr<cJSON, JSON_Deleter>;
 
 bool cache_stats_t::from_file(const std::string& path) noexcept {
   if (!file::file_exists(path)) {
-    m_reliable = false;
     return false;
   }
   JSONPtr ptr;
@@ -63,36 +62,25 @@ bool cache_stats_t::from_file(const std::string& path) noexcept {
 
 bool cache_stats_t::from_json(cJSON const* obj) noexcept {
   if (!obj) {
-    m_reliable = false;
     return false;
   }
-  bool reliable = true;
   auto* node = cJSON_GetObjectItemCaseSensitive(obj, LOCAL_HIT_COUNT);
   if (node && cJSON_IsNumber(node)) {
     m_local_hit_count = node->valueint;
-  } else {
-    reliable = false;
   }
   node = cJSON_GetObjectItemCaseSensitive(obj, LOCAL_MISS_COUNT);
   if (node && cJSON_IsNumber(node)) {
     m_local_miss_count = node->valueint;
-  } else {
-    reliable = false;
   }
   node = cJSON_GetObjectItemCaseSensitive(obj, REMOTE_HIT_COUNT);
   if (node && cJSON_IsNumber(node)) {
     m_remote_hit_count = node->valueint;
-  } else {
-    reliable = false;
   }
   node = cJSON_GetObjectItemCaseSensitive(obj, REMOTE_MISS_COUNT);
   if (node && cJSON_IsNumber(node)) {
     m_remote_miss_count = node->valueint;
-  } else {
-    reliable = false;
   }
-  m_reliable = reliable;
-  return reliable;
+  return true;
 }
 
 bool cache_stats_t::to_json(cJSON* obj) const noexcept {
@@ -163,15 +151,14 @@ bool cache_stats_t::to_file(const std::string& path) const noexcept {
 }
 
 void cache_stats_t::dump(std::ostream& os, const std::string& prefix) const {
-  const std::string suffix = m_reliable ? std::string("") : std::string(" (unreliable)");
-  os << prefix << "Local hits:        " << m_local_hit_count << suffix << std::endl;
-  os << prefix << "Local misses:      " << m_local_miss_count << suffix << std::endl;
-  os << prefix << "Remote hits:       " << m_remote_hit_count << suffix << std::endl;
-  os << prefix << "Remote misses:     " << m_remote_miss_count << suffix << std::endl;
-  os << prefix << "Misses:            " << global_miss_count() << suffix << std::endl;
-  os << prefix << "Local hit ratio:   " << local_hit_ratio() << '%' << suffix << std::endl;
-  os << prefix << "Remote hit ratio:  " << remote_hit_ratio() << '%' << suffix << std::endl;
-  os << prefix << "Hit ratio:         " << global_hit_ratio() << '%' << suffix << std::endl;
+  os << prefix << "Local hits:        " << m_local_hit_count << std::endl;
+  os << prefix << "Local misses:      " << m_local_miss_count << std::endl;
+  os << prefix << "Remote hits:       " << m_remote_hit_count << std::endl;
+  os << prefix << "Remote misses:     " << m_remote_miss_count << std::endl;
+  os << prefix << "Misses:            " << global_miss_count() << std::endl;
+  os << prefix << "Local hit ratio:   " << local_hit_ratio() << '%' << std::endl;
+  os << prefix << "Remote hit ratio:  " << remote_hit_ratio() << '%' << std::endl;
+  os << prefix << "Hit ratio:         " << global_hit_ratio() << '%' << std::endl;
 }
 
 }  // namespace bcache

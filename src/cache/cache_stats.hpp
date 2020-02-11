@@ -31,7 +31,6 @@ class cache_stats_t {
   int m_local_hit_count{0};
   int m_remote_hit_count{0};
   int m_remote_miss_count{0};
-  bool m_reliable{true};
 
 public:
   bool from_file(const std::string& path) noexcept;
@@ -42,7 +41,6 @@ public:
   cache_stats_t& operator+=(const cache_stats_t& other) noexcept {
     m_local_hit_count += other.m_local_hit_count;
     m_local_miss_count += other.m_local_miss_count;
-    m_reliable &= other.m_reliable;
     m_remote_hit_count += other.m_remote_hit_count;
     m_remote_miss_count += other.m_remote_miss_count;
     return *this;
@@ -125,9 +123,6 @@ public:
   int remote_miss_count() const {
     return m_remote_miss_count;
   }
-  bool reliable() const {
-    return m_reliable;
-  }
   void set_local_hit_count(int value) {
     m_local_hit_count = value;
   }
@@ -139,9 +134,6 @@ public:
   }
   void set_remote_miss_value(int value) {
     m_remote_miss_count = value;
-  }
-  void set_reliable(bool value) {
-    m_reliable = value;
   }
 };
 

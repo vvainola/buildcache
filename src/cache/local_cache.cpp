@@ -194,7 +194,6 @@ void local_cache_t::show_stats() {
     cache_stats_t stats;
     file::lock_file_t lock{stats_path + LOCK_FILE_SUFFIX};
     if (!lock.has_lock()) {
-      overall_stats.set_reliable(false);
       debug::log(debug::DEBUG) << "failed to lock stats, skipping";
       return;
     }
@@ -202,7 +201,6 @@ void local_cache_t::show_stats() {
       overall_stats += stats;
     } else {
       debug::log(debug::DEBUG) << "failed to load stats for dir " << firstLevelDirPath;
-      overall_stats.set_reliable(false);
     }
   };
 
@@ -336,21 +334,17 @@ bool local_cache_t::update_stats(const hasher_t::hash_t& hash, const cache_stats
     const auto stats_file_path = file::append_path(cache_subdir, STATS_FILE_NAME);
     file::lock_file_t lock(stats_file_path + LOCK_FILE_SUFFIX);
     if (!lock.has_lock()) {
-      debug::log(debug::INFO) << "failed to lock stats, skipping update";
+      debug::log(debug::INFO) << "Failed to lock stats, skipping update";
       return false;
     }
 
     cache_stats_t stats;
-    if (file::file_exists(stats_file_path)) {
-      stats.from_file(stats_file_path);
-    }
-    if (!stats.reliable()) {
-      debug::log(debug::DEBUG) << "failed to parse stats object for dir " << cache_subdir;
-      return false;
+    if (!stats.from_file(stats_file_path)) {
+      debug::log(debug::DEBUG) << "Failed to parse stats object for dir " << cache_subdir;
     }
     stats += delta;
     if (!stats.to_file(stats_file_path)) {
-      debug::log(debug::DEBUG) << "failed to save stats object for dir " << cache_subdir;
+      debug::log(debug::INFO) << "Failed to save stats object for dir " << cache_subdir;
       return false;
     }
     return true;
