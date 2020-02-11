@@ -157,10 +157,7 @@ void local_cache_t::clear() {
 
   // Remove all cache entries.
   auto dirs = get_cache_entry_dirs(config::dir());
-  std::set<std::string> first_level_dirs;
-
   for (const auto& dir : dirs) {
-    first_level_dirs.insert(file::get_dir_part(dir.path()));
     try {
       // We acquire an exclusive lock for the cache entry before deleting it.
       file::lock_file_t lock(cache_entry_lock_file_path(dir.path()));
@@ -171,17 +168,9 @@ void local_cache_t::clear() {
       debug::log(debug::DEBUG) << "Failed: " << e.what();
     }
   }
-  for (const auto& dir : first_level_dirs) {
-    try {
-      const auto stats_path = file::append_path(dir, STATS_FILE_NAME);
-      file::lock_file_t lock{stats_path + LOCK_FILE_SUFFIX};
-      if (lock.has_lock()) {
-        file::remove_file(stats_path);
-      }
-    } catch (const std::exception& e) {
-      debug::log(debug::DEBUG) << "Failed to remove stats file: " << e.what();
-    }
-  }
+
+  // Clear the stats too.
+  zero_stats();
 
   const auto stop_t = std::chrono::high_resolution_clock::now();
   const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
@@ -205,7 +194,6 @@ void local_cache_t::show_stats() {
     cache_stats_t stats;
     file::lock_file_t lock{stats_path + LOCK_FILE_SUFFIX};
     if (!lock.has_lock()) {
-      overall_stats.set_reliable(false);
       debug::log(debug::DEBUG) << "failed to lock stats, skipping";
       return;
     }
@@ -213,7 +201,6 @@ void local_cache_t::show_stats() {
       overall_stats += stats;
     } else {
       debug::log(debug::DEBUG) << "failed to load stats for dir " << firstLevelDirPath;
-      overall_stats.set_reliable(false);
     }
   };
 
@@ -234,6 +221,28 @@ void local_cache_t::show_stats() {
             << full_percentage << "%)\n";
   overall_stats.dump(std::cout, "  ");
   std::cout.copyfmt(old_fmt);
+}
+
+void local_cache_t::zero_stats() {
+  // Get all first level dirs (each of which may contain a stats file).
+  auto dirs = get_cache_entry_dirs(config::dir());
+  std::set<std::string> first_level_dirs;
+  for (const auto& dir : dirs) {
+    first_level_dirs.insert(file::get_dir_part(dir.path()));
+  }
+
+  // Remove all the stats files.
+  for (const auto& dir : first_level_dirs) {
+    try {
+      const auto stats_path = file::append_path(dir, STATS_FILE_NAME);
+      file::lock_file_t lock{stats_path + LOCK_FILE_SUFFIX};
+      if (lock.has_lock()) {
+        file::remove_file(stats_path);
+      }
+    } catch (const std::exception& e) {
+      debug::log(debug::DEBUG) << "Failed to remove stats file: " << e.what();
+    }
+  }
 }
 
 void local_cache_t::add(const hasher_t::hash_t& hash,
@@ -325,21 +334,17 @@ bool local_cache_t::update_stats(const hasher_t::hash_t& hash, const cache_stats
     const auto stats_file_path = file::append_path(cache_subdir, STATS_FILE_NAME);
     file::lock_file_t lock(stats_file_path + LOCK_FILE_SUFFIX);
     if (!lock.has_lock()) {
-      debug::log(debug::INFO) << "failed to lock stats, skipping update";
+      debug::log(debug::INFO) << "Failed to lock stats, skipping update";
       return false;
     }
 
     cache_stats_t stats;
-    if (file::file_exists(stats_file_path)) {
-      stats.from_file(stats_file_path);
-    }
-    if (!stats.reliable()) {
-      debug::log(debug::DEBUG) << "failed to parse stats object for dir " << cache_subdir;
-      return false;
+    if (!stats.from_file(stats_file_path)) {
+      debug::log(debug::DEBUG) << "Failed to parse stats object for dir " << cache_subdir;
     }
     stats += delta;
     if (!stats.to_file(stats_file_path)) {
-      debug::log(debug::DEBUG) << "failed to save stats object for dir " << cache_subdir;
+      debug::log(debug::INFO) << "Failed to save stats object for dir " << cache_subdir;
       return false;
     }
     return true;

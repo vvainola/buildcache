@@ -183,6 +183,21 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
   std::exit(return_code);
 }
 
+[[noreturn]] void zero_stats_and_exit() {
+  int return_code = 0;
+  try {
+    bcache::local_cache_t cache;
+    cache.zero_stats();
+  } catch (const std::exception& e) {
+    std::cerr << "*** Unexpected error: " << e.what() << "\n";
+    return_code = 1;
+  } catch (...) {
+    std::cerr << "*** Unexpected error.\n";
+    return_code = 1;
+  }
+  std::exit(return_code);
+}
+
 [[noreturn]] void print_version_and_exit() {
   // Print the BuildCache version.
   std::cout << "BuildCache version " BUILDCACHE_VERSION_STRING "\n";
@@ -338,6 +353,7 @@ void print_help(const char* program_name) {
   std::cout << "Options:\n";
   std::cout << "    -C, --clear           clear the local cache (except configuration)\n";
   std::cout << "    -s, --show-stats      show statistics summary and configuration\n";
+  std::cout << "    -z, --zero-stats      zero statistics counters\n";
   std::cout << "    -e, --edit-config     edit the configuration file\n";
   std::cout << "\n";
   std::cout << "    -h, --help            print this help text\n";
@@ -380,6 +396,8 @@ int main(int argc, const char** argv) {
     clear_cache_and_exit();
   } else if (compare_arg(arg_str, "-s", "--show-stats")) {
     show_stats_and_exit();
+  } else if (compare_arg(arg_str, "-z", "--zero-stats")) {
+    zero_stats_and_exit();
   } else if (compare_arg(arg_str, "-V", "--version")) {
     print_version_and_exit();
   } else if (compare_arg(arg_str, "-e", "--edit-config")) {
