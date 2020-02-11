@@ -63,9 +63,9 @@ matrix:
         - choco install ninja
       script:
         - mkdir out && cd out
-        - cmd.exe /C '"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64 &&
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../src &&
-          ninja'
+        - cmd.exe //C 'C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvarsall.bat' amd64 '&&'
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../src '&&'
+          ninja
         - CTEST_OUTPUT_ON_FAILURE=TRUE ninja test
         - ../test_scripts/run_lock_file_stresstest.sh
         # TODO(m): It would be nice to get this working...
