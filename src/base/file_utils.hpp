@@ -26,10 +26,10 @@
 
 namespace bcache {
 namespace file {
-/// @brief A helper class for handling temporary files.
+/// @brief A helper class for handling temporary files and directories.
 ///
 /// When the temp file object is created, a temporary file name is generated. Once the object goes
-/// out of scope, it removes the file from disk.
+/// out of scope, it removes the file or directory from disk.
 class tmp_file_t {
 public:
   /// @brief Construct a temporary file name.
@@ -37,7 +37,7 @@ public:
   /// @param extension The file name extension (including the leading dot).
   tmp_file_t(const std::string& dir, const std::string& extension);
 
-  /// @brief Remove the temporary file (if any).
+  /// @brief Remove the temporary file or directory (if any).
   ~tmp_file_t();
 
   const std::string& path() const {
@@ -244,6 +244,11 @@ void write(const std::string& data, const std::string& path);
 /// @throws runtime_error if the operation could not be completed.
 /// @note Multiple processes may append to the same file concurrently.
 void append(const std::string& data, const std::string& path);
+
+/// @brief Create a unique ID string.
+/// @returns a string that contains a unique ID.
+std::string get_unique_id();
+
 }  // namespace file
 }  // namespace bcache
 

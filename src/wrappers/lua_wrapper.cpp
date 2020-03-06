@@ -56,6 +56,14 @@ bool pop_bool(lua_State* state) {
   return (lua_toboolean(state, -1) != 0);
 }
 
+int pop_int(lua_State* state, bool keep_value_on_the_stack = false) {
+  assert_state_initialized(state);
+  if (lua_isinteger(state, -1) == 0) {
+    throw std::runtime_error("Expected an integer value on the stack.");
+  }
+  return static_cast<int>(lua_tointeger(state, -1));
+}
+
 std::string pop_string(lua_State* state, bool keep_value_on_the_stack = false) {
   assert_state_initialized(state);
   if (lua_isstring(state, -1) == 0) {
@@ -98,6 +106,26 @@ std::map<std::string, std::string> pop_map(lua_State* state, bool keep_value_on_
     const auto key = pop_string(state, true);
     result[key] = value;
   }
+  if (!keep_value_on_the_stack) {
+    lua_pop(state, 1);
+  }
+  return result;
+}
+
+sys::run_result_t pop_run_result(lua_State* state, bool keep_value_on_the_stack = false) {
+  assert_state_initialized(state);
+  if (lua_istable(state, -1) == 0) {
+    throw std::runtime_error("Expected a table on the stack.");
+  }
+
+  sys::run_result_t result;
+  lua_getfield(state, -1, "std_out");
+  result.std_out = pop_string(state);
+  lua_getfield(state, -1, "std_err");
+  result.std_err = pop_string(state);
+  lua_getfield(state, -1, "return_code");
+  result.return_code = pop_int(state);
+
   if (!keep_value_on_the_stack) {
     lua_pop(state, 1);
   }
@@ -164,12 +192,13 @@ int l_split_args(lua_State* state) {
 }
 
 int l_run(lua_State* state) {
-  // Get arguments.
-  const auto cmd = pop_string_list(state);
+  // Get arguments (in reverse order).
   auto quiet = true;
-  if (lua_gettop(state) > 0) {
-    quiet = pop_bool(state);
+  if (lua_isboolean(state, -1) != 0) {
+    quiet = (lua_toboolean(state, -1) != 0);
+    lua_pop(state, 1);
   }
+  const auto cmd = pop_string_list(state);
 
   // Call the C++ function and push the result.
   push(state, sys::run(cmd, quiet));
@@ -297,6 +326,18 @@ bool is_failed_prgmatch(const std::string& script_str, const std::string& progra
 
   return !match;
 }
+
+std::map<std::string, expected_file_t> to_expected_files_map(
+    const std::map<std::string, std::string>& files) {
+  std::map<std::string, expected_file_t> expected_files;
+  for (const auto& file : files) {
+    // Right now we simply assume that all files are required.
+    // TODO(m): Make it possible to specify files as optional in Lua.
+    expected_files[file.first] = {file.second, true};
+  }
+  return expected_files;
+}
+
 }  // namespace
 
 lua_wrapper_t::runner_t::runner_t(const std::string& script_path, const string_list_t& args)
@@ -471,11 +512,21 @@ std::string lua_wrapper_t::get_program_id() {
   }
 }
 
-std::map<std::string, std::string> lua_wrapper_t::get_build_files() {
+std::map<std::string, expected_file_t> lua_wrapper_t::get_build_files() {
   if (m_runner.call("get_build_files")) {
-    return pop_map(m_runner.state());
+    const auto files_map = pop_map(m_runner.state());
+    return to_expected_files_map(files_map);
   } else {
     return program_wrapper_t::get_build_files();
   }
 }
+
+sys::run_result_t lua_wrapper_t::run_for_miss() {
+  if (m_runner.call("run_for_miss")) {
+    return pop_run_result(m_runner.state());
+  } else {
+    return program_wrapper_t::run_for_miss();
+  }
+}
+
 }  // namespace bcache
