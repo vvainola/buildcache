@@ -37,7 +37,7 @@ enum class cache_accuracy_t {
   STRICT    ///< Be as strict as possible.
 };
 
-/// @brief The cache format.
+/// @brief The compression format.
 enum class compress_format_t {
   LZ4,     ///< Utilize LZ4 compression (faster compression, larger cache sizes)
   ZSTD,    ///< Utilize ZSTD compression (slower compression, smaller cache sizes)
@@ -49,9 +49,9 @@ enum class compress_format_t {
 /// @returns an upper case string representing the cache accuracy.
 std::string to_string(const cache_accuracy_t accuracy);
 
-/// @brief Convert a cache format enum value to a string.
-/// @param format The cache format.
-/// @returns an upper case string representing the cache format.
+/// @brief Convert a compression format enum value to a string.
+/// @param format The compression format.
+/// @returns an upper case string representing the compression format.
 std::string to_string(const compress_format_t format);
 
 /// @brief Initialize the configuration based on environment variables etc.

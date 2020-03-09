@@ -101,7 +101,7 @@ config::cache_accuracy_t to_cache_accuracy(const std::string& str) {
   }
 }
 
-config::compress_format_t to_cache_format(const std::string& str) {
+config::compress_format_t to_compress_format(const std::string& str) {
   const auto s = to_lower(str);
   if (s == "lz4") {
     return config::compress_format_t::LZ4;
@@ -264,11 +264,11 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
-  // Get "cache_format".
+  // Get "compress_format".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress_format");
     if (cJSON_IsString(node) && node->valuestring != nullptr) {
-      s_compress_format = to_cache_format(std::string(node->valuestring));
+      s_compress_format = to_compress_format(std::string(node->valuestring));
     }
   }
 
@@ -472,11 +472,11 @@ void init() {
       }
     }
 
-    // Get the cache format from the environment.
+    // Get the compression format from the environment.
     {
       const env_var_t format_env("BUILDCACHE_COMPRESS_FORMAT");
       if (format_env) {
-        s_compress_format = to_cache_format(format_env.as_string());
+        s_compress_format = to_compress_format(format_env.as_string());
       }
     }
   } catch (...) {
