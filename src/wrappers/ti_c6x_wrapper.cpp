@@ -57,11 +57,6 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
   return preprocess_args;
 }
 
-void hash_link_file(const std::string& path, hasher_t& hasher) {
-  debug::log(debug::DEBUG) << "Hashing " << path;
-  hasher.update_from_file(path);
-}
-
 void hash_link_cmd_file(const std::string& path, hasher_t& hasher) {
   // We need to parse *.cmd files, since they contain lines on the form:
   // -l"/foo/.../bar.ext". These lines are files that should be hashed (instead of hashing
@@ -74,7 +69,7 @@ void hash_link_cmd_file(const std::string& path, hasher_t& hasher) {
       if (file_name.size() > 2 && file_name[0] == '"') {
         file_name = file_name.substr(1, file_name.size() - 2);
       }
-      hash_link_file(file_name, hasher);
+      hasher.update_from_file_deterministic(file_name);
     } else {
       hasher.update(line);
     }
@@ -152,7 +147,7 @@ std::string ti_c6x_wrapper_t::preprocess_source() {
           debug::log(debug::DEBUG) << "Hashing cmd-file " << arg;
           hash_link_cmd_file(arg, hasher);
         } else {
-          hash_link_file(arg, hasher);
+          hasher.update_from_file_deterministic(arg);
         }
       }
     }

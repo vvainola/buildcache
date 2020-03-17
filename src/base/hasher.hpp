@@ -60,9 +60,16 @@ public:
   }
 
   /// @brief Update the hash with more data.
+  /// @param data Pointer to the data to hash.
+  /// @param size The number of bytes to hash.
+  void update(const void* data, const size_t size) {
+    MD4_Update(&m_ctx, data, static_cast<unsigned long>(size));
+  }
+
+  /// @brief Update the hash with more data.
   /// @param text The data to hash.
   void update(const std::string& text) {
-    MD4_Update(&m_ctx, text.data(), static_cast<unsigned long>(text.size()));
+    update(text.data(), text.size());
   }
 
   /// @brief Update the hash with more data.
@@ -74,6 +81,14 @@ public:
   /// @throws runtime_error if the operation could not be completed.
   void update_from_file(const std::string& path);
 
+  /// @brief Update the hash with more data.
+  ///
+  /// This method tries to produce a deterministic hash by employing file format specific heuristics
+  /// to exclude things like time stamps.
+  /// @param path Path to a file that contains the data to hash.
+  /// @throws runtime_error if the operation could not be completed.
+  void update_from_file_deterministic(const std::string& path);
+
   /// @brief Finalize the hash calculation.
   /// @returns the result of the hash.
   /// @note This method must only be called once.
@@ -84,6 +99,10 @@ public:
   }
 
 private:
+  /// @brief Update the hash with data from an AR archive.
+  /// @param data The raw AR data.
+  void update_from_ar_data(const std::string &data);
+
   MD4_CTX m_ctx;
 };
 
