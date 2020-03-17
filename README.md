@@ -139,8 +139,8 @@ Currently the following compilers and languages are supported:
 | Clang | C, C++ | Built-in |
 | Microsoft Visual C++ | C, C++ | Built-in |
 | Green Hills Software | C, C++ | Built-in |
+| Texas Instruments TMS320C6000™ | C, C++ | Built-in |
 | scan-build static analyzer | C, C++ | Built-in |
-| Texas Instruments TMS320C6000™ | C, C++ | Lua example |
 
 New backends are relatively easy to add, both as built-in wrappers in C++ and as Lua wrappers (see below).
 
