@@ -133,6 +133,11 @@ public:
     return result;
   }
 
+  /// @brief Remove all the elements.
+  void clear() {
+    m_args.clear();
+  }
+
   std::string& operator[](const size_t idx) {
     return m_args[idx];
   }

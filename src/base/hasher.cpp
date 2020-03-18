@@ -21,7 +21,17 @@
 
 #include <base/file_utils.hpp>
 
+#include <algorithm>
+#include <stdexcept>
+
 namespace bcache {
+namespace {
+bool is_ar_data(const std::string& data) {
+  const char AR_SIGNATURE[] = {0x21, 0x3c, 0x61, 0x72, 0x63, 0x68, 0x3e, 0x0a};
+  return (data.size() >= 8 && std::equal(data.cbegin(), data.cbegin() + 8, &AR_SIGNATURE[0]));
+}
+}  // namespace
+
 const std::string hasher_t::hash_t::as_string() const {
   static const char digits[17] = "0123456789abcdef";
   std::string result(SIZE * 2, '0');
@@ -47,4 +57,45 @@ void hasher_t::update_from_file(const std::string& path) {
   const auto file_data = file::read(path);
   update(file_data);
 }
+
+
+void hasher_t::update_from_file_deterministic(const std::string& path) {
+  const auto file_data = file::read(path);
+  if (is_ar_data(file_data)) {
+    update_from_ar_data(file_data);
+  } else {
+    update(file_data);
+  }
+}
+
+void hasher_t::update_from_ar_data(const std::string& data) {
+  try {
+    size_t pos = 8;
+    while (pos < data.size()) {
+      if ((pos + 60) > data.size()) {
+        throw std::runtime_error("Invalid AR file header.");
+      }
+
+      // Hash all parts of the header except the timestamp.
+      // See: https://en.wikipedia.org/wiki/Ar_(Unix)#File_header
+      update(&data[pos], 16);
+      update(&data[pos + 28], 32);
+
+      // Hash the file data.
+      const auto file_size = std::stoll(data.substr(pos + 48, 10));
+      if (file_size < 0 || (pos + static_cast<size_t>(file_size)) > data.size()) {
+        throw std::runtime_error("Invalid file size.");
+      }
+      update(&data[pos + 60], file_size);
+
+      // Skip to the next file header.
+      // Note: File data is padded to an even number of bytes.
+      pos += 60 + file_size + (file_size & 1);
+    }
+  } catch (const std::exception& e) {
+    throw std::runtime_error(std::string("Unable to parse an AR format file: ") +
+                             std::string(e.what()));
+  }
+}
+
 }  // namespace bcache

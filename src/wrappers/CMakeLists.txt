@@ -30,5 +30,7 @@ add_library(wrappers
   msvc_wrapper.hpp
   program_wrapper.cpp
   program_wrapper.hpp
+  ti_c6x_wrapper.cpp
+  ti_c6x_wrapper.hpp
   )
 target_link_libraries(wrappers base config sys cache lua)

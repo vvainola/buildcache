@@ -1,7 +1,8 @@
 -- match(.*cl6x.*)
 
 -------------------------------------------------------------------------------
--- This is a wrapper for the TI C6000 DSP compiler.
+-- This is a Lua re-implementation of the TI C6000 DSP compiler wrapper,
+-- ti_c6x_wrapper_t.
 -------------------------------------------------------------------------------
 
 require_std("io")
