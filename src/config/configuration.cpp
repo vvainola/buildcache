@@ -51,6 +51,7 @@ int64_t s_max_remote_entry_size = DEFAULT_MAX_REMOTE_ENTRY_SIZE;
 int32_t s_debug = -1;
 std::string s_log_file;
 bool s_hard_links = false;
+bool s_cache_link_commands = false;
 bool s_compress = false;
 int32_t s_compress_level = -1;
 bool s_perf = false;
@@ -221,6 +222,14 @@ void load_from_file(const std::string& file_name) {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "hard_links");
     if (cJSON_IsBool(node)) {
       s_hard_links = cJSON_IsTrue(node);
+    }
+  }
+
+  // Get "cache_link_commands".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "cache_link_commands");
+    if (cJSON_IsBool(node)) {
+      s_cache_link_commands = cJSON_IsTrue(node);
     }
   }
 
@@ -432,6 +441,14 @@ void init() {
       }
     }
 
+    // Get the cache_link_commands flag from the environment.
+    {
+      const env_var_t cache_link_commands_env("BUILDCACHE_CACHE_LINK_COMMANDS");
+      if (cache_link_commands_env) {
+        s_cache_link_commands = cache_link_commands_env.as_bool();
+      }
+    }
+
     // Get the compress flag from the environment.
     {
       const env_var_t compress_env("BUILDCACHE_COMPRESS");
@@ -536,6 +553,10 @@ const std::string& log_file() {
 
 bool hard_links() {
   return s_hard_links;
+}
+
+bool cache_link_commands() {
+  return s_cache_link_commands;
 }
 
 bool compress() {

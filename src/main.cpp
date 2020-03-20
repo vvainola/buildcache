@@ -173,6 +173,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
       std::cout << "  BUILDCACHE_LOG_FILE:               " << bcache::config::log_file() << "\n";
       std::cout << "  BUILDCACHE_HARD_LINKS:             "
                 << (bcache::config::hard_links() ? "true" : "false") << "\n";
+      std::cout << "  BUILDCACHE_CACHE_LINK_COMMANDS:    "
+                << (bcache::config::cache_link_commands() ? "true" : "false") << "\n";
       std::cout << "  BUILDCACHE_COMPRESS:               "
                 << (bcache::config::compress() ? "true" : "false") << "\n";
       std::cout << "  BUILDCACHE_COMPRESS_FORMAT:        "

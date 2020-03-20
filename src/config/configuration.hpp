@@ -96,6 +96,9 @@ const std::string& log_file();
 /// @returns true if BuildCache should use hard links when possible.
 bool hard_links();
 
+/// @returns true if BuildCache should cache link commands.
+bool cache_link_commands();
+
 /// @returns true if BuildCache should compress data in the cache.
 bool compress();
 
