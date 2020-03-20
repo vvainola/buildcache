@@ -23,6 +23,8 @@
 #include <base/file_utils.hpp>
 #include <base/unicode_utils.hpp>
 
+#include <algorithm>
+#include <list>
 #include <stdexcept>
 
 namespace bcache {
@@ -41,10 +43,23 @@ ghs_wrapper_t::ghs_wrapper_t(const string_list_t& args) : gcc_wrapper_t(args) {
 
 bool ghs_wrapper_t::can_handle_command() {
   // Is this the right compiler?
+
+  static const std::list<std::string> supported = {"ccarm",
+                                                   "ccintarm",
+                                                   "cxarm",
+                                                   "cxintarm",
+                                                   "ccthumb",
+                                                   "cxthumb",
+                                                   "ccrh850",
+                                                   "ccintrh850",
+                                                   "cxrh850",
+                                                   "cxintrh850"};
+
   const auto cmd = lower_case(file::get_file_part(m_args[0], false));
-  return (cmd.find("ccarm") != std::string::npos) || (cmd.find("cxarm") != std::string::npos) ||
-         (cmd.find("ccthumb") != std::string::npos) || (cmd.find("cxthumb") != std::string::npos) ||
-         (cmd.find("ccintarm") != std::string::npos) || (cmd.find("cxintarm") != std::string::npos);
+
+  return std::find_if(supported.begin(), supported.end(), [&cmd](const std::string& s) {
+           return cmd.find(s) != std::string::npos;
+         }) != supported.end();
 }
 
 string_list_t ghs_wrapper_t::get_relevant_arguments() {
