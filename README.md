@@ -169,6 +169,16 @@ separated on Windows), and then continues searching in `$BUILDCACHE_DIR/lua`.
 If no matching script file was found, BuildCache falls back to the built in
 compiler wrappers (as listed above).
 
+The first line of a Lua based program wrapper script must be a Lua comment with
+a special "match"-statement that specifies a regex that matches the name of the
+program that is to be wrapped, e.g:
+
+```Lua
+-- match(gcc.*)
+```
+
+More detailed checks can be done in the optional `can_handle_command` method.
+
 **Note:** To use Lua standard libraries (`coroutine`, `debug`, `io`, `math`,
 `os`, `package`, `string`, `table` or `utf8`), you must first load them by
 calling `require_std(name)`. For convenience it is possible to load all standard

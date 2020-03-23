@@ -20,6 +20,7 @@
 #ifndef BUILDCACHE_LUA_WRAPPER_HPP_
 #define BUILDCACHE_LUA_WRAPPER_HPP_
 
+#include <base/env_utils.hpp>
 #include <wrappers/program_wrapper.hpp>
 
 extern "C" {
@@ -62,6 +63,7 @@ private:
     lua_State* m_state = nullptr;
     const std::string m_script_path;
     const string_list_t m_args;
+    scoped_set_env_t m_lua_path_env;
     std::string m_script;
   };
 
