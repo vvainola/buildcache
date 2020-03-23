@@ -3,7 +3,9 @@
 This is a simple compiler accelerator that caches and reuses build results to
 avoid unnecessary re-compilations, and thereby speeding up the build process.
 
-It is similar in spirit to [ccache](https://ccache.samba.org/), [sccache](https://github.com/mozilla/sccache) and [clcache](https://github.com/frerich/clcache).
+It is similar in spirit to [ccache](https://ccache.samba.org/),
+[sccache](https://github.com/mozilla/sccache) and
+[clcache](https://github.com/frerich/clcache).
 
 ## Features
 
@@ -15,10 +17,14 @@ It is similar in spirit to [ccache](https://ccache.samba.org/), [sccache](https:
 * A modular compiler support system:
   * Built-in support for [popular compilers](#supported-compilers-and-languages).
   * Extensible via custom [Lua](https://www.lua.org/) scripts.
-  * In addition to caching compilation results, BuildCache can be used for caching almost any reproducible program artifacts (e.g. test results, [rendered images](https://en.wikipedia.org/wiki/Rendering_(computer_graphics)), etc).
+  * In addition to caching compilation results, BuildCache can be used for
+    caching almost any reproducible program artifacts (e.g. test results,
+    [rendered images](https://en.wikipedia.org/wiki/Rendering_(computer_graphics)),
+    etc).
 * A fast local file system cache.
 * Can optionally use a remote, shared server as a second level cache.
-* Optional compression with [LZ4](https://github.com/lz4/lz4) or [ZSTD](https://github.com/facebook/zstd) (almost negligable overhead).
+* Optional compression with [LZ4](https://github.com/lz4/lz4) or
+  [ZSTD](https://github.com/facebook/zstd) (almost negligable overhead).
 
 ## Status
 
@@ -40,7 +46,8 @@ $ cmake -DCMAKE_BUILD_TYPE=Release ../src
 $ cmake --build .
 ```
 
-Note: For S3 support on non-macOS/Windows systems you need OpenSSL (e.g. install `libssl-dev` on Ubuntu before running CMake).
+Note: For S3 support on non-macOS/Windows systems you need OpenSSL (e.g. install
+`libssl-dev` on Ubuntu before running CMake).
 
 ## Usage
 
@@ -62,7 +69,9 @@ if(buildcache_program)
 endif()
 ```
 
-Another alternative is to create symbolic links that redirect invokations of your favourite compiler to go via BuildCache instead. For instance, if `$HOME/bin` is early in your PATH, you can do the following:
+Another alternative is to create symbolic links that redirect invokations of
+your favourite compiler to go via BuildCache instead. For instance, if
+`$HOME/bin` is early in your PATH, you can do the following:
 
 ```bash
 $ ln -s /path/to/buildcache $HOME/bin/cc
@@ -72,7 +81,8 @@ $ ln -s /path/to/buildcache $HOME/bin/g++
 …
 ```
 
-You can check that it works by invoking the compiler with BuildCache debugging enabled:
+You can check that it works by invoking the compiler with BuildCache debugging
+enabled:
 
 ```bash
 $ BUILDCACHE_DEBUG=1 gcc
@@ -117,7 +127,9 @@ that is often provided by [object storage](https://en.wikipedia.org/wiki/Object_
 solutions. [Amazon AWS](https://aws.amazon.com/) is one such service. An open
 source alternative is [MinIO](https://min.io/).
 
-Compared to a Redis cache, an S3 object store usually has a higher capacity and a slightly higher performance overhead. Thus it is better suited for larger build artifacts.
+Compared to a Redis cache, an S3 object store usually has a higher capacity and
+a slightly higher performance overhead. Thus it is better suited for larger
+build artifacts.
 
 When using an S3 remote, you also need to define `BUILDCACHE_S3_ACCESS` and
 `BUILDCACHE_S3_SECRET`. You will also need to create a bucket for BuildCache
@@ -142,7 +154,8 @@ Currently the following compilers and languages are supported:
 | Texas Instruments TMS320C6000™ | C, C++ | Built-in |
 | scan-build static analyzer | C, C++ | Built-in |
 
-New backends are relatively easy to add, both as built-in wrappers in C++ and as Lua wrappers (see below).
+New backends are relatively easy to add, both as built-in wrappers in C++ and as
+Lua wrappers (see below).
 
 ## Using custom Lua plugins
 
@@ -181,7 +194,11 @@ documentation):
 | get_build_files () | A table of build result files | An empty table |
 | run_for_miss () | A `sys::run_result_t` compatible table | *See note\** |
 
-\*: `run_for_miss`, when defined, shall run the actual command (as specified by `ARGS`) if a cache miss occurs. The return value shall be a table consisting of `std_out`, `std_err` and `return_code` (see [sys::run_result_t](src/sys/sys_utils.hpp)). The default implementation is equivalent to `bcache.run(ARGS, false)`.
+\*: `run_for_miss`, when defined, shall run the actual command (as specified by
+`ARGS`) if a cache miss occurs. The return value shall be a table consisting of
+`std_out`, `std_err` and `return_code` (see
+[sys::run_result_t](src/sys/sys_utils.hpp)). The default implementation is
+equivalent to `bcache.run(ARGS, false)`.
 
 ## Configuration options
 
@@ -206,12 +223,16 @@ The following options control the behavior of BuildCache:
 | `BUILDCACHE_MAX_LOCAL_ENTRY_SIZE` | `max_local_entry_size` | Local cache entry size limit in bytes (uncompressed) | 134217728 |
 | `BUILDCACHE_MAX_REMOTE_ENTRY_SIZE` | `max_remote_entry_size` | Remote cache entry size limit in bytes (uncompressed) | 134217728 |
 | `BUILDCACHE_HARD_LINKS` | `hard_links` | Allow the use of hard links when caching | false |
+| `BUILDCACHE_CACHE_LINK_COMMANDS` | `cache_link_commands` | Enable caching of link commands | false |
 | `BUILDCACHE_COMPRESS` | `compress` | Allow the use of compression when caching (overrides hard links) | false |
 | `BUILDCACHE_COMPRESS_FORMAT` | `compress_format` | Cache compresion format (see below) | DEFAULT |
 | `BUILDCACHE_COMPRESS_LEVEL` | `compress_level` | Cache compresion level (see below) | -1 |
 | `BUILDCACHE_PERF` | `perf` | Enable performance logging | false |
 | `BUILDCACHE_DISABLE` | `disable` | Disable caching (bypass BuildCache) | false |
 | `BUILDCACHE_ACCURACY` | `accuracy` | Caching accuracy (see below) | DEFAULT |
+
+Note: Currently, only the TI C6x back end supports the `cache_link_commands`
+option.
 
 An example configuration file:
 
@@ -238,7 +259,8 @@ $ buildcache -s
 ## Debugging
 
 To get debug output from a BuildCache run, set the environment variable
-`BUILDCACHE_DEBUG` to the desired debug level (debug output is disabled by default):
+`BUILDCACHE_DEBUG` to the desired debug level (debug output is disabled by
+default):
 
 | BUILDCACHE_DEBUG | Level | Comment              |
 | ---------------- | ----- | -------------------- |
@@ -259,9 +281,9 @@ It is also possible to redirect the log output to a file using the
 
 ## Caching accuracy
 
-With the caching accuracy setting, `BUILDCACHE_ACCURACY`, it is possible to control
-how strict BuildCache is when checking for cache hits. This gives an opportunity to
-trade correctness for performance.
+With the caching accuracy setting, `BUILDCACHE_ACCURACY`, it is possible to
+control how strict BuildCache is when checking for cache hits. This gives an
+opportunity to trade correctness for performance.
 
 | BUILDCACHE_ACCURACY | Comment                                       |
 | ------------------- | --------------------------------------------- |
@@ -273,28 +295,41 @@ The default accuracy mode is `DEFAULT`.
 
 ### STRICT
 
-In `STRICT` accuracy mode, the cache lookup will consider absolute file paths and line numbers whenever debugging symbols or coverage info is generated. This means that when your build includes debugging symbols or coverage info, you will get a cache miss if the absolute file path or any line number has changed.
+In `STRICT` accuracy mode, the cache lookup will consider absolute file paths
+and line numbers whenever debugging symbols or coverage info is generated. This
+means that when your build includes debugging symbols or coverage info, you will
+get a cache miss if the absolute file path or any line number has changed.
 
-This mode is suitable if you intend to use the final executable for running code coverage tests or for debugging. The downside is that you may often get cache misses, especially in a shared centralized cache that contains objects from different machines with different build paths.
+This mode is suitable if you intend to use the final executable for running code
+coverage tests or for debugging. The downside is that you may often get cache
+misses, especially in a shared centralized cache that contains objects from
+different machines with different build paths.
 
 ### DEFAULT
 
-The `DEFAULT` mode is similar to the `STRICT` mode, except that it will ignore file path and line number information for debug builds.
+The `DEFAULT` mode is similar to the `STRICT` mode, except that it will ignore
+file path and line number information for debug builds.
 
-Note that in many situations it is still possible to use the generated executables for debugging. For instance, with GDB you can [specify a custom source code path](https://sourceware.org/gdb/current/onlinedocs/gdb/Source-Path.html) during a debugging session.
+Note that in many situations it is still possible to use the generated
+executables for debugging. For instance, with GDB you can
+[specify a custom source code path](https://sourceware.org/gdb/current/onlinedocs/gdb/Source-Path.html)
+during a debugging session.
 
 Binaries built with this mode can be used for code coverage generation.
 
 ### SLOPPY
 
-With the `SLOPPY` mode, absolute file paths and line number information are always ignored during cache lookup, which improves cache hit ratio. The downside is that you may not be able to use the binaries for code coverage.
+With the `SLOPPY` mode, absolute file paths and line number information are
+always ignored during cache lookup, which improves cache hit ratio. The downside
+is that you may not be able to use the binaries for code coverage.
 
 ## Cache compression format
 
-With the cache compression format setting, `BUILDCACHE_COMPRESS_FORMAT`, it is possible to
-control how the generated caches are compressed.
+With the cache compression format setting, `BUILDCACHE_COMPRESS_FORMAT`, it is
+possible to control how the generated caches are compressed.
 
-Note: The "compress" setting must be set to true in order to utilize this setting.
+Note: The "compress" setting must be set to true in order to utilize this
+setting.
 
 | BUILDCACHE_COMPRESS_FORMAT   | Comment                                                            |
 | ---------------------------- | ------------------------------------------------------------------ |
@@ -306,10 +341,13 @@ The default compression format is `DEFAULT`.
 
 ## Cache compression level
 
-With the cache compression level setting, `BUILDCACHE_COMPRESS_LEVEL`, it is possible to
-control the effort exerted by the compressor in order to produce smaller cache files. See the
-documentation of your chosen compressor for more information.
+With the cache compression level setting, `BUILDCACHE_COMPRESS_LEVEL`, it is
+possible to control the effort exerted by the compressor in order to produce
+smaller cache files. See the documentation of your chosen compressor for more
+information.
 
-The default compression level is -1, which will utilize the default compression level for the compressor.
+The default compression level is -1, which will utilize the default compression
+level for the compressor.
 
-Note: The "compress" setting must be set to true in order to utilize this setting.
+Note: The "compress" setting must be set to true in order to utilize this
+setting.

@@ -22,6 +22,7 @@
 #include <base/debug_utils.hpp>
 #include <base/file_utils.hpp>
 #include <base/unicode_utils.hpp>
+#include <config/configuration.hpp>
 
 #include <algorithm>
 #include <regex>
@@ -118,6 +119,9 @@ std::string ti_c6x_wrapper_t::preprocess_source() {
     if (arg == "--compile_only") {
       is_object_compilation = true;
     } else if (arg == "--run_linker") {
+      if (!bcache::config::cache_link_commands()) {
+        throw std::runtime_error("Caching link commands is disabled.");
+      }
       is_link = true;
     } else if (starts_with(arg, "--output_file=")) {
       has_output_file = true;
