@@ -21,6 +21,7 @@
 
 #include <base/debug_utils.hpp>
 #include <base/file_utils.hpp>
+#include <config/configuration.hpp>
 #include <sys/perf_utils.hpp>
 #include <sys/sys_utils.hpp>
 
@@ -341,10 +342,26 @@ std::map<std::string, expected_file_t> to_expected_files_map(
   return expected_files;
 }
 
+std::string make_lua_path() {
+  // Construct a LUA_PATH compatible string that includes the BuildCache Lua paths. This way it
+  // is possible to "require" modules from the BuildCache Lua path.
+  string_list_t lua_paths;
+  for (const auto& path : config::lua_paths()) {
+    lua_paths += file::append_path(path, "?.lua");
+  }
+  {
+    env_var_t lua_path_evn("LUA_PATH");
+    if (lua_path_evn) {
+      lua_paths += string_list_t(lua_path_evn.as_string(), ";");
+    }
+  }
+  return lua_paths.join(";");
+}
+
 }  // namespace
 
 lua_wrapper_t::runner_t::runner_t(const std::string& script_path, const string_list_t& args)
-    : m_script_path(script_path), m_args(args) {
+    : m_script_path(script_path), m_args(args), m_lua_path_env("LUA_PATH", make_lua_path()) {
   try {
     m_script = file::read(m_script_path);
   } catch (...) {
