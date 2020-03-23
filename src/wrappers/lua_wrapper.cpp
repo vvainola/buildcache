@@ -30,6 +30,7 @@ extern "C" {
 #include <lualib.h>
 }
 
+#include <algorithm>
 #include <map>
 #include <regex>
 #include <stdexcept>
@@ -305,11 +306,13 @@ int l_require_std(lua_State* state) {
   return 1;  // Number of results.
 }
 
-bool is_failed_prgmatch(const std::string& script_str, const std::string& program_path) {
-  // Extract the prgmatch statement (if any).
-  if (script_str.substr(0, 9) != "-- match(") {
+bool is_program_match(const std::string& script_str, const std::string& program_path) {
+  // We require that a program wrapper script starts with "-- match(...)".
+  if (script_str.size() < 10 || !std::equal(&script_str[0], &script_str[0] + 9, "-- match(")) {
     return false;
   }
+
+  // Extract the program match expression.
   const auto end_expr_pos = script_str.find_last_of(')', script_str.find('\n'));
   if (end_expr_pos == std::string::npos) {
     return false;
@@ -324,7 +327,7 @@ bool is_failed_prgmatch(const std::string& script_str, const std::string& progra
   debug::log(debug::DEBUG) << "Evaluating regex \"" << expr << "\": " << (!match ? "no " : "")
                            << "match";
 
-  return !match;
+  return match;
 }
 
 std::map<std::string, expected_file_t> to_expected_files_map(
@@ -450,8 +453,8 @@ bool lua_wrapper_t::can_handle_command() {
   auto result = false;
   try {
     // First check: regex match against program name.
-    if (!is_failed_prgmatch(m_runner.script(), m_args[0])) {
-      // Second check: Call can_handle_command() if is defined.
+    if (is_program_match(m_runner.script(), m_args[0])) {
+      // Second check: Call can_handle_command(), if defined.
       if (m_runner.call("can_handle_command")) {
         result = pop_bool(m_runner.state());
       } else {
