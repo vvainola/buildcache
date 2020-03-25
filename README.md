@@ -78,3 +78,7 @@ See [Configruation](doc/configuration.md).
 
 See [Using custom Lua plugins](doc/lua.md).
 
+## Contributing
+
+See [Contributing to BuildCache](doc/contributing.md).
+
