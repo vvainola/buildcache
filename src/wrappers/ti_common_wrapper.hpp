@@ -17,26 +17,28 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include <wrappers/ti_c6x_wrapper.hpp>
+#ifndef BUILDCACHE_TI_COMMON_WRAPPER_HPP_
+#define BUILDCACHE_TI_COMMON_WRAPPER_HPP_
 
-#include <base/file_utils.hpp>
-#include <base/unicode_utils.hpp>
-
-#include <regex>
+#include <wrappers/program_wrapper.hpp>
 
 namespace bcache {
-ti_c6x_wrapper_t::ti_c6x_wrapper_t(const string_list_t& args) : ti_common_wrapper_t(args) {
-}
+/// @brief A base wrapper for the TI compilers.
+class ti_common_wrapper_t : public program_wrapper_t {
+public:
+  ti_common_wrapper_t(const string_list_t& args);
 
-bool ti_c6x_wrapper_t::can_handle_command() {
-  // Is this the right compiler?
-  const auto cmd = lower_case(file::get_file_part(m_args[0], true));
-  const std::regex re(".*cl6x.*");
-  if (std::regex_match(cmd, re)) {
-    return true;
-  }
+protected:
+  void resolve_args() override;
+  std::string preprocess_source() override;
+  string_list_t get_relevant_arguments() override;
+  std::string get_program_id() override;
+  std::map<std::string, expected_file_t> get_build_files() override;
 
-  return false;
-}
+  string_list_t m_resolved_args;
 
+private:
+  void append_response_file(const std::string& response_file);
+};
 }  // namespace bcache
+#endif  // BUILDCACHE_TI_COMMON_WRAPPER_HPP_
