@@ -197,7 +197,12 @@ private:
       if (c == '"') {
         escaped_arg += "\\\"";
       } else if (c == '\\') {
+#ifdef _WIN32
+        // On Windows a backslash has semantic meaning and does not require escaping.
+        escaped_arg += c;
+#else
         escaped_arg += "\\\\";
+#endif
       } else if (c == '$') {
         escaped_arg += "\\$";
         needs_quotes = true;
