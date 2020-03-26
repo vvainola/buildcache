@@ -17,26 +17,18 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include <wrappers/ti_c6x_wrapper.hpp>
+#ifndef BUILDCACHE_TI_ARM_CGT_HPP_
+#define BUILDCACHE_TI_ARM_CGT_HPP_
 
-#include <base/file_utils.hpp>
-#include <base/unicode_utils.hpp>
-
-#include <regex>
+#include <wrappers/ti_common_wrapper.hpp>
 
 namespace bcache {
-ti_c6x_wrapper_t::ti_c6x_wrapper_t(const string_list_t& args) : ti_common_wrapper_t(args) {
-}
-
-bool ti_c6x_wrapper_t::can_handle_command() {
-  // Is this the right compiler?
-  const auto cmd = lower_case(file::get_file_part(m_args[0], true));
-  const std::regex re(".*cl6x.*");
-  if (std::regex_match(cmd, re)) {
-    return true;
-  }
-
-  return false;
-}
-
+/// @brief A program wrapper for the TI ARM CGT compiler.
+class ti_arm_cgt_wrapper_t : public ti_common_wrapper_t {
+public:
+  ti_arm_cgt_wrapper_t(const string_list_t& args);
+  bool can_handle_command() override;
+};
 }  // namespace bcache
+
+#endif  // BUILDCACHE_TI_ARM_CGT_HPP_

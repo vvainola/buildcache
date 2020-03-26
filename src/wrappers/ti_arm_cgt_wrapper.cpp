@@ -17,7 +17,7 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include <wrappers/ti_c6x_wrapper.hpp>
+#include <wrappers/ti_arm_cgt_wrapper.hpp>
 
 #include <base/file_utils.hpp>
 #include <base/unicode_utils.hpp>
@@ -25,13 +25,13 @@
 #include <regex>
 
 namespace bcache {
-ti_c6x_wrapper_t::ti_c6x_wrapper_t(const string_list_t& args) : ti_common_wrapper_t(args) {
+ti_arm_cgt_wrapper_t::ti_arm_cgt_wrapper_t(const string_list_t& args) : ti_common_wrapper_t(args) {
 }
 
-bool ti_c6x_wrapper_t::can_handle_command() {
+bool ti_arm_cgt_wrapper_t::can_handle_command() {
   // Is this the right compiler?
   const auto cmd = lower_case(file::get_file_part(m_args[0], true));
-  const std::regex re(".*cl6x.*");
+  const std::regex re("armcl.*");
   if (std::regex_match(cmd, re)) {
     return true;
   }

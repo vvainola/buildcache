@@ -30,6 +30,10 @@ add_library(wrappers
   msvc_wrapper.hpp
   program_wrapper.cpp
   program_wrapper.hpp
+  ti_arm_cgt_wrapper.cpp
+  ti_arm_cgt_wrapper.hpp
+  ti_common_wrapper.cpp
+  ti_common_wrapper.hpp
   ti_c6x_wrapper.cpp
   ti_c6x_wrapper.hpp
   )
