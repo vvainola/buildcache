@@ -215,7 +215,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
 
 [[noreturn]] void print_version_and_exit() {
   // Print the BuildCache version.
-  std::cout << "BuildCache version " BUILDCACHE_VERSION_STRING "\n";
+  std::cout << "BuildCache version " << BUILDCACHE_VERSION_STRING << "\n"
+            << BUILDCACHE_COPYRIGHT_STRING << "\n";
 
   // Print the supported cache back ends.
   std::cout << "\nSupported back ends:\n";
