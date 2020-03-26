@@ -41,14 +41,21 @@ public:
     return m_hard_links;
   }
 
+  bool create_target_dirs() const {
+    return m_create_target_dirs;
+  }
+
 private:
   bool m_hard_links = false;
+  bool m_create_target_dirs = false;
 };
 
 capabilities_t::capabilities_t(const string_list_t& cap_strings) {
   for (const auto& str : cap_strings) {
     if (str == "hard_links") {
       m_hard_links = true;
+    } else if (str == "create_target_dirs") {
+      m_create_target_dirs = true;
     } else {
       debug::log(debug::ERROR) << "Invalid capability string: " << str;
     }
@@ -108,7 +115,11 @@ bool program_wrapper_t::handle_command(int& return_code) {
     PERF_STOP(GET_BUILD_FILES);
 
     // Look up the entry in the cache(s).
-    if (m_cache.lookup(hash, expected_files, allow_hard_links, return_code)) {
+    if (m_cache.lookup(hash,
+                       expected_files,
+                       allow_hard_links,
+                       capabilites.create_target_dirs(),
+                       return_code)) {
       return true;
     } else {
       debug::log(debug::INFO) << "Cache miss (" << hash.as_string() << ")";
