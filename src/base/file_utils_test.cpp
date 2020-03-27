@@ -114,14 +114,14 @@ TEST_CASE("append_path produces expected results") {
     CHECK_EQ(result.size(), expected_size);
   }
 
-  SUBCASE("En empty dir part results in the file part alone") {
+  SUBCASE("An empty dir part results in the file part alone") {
     const std::string part_1 = "";
     const std::string part_2 = "world";
     const std::string result = file::append_path(part_1, part_2);
     CHECK_EQ(result, part_2);
   }
 
-  SUBCASE("En empty file part results in the dir part alone") {
+  SUBCASE("An empty file part results in the dir part alone") {
     const std::string part_1 = "hello";
     const std::string part_2 = "";
     const std::string result = file::append_path(part_1, part_2);
@@ -144,6 +144,14 @@ TEST_CASE("get_dir_part produces expected results") {
     CHECK_EQ(result.size(), 0);
   }
 }
+
+#ifdef _WIN32
+TEST_CASE("dir_exists produces expected results"){
+  SUBCASE("A Windows drive letter is assumed to exist.") {
+    CHECK_EQ(file::dir_exists("c:"), true);
+  }
+}
+#endif
 
 TEST_CASE("get_file_part produces expected results") {
   SUBCASE("The file is extracted when it exists") {
