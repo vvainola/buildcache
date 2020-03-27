@@ -451,6 +451,12 @@ void remove_dir(const std::string& path, const bool ignore_errors) {
 
 bool dir_exists(const std::string& path) {
 #ifdef _WIN32
+  // Do a quick check if this is a drive letter and assume it exists. For performance reasons
+  // do not invoke Win32 APIs to verify the volume etc.
+  if (path.size() == 2 && path[1] == ':') {
+    return true;
+  }
+
   struct __stat64 buffer;
   const auto success = (_wstat64(utf8_to_ucs2(path).c_str(), &buffer) == 0);
   return success && S_ISDIR(buffer.st_mode);
