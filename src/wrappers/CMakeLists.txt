@@ -32,6 +32,8 @@ add_library(wrappers
   program_wrapper.hpp
   ti_arm_cgt_wrapper.cpp
   ti_arm_cgt_wrapper.hpp
+  ti_arp32_wrapper.cpp
+  ti_arp32_wrapper.hpp
   ti_common_wrapper.cpp
   ti_common_wrapper.hpp
   ti_c6x_wrapper.cpp

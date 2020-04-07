@@ -27,10 +27,36 @@
 #include <algorithm>
 #include <regex>
 
+// Relevant documentation for different TI compilers:
+//
+// * TI TMS320C6000 Optimizing Compiler:
+//    - https://www.ti.com/lit/ug/sprui04b/sprui04b.pdf
+// * TI ARM Optimizing C/C++ compiler:
+//    - http://www.ti.com/lit/ug/spnu151v/spnu151v.pdf
+// * TI ARP32 Optimizing C/C++ compiler:
+//    - spruh24a.pdf (part of PROCESSOR SDK-VISION)
+//    - http://software-dl.ti.com/processor-sdk-vision/esd/TDAx/vision-sdk/latest/index_FDS.html
+
 namespace bcache {
 namespace {
 bool starts_with(const std::string& str, const std::string& sub_str) {
   return str.substr(0, sub_str.size()) == sub_str;
+}
+
+bool has_debug_symbols(const string_list_t& args) {
+  // The default behavior is to enable debugging.
+  //   C6x default (sprui04b.pdf, 3.3.6):   --symdebug:dwarf
+  //   ARM default (spnu151v.pdf, 2.3.5):   --symdebug:dwarf
+  //   ARP32 default (spruh24a.pdf, 2.3.5): --symdebug:skeletal
+  bool result = true;
+  for (auto arg : args) {
+    if (starts_with(arg, "--symdebug:")) {
+      result = (arg != "--symdebug:none");
+    } else if (arg == "-g") {
+      result = true;
+    }
+  }
+  return result;
 }
 
 string_list_t make_preprocessor_cmd(const string_list_t& args,
@@ -51,8 +77,17 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
     }
   }
 
+  // Should we inhibit line info in the preprocessed output?
+  const bool debug_symbols_required =
+      has_debug_symbols(args) && (config::accuracy() >= config::cache_accuracy_t::STRICT);
+  const bool inhibit_line_info = !debug_symbols_required;
+
   // Append the required arguments for producing preprocessed output.
-  preprocess_args += "--preproc_only";
+  if (inhibit_line_info) {
+    preprocess_args += "--preproc_only";
+  } else {
+    preprocess_args += "--preproc_with_line";
+  }
   preprocess_args += ("--output_file=" + preprocessed_file);
 
   return preprocess_args;

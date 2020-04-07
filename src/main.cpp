@@ -31,6 +31,7 @@
 #include <wrappers/msvc_wrapper.hpp>
 #include <wrappers/program_wrapper.hpp>
 #include <wrappers/ti_arm_cgt_wrapper.hpp>
+#include <wrappers/ti_arp32_wrapper.hpp>
 #include <wrappers/ti_c6x_wrapper.hpp>
 
 // These 3rd party includes are used for getting the version numbers.
@@ -103,9 +104,12 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
           if (!wrapper->can_handle_command()) {
             wrapper.reset(new bcache::ti_arm_cgt_wrapper_t(args));
             if (!wrapper->can_handle_command()) {
-              wrapper.reset(new bcache::ccc_analyzer_wrapper_t(args));
+              wrapper.reset(new bcache::ti_arp32_wrapper_t(args));
               if (!wrapper->can_handle_command()) {
-                wrapper = nullptr;
+                wrapper.reset(new bcache::ccc_analyzer_wrapper_t(args));
+                if (!wrapper->can_handle_command()) {
+                  wrapper = nullptr;
+                }
               }
             }
           }
