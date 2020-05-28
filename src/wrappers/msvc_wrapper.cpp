@@ -25,6 +25,7 @@
 #include <sys/sys_utils.hpp>
 
 #include <cstdlib>
+#include <fstream>
 #include <stdexcept>
 
 namespace bcache {
@@ -111,6 +112,24 @@ string_list_t make_preprocessor_cmd(const string_list_t& args) {
 msvc_wrapper_t::msvc_wrapper_t(const string_list_t& args) : program_wrapper_t(args) {
 }
 
+void msvc_wrapper_t::resolve_args() {
+  // Iterate over all args and load any response files that we encounter.
+  m_resolved_args.clear();
+  for (const auto& arg : m_args) {
+    if (arg.substr(0, 1) == "@") {
+      std::ifstream response_file(arg.substr(1));
+      if (response_file.is_open()) {
+        std::string line;
+        while (std::getline(response_file, line)) {
+          m_resolved_args += string_list_t::split_args(line);
+        }
+      }
+    } else {
+      m_resolved_args += arg;
+    }
+  }
+}
+
 bool msvc_wrapper_t::can_handle_command() {
   // Is this the right compiler?
   const auto cmd = lower_case(file::get_file_part(m_args[0], false));
@@ -126,15 +145,13 @@ std::string msvc_wrapper_t::preprocess_source() {
   // Check if this is a compilation command that we support.
   auto is_object_compilation = false;
   auto has_object_output = false;
-  for (const auto& arg : m_args) {
+  for (const auto& arg : m_resolved_args) {
     if (arg_equals(arg, "c")) {
       is_object_compilation = true;
     } else if (arg_starts_with(arg, "Fo") && (is_object_file(file::get_extension(arg)))) {
       has_object_output = true;
     } else if (arg_equals(arg, "Zi") || arg_equals(arg, "ZI")) {
       throw std::runtime_error("PDB generation is not supported.");
-    } else if (arg.substr(0, 1) == "@") {
-      throw std::runtime_error("Response files are currently not supported.");
     }
   }
   if ((!is_object_compilation) || (!has_object_output)) {
@@ -142,7 +159,7 @@ std::string msvc_wrapper_t::preprocess_source() {
   }
 
   // Run the preprocessor step.
-  const auto preprocessor_args = make_preprocessor_cmd(m_args);
+  const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args);
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
     throw std::runtime_error("Preprocessing command was unsuccessful.");
@@ -156,11 +173,11 @@ string_list_t msvc_wrapper_t::get_relevant_arguments() {
   string_list_t filtered_args;
 
   // The first argument is the compiler binary without the path.
-  filtered_args += file::get_file_part(m_args[0]);
+  filtered_args += file::get_file_part(m_resolved_args[0]);
 
   // Note: We always skip the first arg since we have handled it already.
   bool skip_next_arg = true;
-  for (const auto& arg : m_args) {
+  for (const auto& arg : m_resolved_args) {
     if (!skip_next_arg) {
       // Generally unwanted argument (things that will not change how we go from preprocessed code
       // to binary object files)?
@@ -215,7 +232,7 @@ std::string msvc_wrapper_t::get_program_id() {
 std::map<std::string, expected_file_t> msvc_wrapper_t::get_build_files() {
   std::map<std::string, expected_file_t> files;
   auto found_object_file = false;
-  for (const auto& arg : m_args) {
+  for (const auto& arg : m_resolved_args) {
     if (arg_starts_with(arg, "Fo") && (is_object_file(file::get_extension(arg)))) {
       if (found_object_file) {
         throw std::runtime_error("Only a single target object file can be specified.");

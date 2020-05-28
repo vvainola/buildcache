@@ -31,12 +31,15 @@ public:
   bool can_handle_command() override;
 
 private:
+  void resolve_args() override;
   string_list_t get_capabilities() override;
   std::string preprocess_source() override;
   string_list_t get_relevant_arguments() override;
   std::map<std::string, std::string> get_relevant_env_vars() override;
   std::string get_program_id() override;
   std::map<std::string, expected_file_t> get_build_files() override;
+
+  string_list_t m_resolved_args;
 };
 }  // namespace bcache
 #endif  // BUILDCACHE_MSVC_WRAPPER_HPP_
