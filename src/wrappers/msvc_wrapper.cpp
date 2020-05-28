@@ -37,6 +37,11 @@ bool is_source_file(const std::string& arg) {
   return ((ext == ".cpp") || (ext == ".cc") || (ext == ".cxx") || (ext == ".c"));
 }
 
+bool is_object_file(const std::string& file_ext) {
+  const auto ext = lower_case(file_ext);
+  return ((ext == ".obj") || (ext == ".o"));
+}
+
 bool arg_starts_with(const std::string& str, const std::string& sub_str) {
   const auto size = sub_str.size();
   const auto is_flag = (size >= 1) && ((str[0] == '/') || (str[0] == '-'));
@@ -124,7 +129,7 @@ std::string msvc_wrapper_t::preprocess_source() {
   for (const auto& arg : m_args) {
     if (arg_equals(arg, "c")) {
       is_object_compilation = true;
-    } else if (arg_starts_with(arg, "Fo") && (file::get_extension(arg) == ".obj")) {
+    } else if (arg_starts_with(arg, "Fo") && (is_object_file(file::get_extension(arg)))) {
       has_object_output = true;
     } else if (arg_equals(arg, "Zi") || arg_equals(arg, "ZI")) {
       throw std::runtime_error("PDB generation is not supported.");
@@ -211,7 +216,7 @@ std::map<std::string, expected_file_t> msvc_wrapper_t::get_build_files() {
   std::map<std::string, expected_file_t> files;
   auto found_object_file = false;
   for (const auto& arg : m_args) {
-    if (arg_starts_with(arg, "Fo") && (file::get_extension(arg) == ".obj")) {
+    if (arg_starts_with(arg, "Fo") && (is_object_file(file::get_extension(arg)))) {
       if (found_object_file) {
         throw std::runtime_error("Only a single target object file can be specified.");
       }
