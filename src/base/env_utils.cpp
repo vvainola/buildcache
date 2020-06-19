@@ -74,6 +74,17 @@ scoped_set_env_t::~scoped_set_env_t() {
   }
 }
 
+scoped_unset_env_t::scoped_unset_env_t(const std::string& name)
+    : m_name(name), m_old_env_var(name) {
+  unset_env(name);
+}
+
+scoped_unset_env_t::~scoped_unset_env_t() {
+  if (m_old_env_var) {
+    set_env(m_name, m_old_env_var.as_string());
+  }
+}
+
 bool env_defined(const std::string& env_var) {
 #if defined(_WIN32)
   const auto env_var_w = utf8_to_ucs2(env_var);

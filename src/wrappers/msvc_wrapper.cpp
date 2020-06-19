@@ -20,6 +20,7 @@
 #include <wrappers/msvc_wrapper.hpp>
 
 #include <base/debug_utils.hpp>
+#include <base/env_utils.hpp>
 #include <base/unicode_utils.hpp>
 #include <config/configuration.hpp>
 #include <sys/sys_utils.hpp>
@@ -32,6 +33,11 @@ namespace bcache {
 namespace {
 // Tick this to a new number if the format has changed in a non-backwards-compatible way.
 const std::string HASH_VERSION = "1";
+
+// When cl.exe is started from Visual Studio, it explicitly sends its error output to the IDE
+// process. This prevents capturing output otherwise written to stderr. The redirection is
+// controlled by the VS_UNICODE_OUTPUT environment variable.
+const std::string ENV_STDERR_VS_REDIRECTION = "VS_UNICODE_OUTPUT";
 
 bool is_source_file(const std::string& arg) {
   const auto ext = lower_case(file::get_extension(arg));
@@ -158,6 +164,9 @@ std::string msvc_wrapper_t::preprocess_source() {
     throw std::runtime_error("Unsupported complation command.");
   }
 
+  // Disable unwanted printing of source file name in Visual Studio.
+  scoped_unset_env_t scoped_off(ENV_STDERR_VS_REDIRECTION);
+
   // Run the preprocessor step.
   const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args);
   auto result = sys::run(preprocessor_args);
@@ -219,8 +228,11 @@ std::string msvc_wrapper_t::get_program_id() {
   // Get the version string for the compiler.
   // Just calling "cl.exe" will return the version information. Note, though, that the version
   // information is given on stderr.
+  scoped_unset_env_t scoped_off(ENV_STDERR_VS_REDIRECTION);
+  
   string_list_t version_args;
   version_args += m_args[0];
+
   const auto result = sys::run(version_args, true);
   if (result.std_err.empty()) {
     throw std::runtime_error("Unable to get the compiler version information string.");
