@@ -563,19 +563,21 @@ void link_or_copy(const std::string& from_path, const std::string& to_path) {
   success = (link(from_path.c_str(), to_path.c_str()) == 0);
 #endif
 
-  // Touch the file to update the modification time.
-  if (success) {
-#ifdef _WIN32
-    success = (_wutime64(utf8_to_ucs2(to_path).c_str(), nullptr) == 0);
-#else
-    success = (utime(to_path.c_str(), nullptr) == 0);
-#endif
-  }
-
   // If the hard link failed, make a full copy instead.
   if (!success) {
     debug::log(debug::DEBUG) << "Hard link failed - copying instead.";
     copy(from_path, to_path);
+  }
+}
+
+void touch(const std::string& path) {
+#ifdef _WIN32
+  bool success = (_wutime64(utf8_to_ucs2(path).c_str(), nullptr) == 0);
+#else
+  bool success = (utime(path.c_str(), nullptr) == 0);
+#endif
+  if (!success) {
+    throw std::runtime_error("Unable to touch the file.");
   }
 }
 

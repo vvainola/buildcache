@@ -368,6 +368,10 @@ void local_cache_t::get_file(const hasher_t::hash_t& hash,
   } else {
     file::copy(source_path, target_path);
   }
+
+  // Touch retrieved file to ensure that the file timestamp is up to date, 
+  // and that it is picked up by build system file trackers such as MSBuild.
+  file::touch(target_path);
 }
 
 void local_cache_t::perform_housekeeping() {
