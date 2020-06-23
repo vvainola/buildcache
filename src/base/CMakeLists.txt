@@ -33,6 +33,7 @@ set(BASE_SRC
   serializer_utils.cpp
   serializer_utils.hpp
   string_list.hpp
+  string_list.cpp
   unicode_utils.cpp
   unicode_utils.hpp
   )

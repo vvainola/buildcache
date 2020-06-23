@@ -20,21 +20,9 @@
 #ifndef BUILDCACHE_STRING_LIST_HPP_
 #define BUILDCACHE_STRING_LIST_HPP_
 
-#include <base/unicode_utils.hpp>
-
 #include <initializer_list>
 #include <string>
 #include <vector>
-
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <shellapi.h>
-#undef STRICT
-#undef ERROR
-#undef min
-#undef max
-#endif
 
 namespace bcache {
 class string_list_t {
@@ -66,75 +54,13 @@ public:
   /// @param delimiter The delimiter.
   /// @note This is useful for splitting a string into a list of strings (e.g. the PATH environment
   /// variable).
-  string_list_t(const std::string& str, const std::string& delimiter) {
-    std::string::size_type current_str_start = 0u;
-    while (current_str_start < str.size()) {
-      const auto pos = str.find(delimiter, current_str_start);
-      if (pos == std::string::npos) {
-        m_args.emplace_back(str.substr(current_str_start));
-        current_str_start = str.size();
-      } else {
-        m_args.emplace_back(str.substr(current_str_start, pos - current_str_start));
-        current_str_start = pos + 1;
-      }
-    }
-  }
+  string_list_t(const std::string& str, const std::string& delimiter);
 
   /// @brief Construct a list of arguments from a string with a shell-like format.
   /// @param cmd The string.
   /// @note As far as possible this routine mimics the standard shell behaviour, e.g. w.r.t.
   /// escaping and quotation.
-  static string_list_t split_args(const std::string& cmd) {
-    string_list_t args;
-
-#ifdef _WIN32
-    std::wstring wcmd = utf8_to_ucs2(cmd);
-    int argc;
-    wchar_t** argv = CommandLineToArgvW(wcmd.data(), &argc);
-    for (int i = 0; i < argc; ++i) {
-      args += ucs2_to_utf8(argv[i]);
-    }
-
-#else
-    std::string arg;
-    auto is_inside_quote = false;
-    auto has_arg = false;
-    char last_char = 0;
-    for (auto& chr : cmd) {
-      const auto is_space = (chr == ' ');
-      const auto is_quote = (chr == '\"') && (last_char != '\\');
-
-      if (is_quote) {
-        is_inside_quote = !is_inside_quote;
-      }
-
-      // Start of a new argument?
-      if ((!has_arg) && (!is_space)) {
-        has_arg = true;
-      }
-
-      // Append this char to the argument string?
-      if ((is_inside_quote || !is_space) && !is_quote) {
-        arg += chr;
-      }
-
-      // End of argument?
-      if (has_arg && is_space && !is_inside_quote) {
-        args += unescape_arg(arg);
-        arg.clear();
-        has_arg = false;
-      }
-
-      last_char = chr;
-    }
-
-    if (has_arg) {
-      args += unescape_arg(arg);
-    }
-
-#endif
-    return args;
-  }
+  static string_list_t split_args(const std::string& cmd);
 
   /// @brief Join all elements into a single string.
   /// @param separator The separator to use between strings (e.g. " ").
@@ -142,18 +68,7 @@ public:
   /// @returns a string containing all the strings of the list.
   /// @note When string escaping is enabled, the strings are escaped in a way that preserves
   /// command line argument information. E.g. strings that contain spaces are surrounded by quotes.
-  std::string join(const std::string& separator, const bool escape = false) const {
-    std::string result;
-    for (auto arg : m_args) {
-      const auto escaped_arg = escape ? escape_arg(arg) : arg;
-      if (result.empty()) {
-        result += escaped_arg;
-      } else {
-        result += (separator + escaped_arg);
-      }
-    }
-    return result;
-  }
+  std::string join(const std::string& separator, const bool escape = false) const;
 
   /// @brief Remove all the elements.
   void clear() {
@@ -221,89 +136,9 @@ public:
   }
 
 private:
-  static std::string escape_arg(const std::string& arg) {
-    std::string escaped_arg;
-    bool needs_quotes = false;
+  static std::string escape_arg(const std::string& arg);
 
-#ifdef _WIN32
-    // These escaping rules try to match parsing rules of Windows programs, e.g. as outlined here: 
-    // http://www.windowsinspired.com/how-a-windows-programs-splits-its-command-line-into-individual-arguments/
-    // "[..] backslashes are interpreted literally (except when they precede a double quote character)".
-    int backslashes = 0;
-    for (auto c : arg) {
-      if (c == '\\') {
-        ++backslashes;
-      } else { 
-        if (c == '\"') {
-          for (int i = 0; i <= backslashes; ++i) {
-            escaped_arg += '\\';
-          }
-        }
-        backslashes = 0;
-      }
-
-      escaped_arg += c;
-
-      if (c == ' ' || c == '\t') {
-        needs_quotes = true;
-      }
-    }
-
-    if (needs_quotes) {
-      for (int i = 0; i < backslashes; ++i) {
-        escaped_arg += '\\';
-      }
-    }
-
-#else
-    // These escaping rules try to match the most common Un*x shell conventions, e.g. as outlined
-    // here: http://faculty.salina.k-state.edu/tim/unix_sg/shell/metachar.html
-    for (auto c : arg) {
-      if (c == '"') {
-        escaped_arg += "\\\"";
-      } else if (c == '\\') {
-        escaped_arg += "\\\\";
-      } else if (c == '$') {
-        escaped_arg += "\\$";
-        needs_quotes = true;
-      } else if (c == '`') {
-        escaped_arg += "\\`";
-        needs_quotes = true;
-      } else {
-        if (c == ' ' || c == '&' || c == ';' || c == '>' || c == '<' || c == '|' || c == '(' ||
-            c == ')' || c == '*' || c == '#') {
-          needs_quotes = true;
-        }
-        escaped_arg += c;
-      }
-    }
-#endif
-
-    // Do we need to surround with quotes?
-    if (needs_quotes) {
-      escaped_arg = std::string("\"") + escaped_arg + std::string("\"");
-    }
-
-    return escaped_arg;
-  }
-
-  static std::string unescape_arg(const std::string& arg) {
-    std::string unescaped_arg;
-
-    auto is_escaped = false;
-    for (auto c : arg) {
-      if ((c == '\\') && !is_escaped) {
-        is_escaped = true;
-      } else {
-        // TODO(m): We should handle different escape codes. The current solution at least works for
-        // converting \\ -> \ and \" -> ".
-        unescaped_arg += c;
-        is_escaped = false;
-      }
-    }
-
-    return unescaped_arg;
-  }
+  static std::string unescape_arg(const std::string& arg);
 
   std::vector<std::string> m_args;
 };
