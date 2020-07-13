@@ -344,8 +344,26 @@ bool is_absolute_path(const std::string& path) {
 
 std::string resolve_path(const std::string& path) {
 #if defined(_WIN32)
-  // TODO(m): Implement me!
-  return path;
+  auto handle = CreateFileW(utf8_to_ucs2(path).c_str(),
+                            0,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            nullptr,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL, 
+                            nullptr);
+  if (INVALID_HANDLE_VALUE != handle) {
+    std::wstring resolved_path;
+    auto resolved_size = GetFinalPathNameByHandleW(handle, nullptr, 0, FILE_NAME_NORMALIZED);
+    resolved_path.resize(resolved_size - 1); // terminating null character is added automatically
+    
+    GetFinalPathNameByHandleW(handle, &resolved_path[0], resolved_size, FILE_NAME_NORMALIZED);
+    CloseHandle(handle);
+    if (resolved_path.substr(0, 4) == LR"(\\?\)") {
+      resolved_path = resolved_path.substr(4);
+    }
+    return ucs2_to_utf8(resolved_path);
+  }
+  return std::string();
 #else
   auto* char_ptr = realpath(path.c_str(), nullptr);
   if (char_ptr != nullptr) {
@@ -563,19 +581,21 @@ void link_or_copy(const std::string& from_path, const std::string& to_path) {
   success = (link(from_path.c_str(), to_path.c_str()) == 0);
 #endif
 
-  // Touch the file to update the modification time.
-  if (success) {
-#ifdef _WIN32
-    success = (_wutime64(utf8_to_ucs2(to_path).c_str(), nullptr) == 0);
-#else
-    success = (utime(to_path.c_str(), nullptr) == 0);
-#endif
-  }
-
   // If the hard link failed, make a full copy instead.
   if (!success) {
     debug::log(debug::DEBUG) << "Hard link failed - copying instead.";
     copy(from_path, to_path);
+  }
+}
+
+void touch(const std::string& path) {
+#ifdef _WIN32
+  bool success = (_wutime64(utf8_to_ucs2(path).c_str(), nullptr) == 0);
+#else
+  bool success = (utime(path.c_str(), nullptr) == 0);
+#endif
+  if (!success) {
+    throw std::runtime_error("Unable to touch the file.");
   }
 }
 

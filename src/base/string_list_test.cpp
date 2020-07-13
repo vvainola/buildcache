@@ -75,7 +75,11 @@ TEST_CASE("Command line argument parsing works correctly") {
     string_list_t list = string_list_t::split_args(cmd);
     CHECK_EQ(list.size(), 2);
     CHECK_EQ(list[0], "hello");
+#ifdef _WIN32
+    CHECK_EQ(list[1], "beautiful \\\\ \"  world");
+#else
     CHECK_EQ(list[1], "beautiful \\ \"  world");
+#endif
   }
 }
 

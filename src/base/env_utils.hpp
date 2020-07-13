@@ -67,6 +67,21 @@ private:
   env_var_t m_old_env_var;
 };
 
+/// @brief A class for temporarily clearing an environment variable.
+class scoped_unset_env_t {
+public:
+  /// @brief Temporarily clear an environment variable.
+  /// @param name The name of the environment variable.
+  scoped_unset_env_t(const std::string& name);
+
+  /// @brief Restore the environment variable to its old value.
+  ~scoped_unset_env_t();
+
+private:
+  std::string m_name;
+  env_var_t m_old_env_var;
+};
+
 /// @brief Check if the named environment variable is defined.
 /// @param env_var Name of the environment variable.
 /// @returns true if the environment variable was defined, otherwise false.

@@ -20,18 +20,26 @@
 #include <wrappers/msvc_wrapper.hpp>
 
 #include <base/debug_utils.hpp>
+#include <base/env_utils.hpp>
 #include <base/unicode_utils.hpp>
 #include <config/configuration.hpp>
 #include <sys/sys_utils.hpp>
 
+#include <codecvt>
 #include <cstdlib>
 #include <fstream>
+#include <locale>
 #include <stdexcept>
 
 namespace bcache {
 namespace {
 // Tick this to a new number if the format has changed in a non-backwards-compatible way.
 const std::string HASH_VERSION = "1";
+
+// When cl.exe is started from Visual Studio, it explicitly sends its error output to the IDE
+// process. This prevents capturing output otherwise written to stderr. The redirection is
+// controlled by the VS_UNICODE_OUTPUT environment variable.
+const std::string ENV_STDERR_VS_REDIRECTION = "VS_UNICODE_OUTPUT";
 
 bool is_source_file(const std::string& arg) {
   const auto ext = lower_case(file::get_extension(arg));
@@ -117,11 +125,29 @@ void msvc_wrapper_t::resolve_args() {
   m_resolved_args.clear();
   for (const auto& arg : m_args) {
     if (arg.substr(0, 1) == "@") {
-      std::ifstream response_file(arg.substr(1));
-      if (response_file.is_open()) {
-        std::string line;
-        while (std::getline(response_file, line)) {
-          m_resolved_args += string_list_t::split_args(line);
+      std::ifstream file(arg.substr(1));
+      if (file.is_open()) {
+        // Look for UTF-16 BOM.
+        int byte0 = file.get();
+        int byte1 = file.get();
+        if ((byte0 == 0xff && byte1 == 0xfe) || (byte0 == 0xfe && byte1 == 0xff)) {
+          // Reopen stream knowing the file is UTF-16 encoded. 
+          file.close();
+          std::wifstream wfile(arg.substr(1), std::ios::binary);
+          wfile.imbue(std::locale(wfile.getloc(),
+                                  new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>));
+          std::wstring wline;
+          while (std::getline(wfile, wline)) {
+            m_resolved_args += string_list_t::split_args(ucs2_to_utf8(wline));
+          }
+        } else {
+          // Assume UTF-8.
+          file.clear();
+          file.seekg(0);
+          std::string line;
+          while (std::getline(file, line)) {
+            m_resolved_args += string_list_t::split_args(line);
+          }
         }
       }
     } else {
@@ -157,6 +183,9 @@ std::string msvc_wrapper_t::preprocess_source() {
   if ((!is_object_compilation) || (!has_object_output)) {
     throw std::runtime_error("Unsupported complation command.");
   }
+
+  // Disable unwanted printing of source file name in Visual Studio.
+  scoped_unset_env_t scoped_off(ENV_STDERR_VS_REDIRECTION);
 
   // Run the preprocessor step.
   const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args);
@@ -219,8 +248,11 @@ std::string msvc_wrapper_t::get_program_id() {
   // Get the version string for the compiler.
   // Just calling "cl.exe" will return the version information. Note, though, that the version
   // information is given on stderr.
+  scoped_unset_env_t scoped_off(ENV_STDERR_VS_REDIRECTION);
+  
   string_list_t version_args;
   version_args += m_args[0];
+
   const auto result = sys::run(version_args, true);
   if (result.std_err.empty()) {
     throw std::runtime_error("Unable to get the compiler version information string.");

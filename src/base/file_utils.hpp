@@ -226,6 +226,11 @@ void copy(const std::string& from_path, const std::string& to_path);
 /// @throws runtime_error if the operation could not be completed.
 void link_or_copy(const std::string& from_path, const std::string& to_path);
 
+/// @brief Touch the file to update the modification time.
+/// @param path The path to the file.
+/// @throws runtime_error if the operation could not be completed.
+void touch(const std::string& path);
+
 /// @brief Read a file into a string.
 /// @param path The path to the file.
 /// @returns the contents of the file as a string.
