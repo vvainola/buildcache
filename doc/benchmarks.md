@@ -15,6 +15,8 @@ The system used for the benchmark was:
 * **CPU**: AMD Ryzen 7 1800x (8-core x86-64, 3.6 GHz).
 * **Disk**: 1TB NVMe (960 EVO)
 * **RAM**: 32GiB DDR4 @ 3000 MHz
+* **OS**: Linux (Ubuntu 18.04)
+* **Compiler**: GCC 7.5.0
 
 ### No cache
 
