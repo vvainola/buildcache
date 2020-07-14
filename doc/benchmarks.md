@@ -17,6 +17,7 @@ The system used for the benchmark was:
 * **RAM**: 32GiB DDR4 @ 3000 MHz
 * **OS**: Linux (Ubuntu 18.04)
 * **Compiler**: GCC 7.5.0
+* **BuildCache**: 0.19.0
 
 ### No cache
 
