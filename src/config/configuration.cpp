@@ -72,6 +72,7 @@ bool s_remote_locks = false;
 std::string s_remote;
 std::string s_s3_access;
 std::string s_s3_secret;
+bool s_terminate_on_miss = false;
 
 std::string to_lower(const std::string& str) {
   std::string str_lower(str.size(), ' ');
@@ -305,6 +306,13 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "terminate_on_miss");
+    if (cJSON_IsBool(node)) {
+      s_terminate_on_miss = cJSON_IsTrue(node);
+    }
+  }
+
   cJSON_Delete(root);
 }
 }  // namespace
@@ -528,6 +536,13 @@ void init() {
       }
     }
 
+    {
+      const env_var_t env("BUILDCACHE_TERMINATE_ON_MISS");
+      if (env) {
+        s_terminate_on_miss = env.as_bool();
+      }
+    }
+
     // We also look for Lua files in the cache root dir (i.e. ${BUILDCACHE_DIR}/lua).
     // Note: We give the default Lua path the lowest priority.
     s_lua_paths += file::append_path(s_dir, "lua");
@@ -632,6 +647,10 @@ const std::string& s3_access() {
 
 const std::string& s3_secret() {
   return s_s3_secret;
+}
+
+bool terminate_on_miss() {
+  return s_terminate_on_miss;
 }
 
 }  // namespace config

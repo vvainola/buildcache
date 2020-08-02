@@ -32,6 +32,7 @@ The following options control the behavior of BuildCache:
 | `BUILDCACHE_REMOTE_LOCKS` | `remote_locks` | Use a (potentially slower) file locking mechanism that is safe if the local cache is on a fileshare | false |
 | `BUILDCACHE_S3_ACCESS` | `s3_access` | S3 access key | None |
 | `BUILDCACHE_S3_SECRET` | `s3_secret` | S3 secret key | None |
+| `BUILDCACHE_TERMINATE_ON_MISS` | `terminate_on_miss` | Stop building if not found entry in a cache | false |
 
 Note: Currently, only the TI C6x back end supports the `cache_link_commands`
 option.

@@ -208,6 +208,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
               << (bcache::config::s3_access().empty() ? "" : "*******") << "\n";
     std::cout << "  BUILDCACHE_S3_SECRET:              "
               << (bcache::config::s3_secret().empty() ? "" : "*******") << "\n";
+    std::cout << "  BUILDCACHE_TERMINATE_ON_MISS:      "
+              << (bcache::config::terminate_on_miss() ? "true" : "false") << "\n";
   } catch (const std::exception& e) {
     std::cerr << "*** Unexpected error: " << e.what() << "\n";
     return_code = 1;
