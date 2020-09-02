@@ -57,7 +57,7 @@ With that said, BuildCache is still considered to be under development.
 
 * [Building BuildCache](doc/building.md)
 * [Using BuildCache](doc/usage.md)
-* [Configruation](doc/configuration.md)
+* [Configuration](doc/configuration.md)
 * [Using custom Lua plugins](doc/lua.md)
 * [Contributing to BuildCache](doc/contributing.md)
 * [Benchmarks](doc/benchmarks.md)
