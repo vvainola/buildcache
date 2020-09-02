@@ -41,6 +41,7 @@
 #include <hiredis/hiredis.h>
 #include <lua.h>
 #include <lz4/lz4.h>
+#include <xxHash/xxhash.h>
 #include <zstd/zstd.h>
 
 #include <iostream>
@@ -252,7 +253,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
             << LUA_VERSION_RELEASE << "\n";
   std::cout << "  lz4 " << LZ4_VERSION_STRING << "\n";
   std::cout << "  zstd " << ZSTD_VERSION_STRING << "\n";
-  std::cout << "  md4\n";
+  std::cout << "  xxhash " << XXH_VERSION_MAJOR << "." << XXH_VERSION_MINOR << "."
+            << XXH_VERSION_RELEASE << "\n";
 #ifdef USE_MINGW_THREADS
   std::cout << "  mingw-std-threads\n";
 #endif

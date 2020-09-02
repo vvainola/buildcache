@@ -24,6 +24,11 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include <cstring>
+
+#define XXH_INLINE_ALL
+#include <xxHash/xxhash.h>
+
 namespace bcache {
 namespace {
 bool is_ar_data(const std::string& data) {
@@ -42,6 +47,31 @@ const std::string hasher_t::hash_t::as_string() const {
   return result;
 }
 
+hasher_t::hash_t hasher_t::final() {
+  const auto digest = XXH3_128bits_digest(reinterpret_cast<XXH3_state_t*>(m_state));
+  static_assert(sizeof(digest) == hash_t::SIZE, "Unexpected digest size.");
+  hash_t result;
+  std::memcpy(result.data(), &digest, hash_t::SIZE);
+  return result;
+}
+
+hasher_t::hasher_t() {
+  m_state = XXH3_createState();
+  if (XXH3_128bits_reset(reinterpret_cast<XXH3_state_t*>(m_state)) == XXH_ERROR) {
+    throw std::runtime_error("Hash init failure.");
+  }
+}
+
+hasher_t::~hasher_t() {
+  XXH3_freeState(reinterpret_cast<XXH3_state_t*>(m_state));
+}
+
+void hasher_t::update(const void* data, const size_t size) {
+  if (XXH3_128bits_update(reinterpret_cast<XXH3_state_t*>(m_state), data, size) == XXH_ERROR) {
+    throw std::runtime_error("Hash update failure.");
+  }
+}
+
 void hasher_t::update(const std::map<std::string, std::string>& data) {
   // Note: This is guaranteed by the C++ standard to iterate over the elements in ascending key
   // order, so the hash will always be the same for the same map contents.
@@ -57,7 +87,6 @@ void hasher_t::update_from_file(const std::string& path) {
   const auto file_data = file::read(path);
   update(file_data);
 }
-
 
 void hasher_t::update_from_file_deterministic(const std::string& path) {
   const auto file_data = file::read(path);
