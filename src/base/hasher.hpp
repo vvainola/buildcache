@@ -21,12 +21,9 @@
 #define BUILDCACHE_HASHER_HPP_
 
 #include <cstdint>
+
 #include <map>
 #include <string>
-
-extern "C" {
-#include <md4/md4.h>
-}
 
 namespace bcache {
 
@@ -48,23 +45,20 @@ public:
     /// @returns A hexadecimal string representation of the given hash.
     const std::string as_string() const;
 
-  private:
     // The hash size is 128 bits.
     static const size_t SIZE = 16u;
 
-    uint8_t m_data[SIZE];
+  private:
+    uint8_t m_data[SIZE]{};
   };
 
-  hasher_t() {
-    MD4_Init(&m_ctx);
-  }
+  hasher_t();
+  ~hasher_t();
 
   /// @brief Update the hash with more data.
   /// @param data Pointer to the data to hash.
   /// @param size The number of bytes to hash.
-  void update(const void* data, const size_t size) {
-    MD4_Update(&m_ctx, data, static_cast<unsigned long>(size));
-  }
+  void update(const void* data, const size_t size);
 
   /// @brief Update the hash with more data.
   /// @param text The data to hash.
@@ -92,18 +86,16 @@ public:
   /// @brief Finalize the hash calculation.
   /// @returns the result of the hash.
   /// @note This method must only be called once.
-  hash_t final() {
-    hash_t result;
-    MD4_Final(result.data(), &m_ctx);
-    return result;
-  }
+  hash_t final();
 
 private:
   /// @brief Update the hash with data from an AR archive.
   /// @param data The raw AR data.
-  void update_from_ar_data(const std::string &data);
+  void update_from_ar_data(const std::string& data);
 
-  MD4_CTX m_ctx;
+  // This is in fact an XXH3_state_t pointer, but we don't want to include xxhash.h in this
+  // header (to avoid leaking inlined code and to avoid namespace pollution).
+  void* m_state = nullptr;
 };
 
 }  // namespace bcache
