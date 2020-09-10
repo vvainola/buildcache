@@ -34,6 +34,8 @@ set(BASE_SRC
   serializer_utils.hpp
   string_list.hpp
   string_list.cpp
+  time_utils.cpp
+  time_utils.hpp
   unicode_utils.cpp
   unicode_utils.hpp
   )
