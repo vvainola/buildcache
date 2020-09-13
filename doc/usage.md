@@ -55,11 +55,11 @@ wrapped tool.
 For example:
 
 ```bash
-# Wraps execution of "gcc -c hello.cpp"
-$ BUILDCACHE_IMPERSIONATE=gcc buildcache -c hello.cpp
+# Wraps execution of "g++ -c -O2 hello.cpp -o hello.o"
+$ BUILDCACHE_IMPERSONATE=g++ buildcache -c -O2 hello.cpp -o hello.o
 
-# Wraps execution of "gcc -s", probably not desired!
-$ export BUILDACHE_IMPERSONATE=gcc
+# Wraps execution of "g++ -s", probably not desired!
+$ export BUILDACHE_IMPERSONATE=g++
 $ buildcache -s
 ```
 
