@@ -21,6 +21,7 @@
 
 #include <base/debug_utils.hpp>
 #include <base/file_utils.hpp>
+#include <base/time_utils.hpp>
 #include <base/unicode_utils.hpp>
 
 #include <cstdint>
@@ -40,8 +41,6 @@
 #include <chrono>
 #include <fcntl.h>
 #include <signal.h>
-#include <sys/time.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <thread>
 #endif
@@ -52,20 +51,11 @@ namespace {
 #if !defined(_WIN32)
 // The max lock file age before it is considered *definitely* stale, in seconds.
 // Note: We set this high to accomodate for time zone differences, clock errors, etc.
-const file_info_t::time_t MAX_LOCK_FILE_AGE = 24 * 3600;
-
-file_info_t::time_t get_system_time() {
-  struct timeval now;
-  if (::gettimeofday(&now, nullptr) == 0) {
-    return static_cast<file_info_t::time_t>(now.tv_sec);
-  } else {
-    throw std::runtime_error("Could not get system time.");
-  }
-}
+const time::seconds_t MAX_LOCK_FILE_AGE = 24 * 3600;
 
 bool file_is_too_old(const std::string& path) {
   try {
-    const auto age = get_system_time() - get_file_info(path).modify_time();
+    const auto age = time::seconds_since_epoch() - get_file_info(path).modify_time();
     return age > MAX_LOCK_FILE_AGE;
   } catch (const std::exception& e) {
     // Note: This is not necessarily an error, since the lock file may no longer exist.

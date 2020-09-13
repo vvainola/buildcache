@@ -123,13 +123,6 @@ int64_t two_dwords_to_int64(const DWORD low, const DWORD high) {
   return static_cast<int64_t>(static_cast<uint64_t>(static_cast<uint32_t>(low)) |
                               (static_cast<uint64_t>(static_cast<uint32_t>(high)) << 32));
 }
-
-file_info_t::time_t win32_filetime_as_unix_epoch(const FILETIME& file_time) {
-  // The FILETIME represents the number of 100-nanosecond intervals since January 1, 1601 (UTC).
-  // I.e. the Windows epoch starts 11644473600 seconds before the UNIX epoch.
-  const auto t64 = two_dwords_to_int64(file_time.dwLowDateTime, file_time.dwHighDateTime);
-  return static_cast<file_info_t::time_t>((t64 / 10000000L) - 11644473600L);
-}
 #endif
 
 void remove_dir_internal(const std::string& path, const bool ignore_errors) {
@@ -203,8 +196,8 @@ tmp_file_t::~tmp_file_t() {
 }
 
 file_info_t::file_info_t(const std::string& path,
-                         const file_info_t::time_t modify_time,
-                         const file_info_t::time_t access_time,
+                         const time::seconds_t modify_time,
+                         const time::seconds_t access_time,
                          const int64_t size,
                          const bool is_dir)
     : m_path(path),
@@ -743,14 +736,16 @@ file_info_t get_file_info(const std::string& path) {
   if (find_handle != INVALID_HANDLE_VALUE) {
     const auto name = ucs2_to_utf8(std::wstring(&find_data.cFileName[0]));
     const auto file_path = append_path(path, name);
-    file_info_t::time_t modify_time = 0;
-    file_info_t::time_t access_time = 0;
+    time::seconds_t modify_time = 0;
+    time::seconds_t access_time = 0;
     int64_t size = 0;
     bool is_dir = ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
     if (!is_dir) {
       size = two_dwords_to_int64(find_data.nFileSizeLow, find_data.nFileSizeHigh);
-      modify_time = win32_filetime_as_unix_epoch(find_data.ftLastWriteTime);
-      access_time = win32_filetime_as_unix_epoch(find_data.ftLastAccessTime);
+      modify_time = time::win32_filetime_to_unix_epoch(find_data.ftLastWriteTime.dwLowDateTime,
+                                                       find_data.ftLastWriteTime.dwHighDateTime);
+      access_time = time::win32_filetime_to_unix_epoch(find_data.ftLastAccessTime.dwLowDateTime,
+                                                       find_data.ftLastAccessTime.dwHighDateTime);
     }
     return file_info_t(file_path, modify_time, access_time, size, is_dir);
   }
@@ -758,19 +753,19 @@ file_info_t get_file_info(const std::string& path) {
   struct stat file_stat;
   const bool stat_ok = (stat(path.c_str(), &file_stat) == 0);
   if (stat_ok) {
-    file_info_t::time_t modify_time = 0;
-    file_info_t::time_t access_time = 0;
+    time::seconds_t modify_time = 0;
+    time::seconds_t access_time = 0;
     int64_t size = 0;
     const bool is_dir = S_ISDIR(file_stat.st_mode);
     const bool is_file = S_ISREG(file_stat.st_mode);
     if (is_file) {
       size = static_cast<int64_t>(file_stat.st_size);
 #ifdef __APPLE__
-      modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtimespec.tv_sec);
-      access_time = static_cast<file_info_t::time_t>(file_stat.st_atimespec.tv_sec);
+      modify_time = static_cast<time::seconds_t>(file_stat.st_mtimespec.tv_sec);
+      access_time = static_cast<time::seconds_t>(file_stat.st_atimespec.tv_sec);
 #else
-      modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtim.tv_sec);
-      access_time = static_cast<file_info_t::time_t>(file_stat.st_atim.tv_sec);
+      modify_time = static_cast<time::seconds_t>(file_stat.st_mtim.tv_sec);
+      access_time = static_cast<time::seconds_t>(file_stat.st_atim.tv_sec);
 #endif
     }
     return file_info_t(path, modify_time, access_time, size, is_dir);
@@ -813,8 +808,8 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
     const auto name = ucs2_to_utf8(std::wstring(&find_data.cFileName[0]));
     if ((name != ".") && (name != "..")) {
       const auto file_path = append_path(path, name);
-      file_info_t::time_t modify_time = 0;
-      file_info_t::time_t access_time = 0;
+      time::seconds_t modify_time = 0;
+      time::seconds_t access_time = 0;
       int64_t size = 0;
       bool is_dir = false;
       if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
@@ -828,8 +823,10 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
         is_dir = true;
       } else {
         size = two_dwords_to_int64(find_data.nFileSizeLow, find_data.nFileSizeHigh);
-        modify_time = win32_filetime_as_unix_epoch(find_data.ftLastWriteTime);
-        access_time = win32_filetime_as_unix_epoch(find_data.ftLastAccessTime);
+        modify_time = time::win32_filetime_to_unix_epoch(find_data.ftLastWriteTime.dwLowDateTime,
+                                                         find_data.ftLastWriteTime.dwHighDateTime);
+        access_time = time::win32_filetime_to_unix_epoch(find_data.ftLastAccessTime.dwLowDateTime,
+                                                         find_data.ftLastAccessTime.dwHighDateTime);
       }
       files.emplace_back(file_info_t(file_path, modify_time, access_time, size, is_dir));
     }
@@ -855,8 +852,8 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
       const auto file_path = append_path(path, name);
       struct stat file_stat;
       if (stat(file_path.c_str(), &file_stat) == 0) {
-        file_info_t::time_t modify_time = 0;
-        file_info_t::time_t access_time = 0;
+        time::seconds_t modify_time = 0;
+        time::seconds_t access_time = 0;
         int64_t size = 0;
         bool is_dir = false;
         if (S_ISDIR(file_stat.st_mode)) {
@@ -871,11 +868,11 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
         } else if (S_ISREG(file_stat.st_mode)) {
           size = static_cast<int64_t>(file_stat.st_size);
 #ifdef __APPLE__
-          modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtimespec.tv_sec);
-          access_time = static_cast<file_info_t::time_t>(file_stat.st_atimespec.tv_sec);
+          modify_time = static_cast<time::seconds_t>(file_stat.st_mtimespec.tv_sec);
+          access_time = static_cast<time::seconds_t>(file_stat.st_atimespec.tv_sec);
 #else
-          modify_time = static_cast<file_info_t::time_t>(file_stat.st_mtim.tv_sec);
-          access_time = static_cast<file_info_t::time_t>(file_stat.st_atim.tv_sec);
+          modify_time = static_cast<time::seconds_t>(file_stat.st_mtim.tv_sec);
+          access_time = static_cast<time::seconds_t>(file_stat.st_atim.tv_sec);
 #endif
         }
         files.emplace_back(file_info_t(file_path, modify_time, access_time, size, is_dir));

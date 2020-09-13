@@ -57,22 +57,22 @@ std::string get_date_rfc2616_gmt() {
   // manner?
 
   // Set the locale to "C" (and save old locale).
-  const auto* old_locale_ptr = setlocale(LC_ALL, nullptr);
-  const auto old_locale = old_locale_ptr ? std::string(setlocale(LC_ALL, nullptr)) : std::string();
-  setlocale(LC_ALL, "C");
+  const auto* old_locale_ptr = ::setlocale(LC_ALL, nullptr);
+  const auto old_locale = old_locale_ptr ? std::string(::setlocale(LC_ALL, nullptr)) : std::string();
+  ::setlocale(LC_ALL, "C");
 
   // Get the current date & time.
-  time_t now = time(0);
-  struct tm tm = *gmtime(&now);
+  time_t now = ::time(0);
+  struct tm tm = *::gmtime(&now);
 
   // Format the date & time according to RFC2616.
   char buf[100];
-  if (strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &tm) == 0) {
+  if (::strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &tm) == 0) {
     throw std::runtime_error("strftime failed");
   }
 
   // Restore the old locale.
-  setlocale(LC_ALL, old_locale.c_str());
+  ::setlocale(LC_ALL, old_locale.c_str());
 
   return std::string(&buf[0]);
 }

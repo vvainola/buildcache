@@ -23,15 +23,20 @@
 #include <base/debug_utils.hpp>
 #include <base/hasher.hpp>
 #include <cache/cache_entry.hpp>
+#include <cache/data_store.hpp>
 #include <config/configuration.hpp>
 #include <sys/perf_utils.hpp>
 #include <sys/sys_utils.hpp>
 
 #include <iostream>
 #include <map>
+#include <sstream>
 
 namespace bcache {
 namespace {
+static std::string PROGRAM_ID_CACHE_NAME = "prgid";
+static time::seconds_t PROGRAM_ID_CACHE_LIFE_TIME = 300;  // Five minutes.
+
 /// @brief A helper class for managing wrapper capabilities.
 class capabilities_t {
 public:
@@ -99,7 +104,7 @@ bool program_wrapper_t::handle_command(int& return_code) {
 
     // Hash the program identification (version string or similar).
     PERF_START(GET_PRG_ID);
-    hasher.update(get_program_id());
+    hasher.update(get_program_id_cached());
     PERF_STOP(GET_PRG_ID);
 
     // Finalize the hash.
@@ -217,6 +222,37 @@ std::map<std::string, expected_file_t> program_wrapper_t::get_build_files() {
 sys::run_result_t program_wrapper_t::run_for_miss() {
   // Default: Run the program with the configured prefix.
   return sys::run_with_prefix(m_args, false);
+}
+
+std::string program_wrapper_t::get_program_id_cached() {
+  try {
+    // Get an ID of the program executable, based on its path, size and modification time.
+    const auto file_info = file::get_file_info(m_args[0]);
+    std::ostringstream ss;
+    ss << file_info.path() << ":" << file_info.size() << ":" << file_info.modify_time();
+    hasher_t hasher;
+    hasher.update(ss.str());
+    const auto key = hasher.final().as_string();
+
+    // Look up the program ID in the data store.
+    data_store_t store(PROGRAM_ID_CACHE_NAME);
+    const auto item = store.get_item(key);
+    if (item.is_valid()) {
+      debug::log(debug::DEBUG) << "Found cached program ID for " << m_args[0];
+      return item.value();
+    }
+
+    // We had a miss. Query the program ID and add it to the meta store.
+    debug::log(debug::DEBUG) << "Program ID cache miss for " << m_args[0];
+    const auto program_id = get_program_id();
+    store.store_item(key, program_id, PROGRAM_ID_CACHE_LIFE_TIME);
+    return program_id;
+  } catch (std::exception& e) {
+    // Something went wrong. Fall back to querying the program ID.
+    debug::log(debug::ERROR) << "Unable to get cached program ID: " << e.what();
+  }
+
+  return get_program_id();
 }
 
 }  // namespace bcache

@@ -120,6 +120,8 @@ protected:
   const string_list_t& m_args;
 
 private:
+  std::string get_program_id_cached();
+
   cache_t m_cache;
 };
 }  // namespace bcache
