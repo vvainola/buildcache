@@ -19,10 +19,10 @@
 
 #include <base/debug_utils.hpp>
 #include <base/file_utils.hpp>
+#include <base/hasher.hpp>
 #include <base/lock_file.hpp>
 #include <base/time_utils.hpp>
 #include <base/unicode_utils.hpp>
-#include <config/configuration.hpp>
 
 #include <cstdint>
 
@@ -50,6 +50,24 @@
 namespace bcache {
 namespace file {
 namespace {
+#if defined(_WIN32)
+std::wstring construct_mutex_name(const std::string& path) {
+  const std::wstring NAME_PREFIX = L"Global\\buildcache_";  // Place in the Global namespace.
+
+  // Use the full path, without backslashes, as the name.
+  auto name = utf8_to_ucs2(path);
+  std::replace(name.begin(), name.end(), L'\\', L'_');
+  if ((NAME_PREFIX.size() + name.size()) >= MAX_PATH) {
+    // If the name does not fit within MAX_PATH, use a hash instead.
+    hasher_t hasher;
+    hasher.update(ucs2_to_utf8(name));
+    name = utf8_to_ucs2(hasher.final().as_string());
+  }
+
+  return NAME_PREFIX + name;
+}
+#endif
+
 #if !defined(_WIN32)
 // The max lock file age before it is considered *definitely* stale, in seconds.
 // Note: We set this high to accomodate for time zone differences, clock errors, etc.
@@ -68,49 +86,33 @@ bool file_is_too_old(const std::string& path) {
 #endif  // !_WIN32
 }  // namespace
 
-lock_file_t::handle_t lock_file_t::invalid_handle() {
+lock_file_t::lock_file_t(const std::string& path, const bool remote_lock) : m_path(path) {
 #if defined(_WIN32)
-  if (config::local_locks()) {
-    return nullptr;
-  } else {
-    return INVALID_HANDLE_VALUE;
-  }
-#else
-  return -1;
-#endif
-}
+  // Time values are in milliseconds.
+  const DWORD MAX_WAIT_TIME = 10000;  // We'll fail if the lock can't be acquired in 10s.
 
-lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
-#if defined(_WIN32)
-  if (config::local_locks()) {
-    // Time values are in milliseconds.
-    const DWORD MAX_WAIT_TIME = 10000;  // We'll fail if the lock can't be acquired in 10s.
+  // For Windows, we can use local, named mutexes instead of file locks, if we're allowed to.
+  if (!remote_lock) {
+    // Construct a unique mutex name that identifies the given path.
+    const auto name = construct_mutex_name(path);
 
-    // Just convert the path into a mutex name.
-    auto path_w = utf8_to_ucs2(path);
-    // Object names may not contain backslashes.
-    std::replace(path_w.begin(), path_w.end(), L'\\', L'_');
-    // Place in the Global namespace, so the mutex will work for any instance of buildcache on the
-    // local machine.
-    const auto name = L"Global\\" + path_w;
-    // Get a handle to a named mutex. The object may be created now for our call, or previously for
-    // another instance of buildcache - it doesn't make a difference.
-    m_handle = CreateMutexW(nullptr, FALSE, name.c_str());
-    if (m_handle == invalid_handle()) {
+    // Open the named mutex (create it if it does not already exist).
+    m_mutex_handle = CreateMutexW(nullptr, FALSE, name.c_str());
+    if (m_mutex_handle == invalid_mutex_handle()) {
       return;
     }
-    const DWORD status = WaitForSingleObject(m_handle, MAX_WAIT_TIME);
+
+    // Acquire the mutex.
     // WAIT_OBJECT_0 and WAIT_ABANDONED both indicate the lock has been acquired. WAIT_ABANDONED
     // additionally indicates that the previous thread owning the lock terminated without properly
     // releasing it.
+    const auto status = WaitForSingleObject(m_mutex_handle, MAX_WAIT_TIME);
     if (!(status == WAIT_OBJECT_0 || status == WAIT_ABANDONED)) {
-      CloseHandle(m_handle);
-      m_handle = invalid_handle();
+      return;
     }
   } else {
     // Time values are in milliseconds.
-    const DWORD MAX_WAIT_TIME = 10000;  // We'll fail if the lock can't be acquired in 10s.
-    const DWORD MIN_SLEEP_TIME = 0;     // We start with 0, which is essentially just a yield.
+    const DWORD MIN_SLEEP_TIME = 0;  // We start with 0, which is essentially just a yield.
     const DWORD MAX_SLEEP_TIME = 50;
 
     DWORD total_wait_time = 0;
@@ -118,14 +120,14 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
 
     while (total_wait_time < MAX_WAIT_TIME) {
       // Try to create the lock file in exclusive mode.
-      m_handle = CreateFileW(utf8_to_ucs2(path).c_str(),
-                             GENERIC_READ | GENERIC_WRITE,
-                             0,  // No sharing => exclusive access.
-                             nullptr,
-                             CREATE_ALWAYS,
-                             FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE,
-                             nullptr);
-      if (m_handle != INVALID_HANDLE_VALUE) {
+      m_file_handle = CreateFileW(utf8_to_ucs2(path).c_str(),
+                                  GENERIC_READ | GENERIC_WRITE,
+                                  0,  // No sharing => exclusive access.
+                                  nullptr,
+                                  CREATE_ALWAYS,
+                                  FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE,
+                                  nullptr);
+      if (m_file_handle != invalid_file_handle()) {
         // We got the lock!
         break;
       } else {
@@ -150,6 +152,10 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
     }
   }
 #else
+  // For POSIX, there's no need to use local locks (e.g. named semaphores), since the performance
+  // benefit is negligable, and there are many inherent problems with that solution.
+  (void)remote_lock;
+
   // Time values are in microseconds.
   const int64_t MAX_WAIT_TIME = 10000000;  // We'll fail if the lock can't be acquired in 10s.
   const int64_t TIME_BETWEEN_LOCK_BREAKS = 100000;  // We try to break the lock every 100ms.
@@ -162,15 +168,15 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
 
   while (total_wait_time < MAX_WAIT_TIME) {
     // Try to create the lock file in exclusive mode.
-    m_handle = ::open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
-    if (m_handle >= 0) {
+    m_file_handle = ::open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
+    if (m_file_handle != invalid_file_handle()) {
       // We got the lock! Write our PID to the file.
       const auto pid_str = std::to_string(getpid());
-      const auto bytes_written = ::write(m_handle, pid_str.data(), pid_str.size());
+      const auto bytes_written = ::write(m_file_handle, pid_str.data(), pid_str.size());
       if (bytes_written != static_cast<ssize_t>(pid_str.size())) {
         ::unlink(path.c_str());
-        ::close(m_handle);
-        m_handle = invalid_handle();
+        ::close(m_file_handle);
+        m_file_handle = invalid_file_handle();
         debug::log(debug::ERROR) << "Failed to write our PID to the lock file " << path;
       }
       break;
@@ -261,24 +267,31 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
 #endif
 
   // Did we get the lock?
-  m_has_lock = (m_handle != invalid_handle());
+  m_has_lock =
+      (m_file_handle != invalid_file_handle()) || (m_mutex_handle != invalid_mutex_handle());
   if (m_has_lock) {
     debug::log(debug::DEBUG) << "Locked " << path;
   }
 }
 
 lock_file_t::lock_file_t(lock_file_t&& other) noexcept
-    : m_path(std::move(other.m_path)), m_handle(other.m_handle), m_has_lock(other.m_has_lock) {
-  other.m_handle = invalid_handle();
+    : m_path(std::move(other.m_path)),
+      m_file_handle(other.m_file_handle),
+      m_mutex_handle(other.m_mutex_handle),
+      m_has_lock(other.m_has_lock) {
+  other.m_file_handle = invalid_file_handle();
+  other.m_mutex_handle = invalid_mutex_handle();
   other.m_has_lock = false;
 }
 
 lock_file_t& lock_file_t::operator=(lock_file_t&& other) noexcept {
   m_path = std::move(other.m_path);
-  m_handle = other.m_handle;
+  m_file_handle = other.m_file_handle;
+  m_mutex_handle = other.m_mutex_handle;
   m_has_lock = other.m_has_lock;
 
-  other.m_handle = invalid_handle();
+  other.m_file_handle = invalid_file_handle();
+  other.m_mutex_handle = invalid_mutex_handle();
   other.m_has_lock = false;
 
   return *this;
@@ -286,24 +299,21 @@ lock_file_t& lock_file_t::operator=(lock_file_t&& other) noexcept {
 
 lock_file_t::~lock_file_t() {
 #if defined(_WIN32)
-  if (config::local_locks()) {
-    if (m_handle) {
-      if (m_has_lock) {
-        ReleaseMutex(m_handle);
-      }
-      CloseHandle(m_handle);
+  if (m_mutex_handle != invalid_mutex_handle()) {
+    if (m_has_lock) {
+      ReleaseMutex(m_mutex_handle);
     }
-  } else {
-    if (m_handle != INVALID_HANDLE_VALUE) {
-      // Close the lock file. This also deletes the file due to FILE_FLAG_DELETE_ON_CLOSE.
-      CloseHandle(m_handle);
-    }
+    CloseHandle(m_mutex_handle);
+  }
+  if (m_file_handle != invalid_file_handle()) {
+    // Close the file handle. This also deletes the file due to FILE_FLAG_DELETE_ON_CLOSE.
+    CloseHandle(m_file_handle);
   }
 #else
-  if (m_handle >= 0) {
-    // 1) Delete and close the lock file.
+  if (m_file_handle != invalid_file_handle()) {
+    // Delete and close the lock file.
     ::unlink(m_path.c_str());
-    ::close(m_handle);
+    ::close(m_file_handle);
   }
 #endif
 }

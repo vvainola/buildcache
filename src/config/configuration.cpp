@@ -58,7 +58,7 @@ int32_t s_compress_level = -1;
 bool s_perf = false;
 bool s_disable = false;
 bool s_read_only = false;
-bool s_local_locks = false;
+bool s_remote_locks = false;
 config::cache_accuracy_t s_accuracy = config::cache_accuracy_t::DEFAULT;
 config::compress_format_t s_compress_format = config::compress_format_t::DEFAULT;
 
@@ -300,11 +300,11 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
-  // Get "local_locks".
+  // Get "remote_locks".
   {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "local_locks");
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "remote_locks");
     if (cJSON_IsBool(node)) {
-      s_local_locks = cJSON_IsTrue(node);
+      s_remote_locks = cJSON_IsTrue(node);
     }
   }
 
@@ -542,9 +542,9 @@ void init() {
 
     // Get the local lock flag from the environment.
     {
-      const env_var_t local_locks_env("BUILDCACHE_LOCAL_LOCKS");
-      if (local_locks_env) {
-        s_local_locks = local_locks_env.as_bool();
+      const env_var_t remote_locks_env("BUILDCACHE_REMOTE_LOCKS");
+      if (remote_locks_env) {
+        s_remote_locks = remote_locks_env.as_bool();
       }
     }
   } catch (...) {
@@ -642,8 +642,8 @@ bool read_only() {
   return s_read_only;
 }
 
-bool local_locks() {
-  return s_local_locks;
+bool remote_locks() {
+  return s_remote_locks;
 }
 
 }  // namespace config

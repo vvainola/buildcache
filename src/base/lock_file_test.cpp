@@ -32,61 +32,106 @@ TEST_CASE("lock_file_t constructors are behaving as expected") {
   }
 }
 
-TEST_CASE("Acquiring a lock creates and removes a file") {
-  // Get a temporary file name.
-  file::tmp_file_t tmp_file(file::get_temp_dir(), ".lock");
-  REQUIRE_GT(tmp_file.path().size(), 0);
+TEST_CASE("Remote locks") {
+  SUBCASE("Acquiring a lock creates and removes a file") {
+    // Get a temporary file name.
+    file::tmp_file_t tmp_file(file::get_temp_dir(), ".lock");
+    REQUIRE_GT(tmp_file.path().size(), 0);
 
-  // The file should not yet exist.
-  CHECK_EQ(file::file_exists(tmp_file.path()), false);
-
-  // Aquire a lock in a scope.
-  {
-    file::lock_file_t lock(tmp_file.path());
-
-    // We should now have the lock, and the file should exist.
-    CHECK_EQ(lock.has_lock(), true);
-    CHECK_EQ(file::file_exists(tmp_file.path()), true);
-  }
-
-  // The lock file should no longer exist after the lock has gone out of scope.
-  CHECK_EQ(file::file_exists(tmp_file.path()), false);
-}
-
-TEST_CASE("Transfering lock ownership works as expected") {
-  // Get a temporary file name.
-  file::tmp_file_t tmp_file(file::get_temp_dir(), ".lock");
-  REQUIRE_GT(tmp_file.path().size(), 0);
-
-  // The file should not yet exist.
-  CHECK_EQ(file::file_exists(tmp_file.path()), false);
-
-  {
-    file::lock_file_t lock;
+    // The file should not yet exist.
+    CHECK_EQ(file::file_exists(tmp_file.path()), false);
 
     // Aquire a lock in a scope.
     {
-      file::lock_file_t child_lock(tmp_file.path());
+      file::lock_file_t lock(tmp_file.path(), true);
 
       // We should now have the lock, and the file should exist.
-      CHECK_EQ(child_lock.has_lock(), true);
-      CHECK_EQ(file::file_exists(tmp_file.path()), true);
-
-      // Move the lock object to the parent scope.
-      lock = std::move(child_lock);
-
-      // The lock in the child scope should no longer have the lock, but the file should still
-      // exist.
-      CHECK_EQ(child_lock.has_lock(), false);
+      CHECK_EQ(lock.has_lock(), true);
       CHECK_EQ(file::file_exists(tmp_file.path()), true);
     }
 
-    // The lock in the parent scope should now have the lock, and the file should still exist.
-    // We should now have the lock, and the file should exist.
-    CHECK_EQ(lock.has_lock(), true);
-    CHECK_EQ(file::file_exists(tmp_file.path()), true);
+    // The lock file should no longer exist after the lock has gone out of scope.
+    CHECK_EQ(file::file_exists(tmp_file.path()), false);
   }
 
-  // The lock file should no longer exist after the lock has gone out of scope.
-  CHECK_EQ(file::file_exists(tmp_file.path()), false);
+  SUBCASE("Transfering lock ownership works as expected") {
+    // Get a temporary file name.
+    file::tmp_file_t tmp_file(file::get_temp_dir(), ".lock");
+    REQUIRE_GT(tmp_file.path().size(), 0);
+
+    // The file should not yet exist.
+    CHECK_EQ(file::file_exists(tmp_file.path()), false);
+
+    {
+      file::lock_file_t lock;
+
+      // Aquire a lock in a scope.
+      {
+        file::lock_file_t child_lock(tmp_file.path(), true);
+
+        // We should now have the lock, and the file should exist.
+        CHECK_EQ(child_lock.has_lock(), true);
+        CHECK_EQ(file::file_exists(tmp_file.path()), true);
+
+        // Move the lock object to the parent scope.
+        lock = std::move(child_lock);
+
+        // TThe ownership of the lock should now have moved, and the file should still exist.
+        CHECK_EQ(child_lock.has_lock(), false);
+        CHECK_EQ(lock.has_lock(), true);
+        CHECK_EQ(file::file_exists(tmp_file.path()), true);
+      }
+
+      // The lock in the parent scope should now have the lock, and the file should still exist.
+      CHECK_EQ(lock.has_lock(), true);
+      CHECK_EQ(file::file_exists(tmp_file.path()), true);
+    }
+
+    // The lock file should no longer exist after the lock has gone out of scope.
+    CHECK_EQ(file::file_exists(tmp_file.path()), false);
+  }
+}
+
+TEST_CASE("Local locks") {
+  SUBCASE("Acquiring a lock creates and removes a file") {
+    // Get a temporary file name.
+    file::tmp_file_t tmp_file(file::get_temp_dir(), ".lock");
+    REQUIRE_GT(tmp_file.path().size(), 0);
+
+    // Repeatedly aquire and release a lock in a loop scope.
+    for (int i = 0; i < 10; ++i) {
+      file::lock_file_t lock(tmp_file.path(), false);
+
+      // We should now have the lock.
+      CHECK_EQ(lock.has_lock(), true);
+    }
+  }
+
+  SUBCASE("Transfering lock ownership works as expected") {
+    // Get a temporary file name.
+    file::tmp_file_t tmp_file(file::get_temp_dir(), ".lock");
+    REQUIRE_GT(tmp_file.path().size(), 0);
+
+    {
+      file::lock_file_t lock;
+
+      // Aquire a lock in a scope.
+      {
+        file::lock_file_t child_lock(tmp_file.path(), false);
+
+        // We should now have the lock.
+        CHECK_EQ(child_lock.has_lock(), true);
+
+        // Move the lock object to the parent scope.
+        lock = std::move(child_lock);
+
+        // The ownership of the lock should now have moved.
+        CHECK_EQ(child_lock.has_lock(), false);
+        CHECK_EQ(lock.has_lock(), true);
+      }
+
+      // The lock in the parent scope should now have the lock.
+      CHECK_EQ(lock.has_lock(), true);
+    }
+  }
 }
