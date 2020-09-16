@@ -18,9 +18,9 @@
 //--------------------------------------------------------------------------------------------------
 
 #include <base/debug_utils.hpp>
+#include <base/file_lock.hpp>
 #include <base/file_utils.hpp>
 #include <base/hasher.hpp>
-#include <base/lock_file.hpp>
 #include <base/time_utils.hpp>
 #include <base/unicode_utils.hpp>
 
@@ -69,14 +69,14 @@ std::wstring construct_mutex_name(const std::string& path) {
 #endif
 
 #if !defined(_WIN32)
-// The max lock file age before it is considered *definitely* stale, in seconds.
+// The max file lock age before it is considered *definitely* stale, in seconds.
 // Note: We set this high to accomodate for time zone differences, clock errors, etc.
-const time::seconds_t MAX_LOCK_FILE_AGE = 24 * 3600;
+const time::seconds_t MAX_FILE_LOCK_AGE = 24 * 3600;
 
 bool file_is_too_old(const std::string& path) {
   try {
     const auto age = time::seconds_since_epoch() - get_file_info(path).modify_time();
-    return age > MAX_LOCK_FILE_AGE;
+    return age > MAX_FILE_LOCK_AGE;
   } catch (const std::exception& e) {
     // Note: This is not necessarily an error, since the lock file may no longer exist.
     debug::log(debug::DEBUG) << "Unable to determine file age for " << path << ": " << e.what();
@@ -86,7 +86,7 @@ bool file_is_too_old(const std::string& path) {
 #endif  // !_WIN32
 }  // namespace
 
-lock_file_t::lock_file_t(const std::string& path, const bool remote_lock) : m_path(path) {
+file_lock_t::file_lock_t(const std::string& path, const bool remote_lock) : m_path(path) {
 #if defined(_WIN32)
   // Time values are in milliseconds.
   const DWORD MAX_WAIT_TIME = 10000;  // We'll fail if the lock can't be acquired in 10s.
@@ -135,7 +135,7 @@ lock_file_t::lock_file_t(const std::string& path, const bool remote_lock) : m_pa
         // again later: ERROR_SHARING_VIOLATION (the lock is already held by another process) and
         // ERROR_ACCESS_DENIED (this can can in fact be due to a pending delete, see
         // https://stackoverflow.com/q/6680491/5778708). Any other errors are treated as
-        // unrecoverable and result in an unlocked lock_file_t object.
+        // unrecoverable and result in an unlocked file_lock_t object.
         const auto last_error = GetLastError();
         if (last_error != ERROR_SHARING_VIOLATION && last_error != ERROR_ACCESS_DENIED) {
           debug::log(debug::ERROR)
@@ -274,7 +274,7 @@ lock_file_t::lock_file_t(const std::string& path, const bool remote_lock) : m_pa
   }
 }
 
-lock_file_t::lock_file_t(lock_file_t&& other) noexcept
+file_lock_t::file_lock_t(file_lock_t&& other) noexcept
     : m_path(std::move(other.m_path)),
       m_file_handle(other.m_file_handle),
       m_mutex_handle(other.m_mutex_handle),
@@ -284,7 +284,7 @@ lock_file_t::lock_file_t(lock_file_t&& other) noexcept
   other.m_has_lock = false;
 }
 
-lock_file_t& lock_file_t::operator=(lock_file_t&& other) noexcept {
+file_lock_t& file_lock_t::operator=(file_lock_t&& other) noexcept {
   m_path = std::move(other.m_path);
   m_file_handle = other.m_file_handle;
   m_mutex_handle = other.m_mutex_handle;
@@ -297,7 +297,7 @@ lock_file_t& lock_file_t::operator=(lock_file_t&& other) noexcept {
   return *this;
 }
 
-lock_file_t::~lock_file_t() {
+file_lock_t::~file_lock_t() {
 #if defined(_WIN32)
   if (m_mutex_handle != invalid_mutex_handle()) {
     if (m_has_lock) {

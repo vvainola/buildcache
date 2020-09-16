@@ -5,7 +5,7 @@
 total_success=true
 
 function run_test {
-  TESTFILE=/tmp/bc_lock_file_stresstest_data-$$
+  TESTFILE=/tmp/bc_file_lock_stresstest_data-$$
 
   rm -f "$TESTFILE"
 
@@ -18,7 +18,7 @@ function run_test {
   echo "Starting four concurrent processes (${test_type})..."
   pids=""
   for i in {1..4}; do
-    base/lock_file_stresstest "$TESTFILE" $1 &
+    base/file_lock_stresstest "$TESTFILE" $1 &
     pids+=" $!"
   done
 

@@ -28,8 +28,8 @@ set(BASE_SRC
   file_utils.hpp
   hasher.cpp
   hasher.hpp
-  lock_file.cpp
-  lock_file.hpp
+  file_lock.cpp
+  file_lock.hpp
   serializer_utils.cpp
   serializer_utils.hpp
   string_list.hpp
@@ -74,8 +74,8 @@ buildcache_add_test(NAME env_utils_test
                     SOURCES env_utils_test.cpp
                     LIBRARIES base)
 
-buildcache_add_test(NAME lock_file_test
-                    SOURCES lock_file_test.cpp
+buildcache_add_test(NAME file_lock_test
+                    SOURCES file_lock_test.cpp
                     LIBRARIES base)
 
 buildcache_add_test(NAME string_list_test
@@ -89,6 +89,6 @@ if(HAS_HMAC)
 endif()
 
 # This is a special test executable. It is meant to be run as multiple concurrent instances.
-add_executable(lock_file_stresstest
-               lock_file_stresstest.cpp)
-target_link_libraries(lock_file_stresstest base)
+add_executable(file_lock_stresstest
+               file_lock_stresstest.cpp)
+target_link_libraries(file_lock_stresstest base)

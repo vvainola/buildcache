@@ -20,9 +20,9 @@
 #ifndef BUILDCACHE_LOCAL_CACHE_HPP_
 #define BUILDCACHE_LOCAL_CACHE_HPP_
 
+#include <base/file_lock.hpp>
 #include <base/file_utils.hpp>
 #include <base/hasher.hpp>
-#include <base/lock_file.hpp>
 #include <cache/cache_entry.hpp>
 #include <cache/cache_stats.hpp>
 #include <cache/expected_file.hpp>
@@ -62,9 +62,9 @@ public:
            const bool allow_hard_links);
 
   /// @brief Check if an entry exists in the cache.
-  /// @returns A pair of a cache entry struct and a lock file object. If there was no cache hit,
-  /// the entry will be empty, and the lock file object will not hold any lock.
-  std::pair<cache_entry_t, file::lock_file_t> lookup(const hasher_t::hash_t& hash);
+  /// @returns A pair of a cache entry struct and a file lock object. If there was no cache hit,
+  /// the entry will be empty, and the file lock object will not hold any lock.
+  std::pair<cache_entry_t, file::file_lock_t> lookup(const hasher_t::hash_t& hash);
 
   /// @brief Copy a cached file to the local file system.
   /// @param hash The cache entry identifier.

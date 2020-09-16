@@ -18,8 +18,8 @@
 //--------------------------------------------------------------------------------------------------
 
 #include <base/debug_utils.hpp>
+#include <base/file_lock.hpp>
 #include <base/file_utils.hpp>
-#include <base/lock_file.hpp>
 
 #include <iostream>
 #include <string>
@@ -81,16 +81,16 @@ int main(int argc, const char** argv) {
     exit(0);
   }
   const std::string filename(argv[1]);
-  const auto lock_filename = filename + ".lock";
+  const auto file_lockname = filename + ".lock";
   const bool local_locks = (std::string(argv[2]) == "true");
 
   long last_count = -1;
   for (int i = 0; i < NUM_LOOPS; ++i) {
     {
       // Acquire a lock, which should guarantee us exclusive access to the data file.
-      file::lock_file_t lock(lock_filename, local_locks);
+      file::file_lock_t lock(file_lockname, local_locks);
       if (!lock.has_lock()) {
-        std::cerr << "*** Error: Unable to acquire lock: " << lock_filename << std::endl;
+        std::cerr << "*** Error: Unable to acquire lock: " << file_lockname << std::endl;
         exit(1);
       }
 

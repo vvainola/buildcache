@@ -17,8 +17,8 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#ifndef BUILDCACHE_LOCK_FILE_HPP_
-#define BUILDCACHE_LOCK_FILE_HPP_
+#ifndef BUILDCACHE_FILE_LOCK_HPP_
+#define BUILDCACHE_FILE_LOCK_HPP_
 
 #include <string>
 
@@ -55,10 +55,10 @@ namespace file {
 ///
 /// \note
 /// On some systems, local locks are implemented as remote locks.
-class lock_file_t {
+class file_lock_t {
 public:
   /// @brief Create an empty (unlocked) lock object.
-  lock_file_t() {
+  file_lock_t() {
   }
 
   /// @brief Acquire a lock for the specified file path.
@@ -66,19 +66,19 @@ public:
   /// the file system to which the process requires access synchronization.
   /// @param remote_lock Require the implementation to use a locking mechanism that can synchronize
   /// file system access across several OS instances (e.g. use this for network shares).
-  explicit lock_file_t(const std::string& path, const bool remote_lock);
+  explicit file_lock_t(const std::string& path, const bool remote_lock);
 
   // Support move semantics.
-  lock_file_t(lock_file_t&& other) noexcept;
-  lock_file_t& operator=(lock_file_t&& other) noexcept;
-  lock_file_t(const lock_file_t& other) = delete;
-  lock_file_t& operator=(const lock_file_t& other) = delete;
+  file_lock_t(file_lock_t&& other) noexcept;
+  file_lock_t& operator=(file_lock_t&& other) noexcept;
+  file_lock_t(const file_lock_t& other) = delete;
+  file_lock_t& operator=(const file_lock_t& other) = delete;
 
   /// @brief Release the lock.
   ///
   /// This releases the lock that was held. The sycnhronization object (if any) is deleted if this
   /// is the last process that holds a lock.
-  ~lock_file_t();
+  ~file_lock_t();
 
   /// @returns true if the lock was acquired successfully.
   bool has_lock() const {
@@ -121,4 +121,4 @@ private:
 }  // namespace file
 }  // namespace bcache
 
-#endif  // BUILDCACHE_LOCK_FILE_HPP_
+#endif  // BUILDCACHE_FILE_LOCK_HPP_

@@ -65,14 +65,14 @@ namespace bcache {
 namespace {
 const std::string CACHE_FILES_FOLDER_NAME = "c";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
-const std::string LOCK_FILE_SUFFIX = ".lock";
+const std::string FILE_LOCK_SUFFIX = ".lock";
 const std::string STATS_FILE_NAME = "stats.json";
 
 // The version of the entry file serialization data format.
 const int32_t ENTRY_DATA_FORMAT_VERSION = 2;
 
-std::string cache_entry_lock_file_path(const std::string& cache_entry_path) {
-  return cache_entry_path + LOCK_FILE_SUFFIX;
+std::string cache_entry_file_lock_path(const std::string& cache_entry_path) {
+  return cache_entry_path + FILE_LOCK_SUFFIX;
 }
 
 bool is_cache_entry_dir_path(const std::string& path) {
@@ -160,7 +160,7 @@ void local_cache_t::clear() {
   for (const auto& dir : dirs) {
     try {
       // We acquire an exclusive lock for the cache entry before deleting it.
-      file::lock_file_t lock(cache_entry_lock_file_path(dir.path()), config::remote_locks());
+      file::file_lock_t lock(cache_entry_file_lock_path(dir.path()), config::remote_locks());
       if (lock.has_lock()) {
         file::remove_dir(dir.path());
       }
@@ -192,7 +192,7 @@ void local_cache_t::show_stats() {
     visitedDirs.insert(firstLevelDirPath);
     const auto stats_path = file::append_path(firstLevelDirPath, STATS_FILE_NAME);
     cache_stats_t stats;
-    file::lock_file_t lock{stats_path + LOCK_FILE_SUFFIX, config::remote_locks()};
+    file::file_lock_t lock{stats_path + FILE_LOCK_SUFFIX, config::remote_locks()};
     if (!lock.has_lock()) {
       debug::log(debug::DEBUG) << "failed to lock stats, skipping";
       return;
@@ -235,7 +235,7 @@ void local_cache_t::zero_stats() {
   for (const auto& dir : first_level_dirs) {
     try {
       const auto stats_path = file::append_path(dir, STATS_FILE_NAME);
-      file::lock_file_t lock{stats_path + LOCK_FILE_SUFFIX, config::remote_locks()};
+      file::file_lock_t lock{stats_path + FILE_LOCK_SUFFIX, config::remote_locks()};
       if (lock.has_lock()) {
         file::remove_file(stats_path);
       }
@@ -256,7 +256,7 @@ void local_cache_t::add(const hasher_t::hash_t& hash,
 
   {
     // Acquire a scoped exclusive lock for the cache entry.
-    file::lock_file_t lock(cache_entry_lock_file_path(cache_entry_path), config::remote_locks());
+    file::file_lock_t lock(cache_entry_file_lock_path(cache_entry_path), config::remote_locks());
     if (!lock.has_lock()) {
       throw std::runtime_error("Unable to acquire a cache entry lock for writing.");
     }
@@ -291,13 +291,13 @@ void local_cache_t::add(const hasher_t::hash_t& hash,
   }
 }
 
-std::pair<cache_entry_t, file::lock_file_t> local_cache_t::lookup(const hasher_t::hash_t& hash) {
+std::pair<cache_entry_t, file::file_lock_t> local_cache_t::lookup(const hasher_t::hash_t& hash) {
   // Get the path to the cache entry.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
 
   try {
     // If the cache parent dir does not exist yet, we can't possibly have a cache hit.
-    // Note: This is mostly a trick to avoid irrelevant error log printouts from the lock_file_t
+    // Note: This is mostly a trick to avoid irrelevant error log printouts from the file_lock_t
     // constructor later on.
     const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
     if (!file::dir_exists(cache_entry_parent_path)) {
@@ -305,7 +305,7 @@ std::pair<cache_entry_t, file::lock_file_t> local_cache_t::lookup(const hasher_t
     }
 
     // Acquire a scoped lock for the cache entry.
-    file::lock_file_t lock(cache_entry_lock_file_path(cache_entry_path), config::remote_locks());
+    file::file_lock_t lock(cache_entry_file_lock_path(cache_entry_path), config::remote_locks());
     if (!lock.has_lock()) {
       throw std::runtime_error("Unable to acquire a cache entry lock for reading.");
     }
@@ -318,7 +318,7 @@ std::pair<cache_entry_t, file::lock_file_t> local_cache_t::lookup(const hasher_t
     return std::make_pair(cache_entry_t::deserialize(entry_data), std::move(lock));
   } catch (...) {
     update_stats(hash, cache_stats_t::local_miss());
-    return std::make_pair(cache_entry_t(), file::lock_file_t());
+    return std::make_pair(cache_entry_t(), file::file_lock_t());
   }
 }
 
@@ -332,7 +332,7 @@ bool local_cache_t::update_stats(const hasher_t::hash_t& hash, const cache_stats
       file::create_dir_with_parents(cache_subdir);
     }
     const auto stats_file_path = file::append_path(cache_subdir, STATS_FILE_NAME);
-    file::lock_file_t lock(stats_file_path + LOCK_FILE_SUFFIX, config::remote_locks());
+    file::file_lock_t lock(stats_file_path + FILE_LOCK_SUFFIX, config::remote_locks());
     if (!lock.has_lock()) {
       debug::log(debug::INFO) << "Failed to lock stats, skipping update";
       return false;
@@ -401,7 +401,7 @@ void local_cache_t::perform_housekeeping() {
                                  << dir.access_time() << ", " << dir.size() << " bytes)";
 
         // We acquire a scoped lock for the cache entry before deleting it.
-        file::lock_file_t lock(cache_entry_lock_file_path(dir.path()), config::remote_locks());
+        file::file_lock_t lock(cache_entry_file_lock_path(dir.path()), config::remote_locks());
         if (lock.has_lock()) {
           file::remove_dir(dir.path());
           total_size -= dir.size();

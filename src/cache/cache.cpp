@@ -110,7 +110,7 @@ bool cache_t::lookup_in_local_cache(const hasher_t::hash_t hash,
                                     const bool create_target_dirs,
                                     int& return_code) {
   PERF_START(CACHE_LOOKUP);
-  // Note: The lookup will give us a lock file that is locked until we go out of scope.
+  // Note: The lookup will give us a file lock that is locked until we go out of scope.
   auto lookup_result = m_local_cache.lookup(hash);
   const auto& cached_entry = lookup_result.first;
   PERF_STOP(CACHE_LOOKUP);
