@@ -54,7 +54,7 @@ An example configuration file:
 To see the configuration options that are in effect, run:
 
 ```bash
-$ buildcache -s
+$ buildcache --show-config
 ```
 
 ## Debugging
