@@ -17,14 +17,15 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //--------------------------------------------------------------------------------------------------
 
-#include <base/lock_file.hpp>
-
 #include <base/debug_utils.hpp>
+#include <base/file_lock.hpp>
 #include <base/file_utils.hpp>
+#include <base/hasher.hpp>
 #include <base/time_utils.hpp>
 #include <base/unicode_utils.hpp>
 
 #include <cstdint>
+
 #include <algorithm>
 
 #if defined(_WIN32)
@@ -42,21 +43,40 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
+
 #include <thread>
 #endif
 
 namespace bcache {
 namespace file {
 namespace {
+#if defined(_WIN32)
+std::wstring construct_mutex_name(const std::string& path) {
+  const std::wstring NAME_PREFIX = L"Global\\buildcache_";  // Place in the Global namespace.
+
+  // Use the full path, without backslashes, as the name.
+  auto name = utf8_to_ucs2(path);
+  std::replace(name.begin(), name.end(), L'\\', L'_');
+  if ((NAME_PREFIX.size() + name.size()) >= MAX_PATH) {
+    // If the name does not fit within MAX_PATH, use a hash instead.
+    hasher_t hasher;
+    hasher.update(ucs2_to_utf8(name));
+    name = utf8_to_ucs2(hasher.final().as_string());
+  }
+
+  return NAME_PREFIX + name;
+}
+#endif
+
 #if !defined(_WIN32)
-// The max lock file age before it is considered *definitely* stale, in seconds.
+// The max file lock age before it is considered *definitely* stale, in seconds.
 // Note: We set this high to accomodate for time zone differences, clock errors, etc.
-const time::seconds_t MAX_LOCK_FILE_AGE = 24 * 3600;
+const time::seconds_t MAX_FILE_LOCK_AGE = 24 * 3600;
 
 bool file_is_too_old(const std::string& path) {
   try {
     const auto age = time::seconds_since_epoch() - get_file_info(path).modify_time();
-    return age > MAX_LOCK_FILE_AGE;
+    return age > MAX_FILE_LOCK_AGE;
   } catch (const std::exception& e) {
     // Note: This is not necessarily an error, since the lock file may no longer exist.
     debug::log(debug::DEBUG) << "Unable to determine file age for " << path << ": " << e.what();
@@ -66,57 +86,76 @@ bool file_is_too_old(const std::string& path) {
 #endif  // !_WIN32
 }  // namespace
 
-lock_file_t::handle_t lock_file_t::invalid_handle() {
-#if defined(_WIN32)
-  return INVALID_HANDLE_VALUE;
-#else
-  return -1;
-#endif
-}
-
-lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
+file_lock_t::file_lock_t(const std::string& path, const bool remote_lock) : m_path(path) {
 #if defined(_WIN32)
   // Time values are in milliseconds.
   const DWORD MAX_WAIT_TIME = 10000;  // We'll fail if the lock can't be acquired in 10s.
-  const DWORD MIN_SLEEP_TIME = 0;     // We start with 0, which is essentially just a yield.
-  const DWORD MAX_SLEEP_TIME = 50;
 
-  DWORD total_wait_time = 0;
-  DWORD sleep_time = MIN_SLEEP_TIME;
+  // For Windows, we can use local, named mutexes instead of file locks, if we're allowed to.
+  if (!remote_lock) {
+    // Construct a unique mutex name that identifies the given path.
+    const auto name = construct_mutex_name(path);
 
-  while (total_wait_time < MAX_WAIT_TIME) {
-    // Try to create the lock file in exclusive mode.
-    m_handle = CreateFileW(utf8_to_ucs2(path).c_str(),
-                           GENERIC_READ | GENERIC_WRITE,
-                           0,  // No sharing => exclusive access.
-                           nullptr,
-                           CREATE_ALWAYS,
-                           FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE,
-                           nullptr);
-    if (m_handle != INVALID_HANDLE_VALUE) {
-      // We got the lock!
-      break;
-    } else {
-      // We were unable to create the file. We allow the following errors by waiting and trying
-      // again later: ERROR_SHARING_VIOLATION (the lock is already held by another process) and
-      // ERROR_ACCESS_DENIED (this can can in fact be due to a pending delete, see
-      // https://stackoverflow.com/q/6680491/5778708). Any other errors are treated as unrecoverable
-      // and result in an unlocked lock_file_t object.
-      const auto last_error = GetLastError();
-      if (last_error != ERROR_SHARING_VIOLATION && last_error != ERROR_ACCESS_DENIED) {
-        debug::log(debug::ERROR) << "Failed to open the lock file " << path
-                                 << " (error code: " << last_error << ")";
-        break;
-      }
+    // Open the named mutex (create it if it does not already exist).
+    m_mutex_handle = CreateMutexW(nullptr, FALSE, name.c_str());
+    if (m_mutex_handle == invalid_mutex_handle()) {
+      return;
     }
 
-    // Wait for a small period of time to give other processes a chance to release the lock.
-    // Note: Handle both short and long blocks by increasing the sleep time for every new try.
-    Sleep(sleep_time);
-    total_wait_time += sleep_time;
-    sleep_time = std::min(sleep_time * 2 + 1, MAX_SLEEP_TIME);
+    // Acquire the mutex.
+    // WAIT_OBJECT_0 and WAIT_ABANDONED both indicate the lock has been acquired. WAIT_ABANDONED
+    // additionally indicates that the previous thread owning the lock terminated without properly
+    // releasing it.
+    const auto status = WaitForSingleObject(m_mutex_handle, MAX_WAIT_TIME);
+    if (!(status == WAIT_OBJECT_0 || status == WAIT_ABANDONED)) {
+      return;
+    }
+  } else {
+    // Time values are in milliseconds.
+    const DWORD MIN_SLEEP_TIME = 0;  // We start with 0, which is essentially just a yield.
+    const DWORD MAX_SLEEP_TIME = 50;
+
+    DWORD total_wait_time = 0;
+    DWORD sleep_time = MIN_SLEEP_TIME;
+
+    while (total_wait_time < MAX_WAIT_TIME) {
+      // Try to create the lock file in exclusive mode.
+      m_file_handle = CreateFileW(utf8_to_ucs2(path).c_str(),
+                                  GENERIC_READ | GENERIC_WRITE,
+                                  0,  // No sharing => exclusive access.
+                                  nullptr,
+                                  CREATE_ALWAYS,
+                                  FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE,
+                                  nullptr);
+      if (m_file_handle != invalid_file_handle()) {
+        // We got the lock!
+        break;
+      } else {
+        // We were unable to create the file. We allow the following errors by waiting and trying
+        // again later: ERROR_SHARING_VIOLATION (the lock is already held by another process) and
+        // ERROR_ACCESS_DENIED (this can can in fact be due to a pending delete, see
+        // https://stackoverflow.com/q/6680491/5778708). Any other errors are treated as
+        // unrecoverable and result in an unlocked file_lock_t object.
+        const auto last_error = GetLastError();
+        if (last_error != ERROR_SHARING_VIOLATION && last_error != ERROR_ACCESS_DENIED) {
+          debug::log(debug::ERROR)
+              << "Failed to open the lock file " << path << " (error code: " << last_error << ")";
+          break;
+        }
+      }
+
+      // Wait for a small period of time to give other processes a chance to release the lock.
+      // Note: Handle both short and long blocks by increasing the sleep time for every new try.
+      Sleep(sleep_time);
+      total_wait_time += sleep_time;
+      sleep_time = std::min(sleep_time * 2 + 1, MAX_SLEEP_TIME);
+    }
   }
 #else
+  // For POSIX, there's no need to use local locks (e.g. named semaphores), since the performance
+  // benefit is negligable, and there are many inherent problems with that solution.
+  (void)remote_lock;
+
   // Time values are in microseconds.
   const int64_t MAX_WAIT_TIME = 10000000;  // We'll fail if the lock can't be acquired in 10s.
   const int64_t TIME_BETWEEN_LOCK_BREAKS = 100000;  // We try to break the lock every 100ms.
@@ -129,15 +168,15 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
 
   while (total_wait_time < MAX_WAIT_TIME) {
     // Try to create the lock file in exclusive mode.
-    m_handle = ::open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
-    if (m_handle >= 0) {
+    m_file_handle = ::open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0666);
+    if (m_file_handle != invalid_file_handle()) {
       // We got the lock! Write our PID to the file.
       const auto pid_str = std::to_string(getpid());
-      const auto bytes_written = ::write(m_handle, pid_str.data(), pid_str.size());
+      const auto bytes_written = ::write(m_file_handle, pid_str.data(), pid_str.size());
       if (bytes_written != static_cast<ssize_t>(pid_str.size())) {
         ::unlink(path.c_str());
-        ::close(m_handle);
-        m_handle = invalid_handle();
+        ::close(m_file_handle);
+        m_file_handle = invalid_file_handle();
         debug::log(debug::ERROR) << "Failed to write our PID to the lock file " << path;
       }
       break;
@@ -228,40 +267,53 @@ lock_file_t::lock_file_t(const std::string& path) : m_path(path) {
 #endif
 
   // Did we get the lock?
-  m_has_lock = (m_handle != invalid_handle());
+  m_has_lock =
+      (m_file_handle != invalid_file_handle()) || (m_mutex_handle != invalid_mutex_handle());
   if (m_has_lock) {
     debug::log(debug::DEBUG) << "Locked " << path;
   }
 }
 
-lock_file_t::lock_file_t(lock_file_t&& other) noexcept
-    : m_path(std::move(other.m_path)), m_handle(other.m_handle), m_has_lock(other.m_has_lock) {
-  other.m_handle = invalid_handle();
+file_lock_t::file_lock_t(file_lock_t&& other) noexcept
+    : m_path(std::move(other.m_path)),
+      m_file_handle(other.m_file_handle),
+      m_mutex_handle(other.m_mutex_handle),
+      m_has_lock(other.m_has_lock) {
+  other.m_file_handle = invalid_file_handle();
+  other.m_mutex_handle = invalid_mutex_handle();
   other.m_has_lock = false;
 }
 
-lock_file_t& lock_file_t::operator=(lock_file_t&& other) noexcept {
+file_lock_t& file_lock_t::operator=(file_lock_t&& other) noexcept {
   m_path = std::move(other.m_path);
-  m_handle = other.m_handle;
+  m_file_handle = other.m_file_handle;
+  m_mutex_handle = other.m_mutex_handle;
   m_has_lock = other.m_has_lock;
 
-  other.m_handle = invalid_handle();
+  other.m_file_handle = invalid_file_handle();
+  other.m_mutex_handle = invalid_mutex_handle();
   other.m_has_lock = false;
 
   return *this;
 }
 
-lock_file_t::~lock_file_t() {
+file_lock_t::~file_lock_t() {
 #if defined(_WIN32)
-  if (m_handle != INVALID_HANDLE_VALUE) {
-    // Close the lock file. This also deletes the file due to FILE_FLAG_DELETE_ON_CLOSE.
-    CloseHandle(m_handle);
+  if (m_mutex_handle != invalid_mutex_handle()) {
+    if (m_has_lock) {
+      ReleaseMutex(m_mutex_handle);
+    }
+    CloseHandle(m_mutex_handle);
+  }
+  if (m_file_handle != invalid_file_handle()) {
+    // Close the file handle. This also deletes the file due to FILE_FLAG_DELETE_ON_CLOSE.
+    CloseHandle(m_file_handle);
   }
 #else
-  if (m_handle >= 0) {
-    // 1) Delete and close the lock file.
+  if (m_file_handle != invalid_file_handle()) {
+    // Delete and close the lock file.
     ::unlink(m_path.c_str());
-    ::close(m_handle);
+    ::close(m_file_handle);
   }
 #endif
 }

@@ -18,8 +18,8 @@
 //--------------------------------------------------------------------------------------------------
 
 #include <base/debug_utils.hpp>
+#include <base/file_lock.hpp>
 #include <base/file_utils.hpp>
-#include <base/lock_file.hpp>
 
 #include <iostream>
 #include <string>
@@ -74,21 +74,23 @@ long read_number_from_file(const std::string& path) {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  // The program takes one argument: The name of a file that is to be updated in a locked fashion.
-  if (argc != 2) {
-    std::cout << "Usage: " << argv[0] << " <filename>\n";
+  if (argc != 3) {
+    std::cout << "Usage: " << argv[0] << " <filename> <local_locks>\n";
+    std::cout << "  filename    The name of the file to be updated in a locked fashion\n";
+    std::cout << "  local_locks Set this to \"true\" to allow local locks\n";
     exit(0);
   }
-  std::string filename(argv[1]);
-  std::string lock_filename = filename + ".lock";
+  const std::string filename(argv[1]);
+  const auto file_lockname = filename + ".lock";
+  const bool local_locks = (std::string(argv[2]) == "true");
 
   long last_count = -1;
   for (int i = 0; i < NUM_LOOPS; ++i) {
     {
       // Acquire a lock, which should guarantee us exclusive access to the data file.
-      file::lock_file_t lock(lock_filename);
+      file::file_lock_t lock(file_lockname, local_locks);
       if (!lock.has_lock()) {
-        std::cerr << "*** Error: Unable to acquire lock: " << lock_filename << std::endl;
+        std::cerr << "*** Error: Unable to acquire lock: " << file_lockname << std::endl;
         exit(1);
       }
 
