@@ -145,62 +145,67 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
     // Print the cache stats.
     std::cout << "Cache status:\n";
     cache.show_stats();
+  } catch (const std::exception& e) {
+    std::cerr << "*** Unexpected error: " << e.what() << "\n";
+    return_code = 1;
+  } catch (...) {
+    std::cerr << "*** Unexpected error.\n";
+    return_code = 1;
+  }
+  std::exit(return_code);
+}
 
-    {
-// Print the configuration.
+[[noreturn]] void show_config_and_exit() {
+  int return_code = 0;
+  try {
 #ifdef _WIN32
-      const std::string PATH_SEP = ";";
+    const std::string PATH_SEP = ";";
 #else
-      const std::string PATH_SEP = ":";
+    const std::string PATH_SEP = ":";
 #endif
 
-      std::cout << "\nConfiguration:\n";
-      std::cout << "  Configuration file: " << bcache::config::config_file() << "\n\n";
+    std::cout << "Configuration file: " << bcache::config::config_file() << "\n\n";
 
-      std::cout << "  BUILDCACHE_DIR:                    " << bcache::config::dir() << "\n";
-      std::cout << "  BUILDCACHE_LUA_PATH:               "
-                << bcache::config::lua_paths().join(PATH_SEP, false) << "\n";
-      std::cout << "  BUILDCACHE_PREFIX:                 " << bcache::config::prefix() << "\n";
-      std::cout << "  BUILDCACHE_REMOTE:                 "
-                << (bcache::config::remote().empty() ? "(disabled)" : bcache::config::remote())
-                << "\n";
-      std::cout << "  BUILDCACHE_S3_ACCESS:              "
-                << (bcache::config::s3_access().empty() ? "" : "*******") << "\n";
-      std::cout << "  BUILDCACHE_S3_SECRET:              "
-                << (bcache::config::s3_secret().empty() ? "" : "*******") << "\n";
-      std::cout << "  BUILDCACHE_MAX_CACHE_SIZE:         " << bcache::config::max_cache_size()
-                << " (" << bcache::file::human_readable_size(bcache::config::max_cache_size())
-                << ")\n";
-      std::cout << "  BUILDCACHE_MAX_LOCAL_ENTRY_SIZE:   " << bcache::config::max_local_entry_size()
-                << " (" << bcache::file::human_readable_size(bcache::config::max_local_entry_size())
-                << ")\n";
-      std::cout << "  BUILDCACHE_MAX_REMOTE_ENTRY_SIZE:  "
-                << bcache::config::max_remote_entry_size() << " ("
-                << bcache::file::human_readable_size(bcache::config::max_remote_entry_size())
-                << ")\n";
-      std::cout << "  BUILDCACHE_DEBUG:                  " << bcache::config::debug() << "\n";
-      std::cout << "  BUILDCACHE_LOG_FILE:               " << bcache::config::log_file() << "\n";
-      std::cout << "  BUILDCACHE_HARD_LINKS:             "
-                << (bcache::config::hard_links() ? "true" : "false") << "\n";
-      std::cout << "  BUILDCACHE_CACHE_LINK_COMMANDS:    "
-                << (bcache::config::cache_link_commands() ? "true" : "false") << "\n";
-      std::cout << "  BUILDCACHE_COMPRESS:               "
-                << (bcache::config::compress() ? "true" : "false") << "\n";
-      std::cout << "  BUILDCACHE_COMPRESS_FORMAT:        "
-                << to_string(bcache::config::compress_format()) << "\n";
-      std::cout << "  BUILDCACHE_COMPRESS_LEVEL:         " << bcache::config::compress_level()
-                << "\n";
-      std::cout << "  BUILDCACHE_PERF:                   "
-                << (bcache::config::perf() ? "true" : "false") << "\n";
-      std::cout << "  BUILDCACHE_DISABLE:                "
-                << (bcache::config::disable() ? "true" : "false") << "\n";
-      std::cout << "  BUILDCACHE_READ_ONLY:              "
-                << (bcache::config::read_only() ? "true" : "false") << "\n";
-      std::cout << "  BUILDCACHE_REMOTE_LOCKS:           "
-                << (bcache::config::remote_locks() ? "true" : "false") << "\n";
-      std::cout << "  BUILDCACHE_ACCURACY:               " << to_string(bcache::config::accuracy())
-                << "\n";
-    }
+    std::cout << "  BUILDCACHE_ACCURACY:               " << to_string(bcache::config::accuracy())
+              << "\n";
+    std::cout << "  BUILDCACHE_CACHE_LINK_COMMANDS:    "
+              << (bcache::config::cache_link_commands() ? "true" : "false") << "\n";
+    std::cout << "  BUILDCACHE_COMPRESS:               "
+              << (bcache::config::compress() ? "true" : "false") << "\n";
+    std::cout << "  BUILDCACHE_COMPRESS_FORMAT:        "
+              << to_string(bcache::config::compress_format()) << "\n";
+    std::cout << "  BUILDCACHE_COMPRESS_LEVEL:         " << bcache::config::compress_level()
+              << "\n";
+    std::cout << "  BUILDCACHE_DEBUG:                  " << bcache::config::debug() << "\n";
+    std::cout << "  BUILDCACHE_DIR:                    " << bcache::config::dir() << "\n";
+    std::cout << "  BUILDCACHE_DISABLE:                "
+              << (bcache::config::disable() ? "true" : "false") << "\n";
+    std::cout << "  BUILDCACHE_HARD_LINKS:             "
+              << (bcache::config::hard_links() ? "true" : "false") << "\n";
+    std::cout << "  BUILDCACHE_IMPERSONATE:            " << bcache::config::dir() << "\n";
+    std::cout << "  BUILDCACHE_LOG_FILE:               " << bcache::config::log_file() << "\n";
+    std::cout << "  BUILDCACHE_LUA_PATH:               "
+              << bcache::config::lua_paths().join(PATH_SEP, false) << "\n";
+    std::cout << "  BUILDCACHE_MAX_CACHE_SIZE:         " << bcache::config::max_cache_size() << " ("
+              << bcache::file::human_readable_size(bcache::config::max_cache_size()) << ")\n";
+    std::cout << "  BUILDCACHE_MAX_LOCAL_ENTRY_SIZE:   " << bcache::config::max_local_entry_size()
+              << " (" << bcache::file::human_readable_size(bcache::config::max_local_entry_size())
+              << ")\n";
+    std::cout << "  BUILDCACHE_MAX_REMOTE_ENTRY_SIZE:  " << bcache::config::max_remote_entry_size()
+              << " (" << bcache::file::human_readable_size(bcache::config::max_remote_entry_size())
+              << ")\n";
+    std::cout << "  BUILDCACHE_PERF:                   "
+              << (bcache::config::perf() ? "true" : "false") << "\n";
+    std::cout << "  BUILDCACHE_PREFIX:                 " << bcache::config::prefix() << "\n";
+    std::cout << "  BUILDCACHE_READ_ONLY:              "
+              << (bcache::config::read_only() ? "true" : "false") << "\n";
+    std::cout << "  BUILDCACHE_REMOTE:                 " << bcache::config::remote() << "\n";
+    std::cout << "  BUILDCACHE_REMOTE_LOCKS:           "
+              << (bcache::config::remote_locks() ? "true" : "false") << "\n";
+    std::cout << "  BUILDCACHE_S3_ACCESS:              "
+              << (bcache::config::s3_access().empty() ? "" : "*******") << "\n";
+    std::cout << "  BUILDCACHE_S3_SECRET:              "
+              << (bcache::config::s3_secret().empty() ? "" : "*******") << "\n";
   } catch (const std::exception& e) {
     std::cerr << "*** Unexpected error: " << e.what() << "\n";
     return_code = 1;
@@ -385,7 +390,8 @@ void print_help(const char* program_name) {
   std::cout << "\n";
   std::cout << "Options:\n";
   std::cout << "    -C, --clear           clear the local cache (except configuration)\n";
-  std::cout << "    -s, --show-stats      show statistics summary and configuration\n";
+  std::cout << "    -s, --show-stats      show statistics summary\n";
+  std::cout << "    -c, --show-config     show current configuration\n";
   std::cout << "    -z, --zero-stats      zero statistics counters\n";
   std::cout << "    -e, --edit-config     edit the configuration file\n";
   std::cout << "\n";
@@ -436,6 +442,8 @@ int main(int argc, const char** argv) {
     clear_cache_and_exit();
   } else if (compare_arg(arg_str, "-s", "--show-stats")) {
     show_stats_and_exit();
+  } else if (compare_arg(arg_str, "-c", "--show-config")) {
+    show_config_and_exit();
   } else if (compare_arg(arg_str, "-z", "--zero-stats")) {
     zero_stats_and_exit();
   } else if (compare_arg(arg_str, "-V", "--version")) {

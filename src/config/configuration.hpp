@@ -57,47 +57,11 @@ std::string to_string(const compress_format_t format);
 /// @brief Initialize the configuration based on environment variables etc.
 void init();
 
-/// @returns the BuildCache home directory.
-const std::string& dir();
-
 /// @returns the BuildCache configuration file.
 const std::string& config_file();
 
-/// @returns the Lua search paths.
-const string_list_t& lua_paths();
-
-/// @returns the compiler execution prefix command.
-const std::string& prefix();
-
-/// @returns the executable to impersonate.
-const std::string& impersonate();
-
-/// @returns the remote cache service address.
-const std::string& remote();
-
-/// @returns the S3 access key for the remote cache.
-const std::string& s3_access();
-
-/// @returns the S3 secret key for the remote cache.
-const std::string& s3_secret();
-
-/// @returns the maximum cache size (in bytes).
-int64_t max_cache_size();
-
-/// @returns the maximum local cache entry size (in bytes).
-int64_t max_local_entry_size();
-
-/// @returns the maximum remote cache entry size (in bytes).
-int64_t max_remote_entry_size();
-
-/// @returns the debug level (-1 for no debugging).
-int32_t debug();
-
-/// @returns the log file (empty string for stdout).
-const std::string& log_file();
-
-/// @returns true if BuildCache should use hard links when possible.
-bool hard_links();
+/// @returns the cache accuracy.
+cache_accuracy_t accuracy();
 
 /// @returns true if BuildCache should cache link commands.
 bool cache_link_commands();
@@ -111,20 +75,56 @@ compress_format_t compress_format();
 /// @returns the compression level.
 int32_t compress_level();
 
-/// @returns true if performance profiling output is enabled.
-bool perf();
+/// @returns the debug level (-1 for no debugging).
+int32_t debug();
+
+/// @returns the BuildCache home directory.
+const std::string& dir();
 
 /// @returns true if BuildCache is disabled.
 bool disable();
 
+/// @returns true if BuildCache should use hard links when possible.
+bool hard_links();
+
+/// @returns the executable to impersonate.
+const std::string& impersonate();
+
+/// @returns the log file (empty string for stdout).
+const std::string& log_file();
+
+/// @returns the Lua search paths.
+const string_list_t& lua_paths();
+
+/// @returns the maximum cache size (in bytes).
+int64_t max_cache_size();
+
+/// @returns the maximum local cache entry size (in bytes).
+int64_t max_local_entry_size();
+
+/// @returns the maximum remote cache entry size (in bytes).
+int64_t max_remote_entry_size();
+
+/// @returns true if performance profiling output is enabled.
+bool perf();
+
+/// @returns the compiler execution prefix command.
+const std::string& prefix();
+
 /// @returns true if the readonly mode is enabled.
 bool read_only();
+
+/// @returns the remote cache service address.
+const std::string& remote();
 
 /// @returns true if BuildCache must use file locks that are safe for remote file systems.
 bool remote_locks();
 
-/// @returns the cache accuracy.
-cache_accuracy_t accuracy();
+/// @returns the S3 access key for the remote cache.
+const std::string& s3_access();
+
+/// @returns the S3 secret key for the remote cache.
+const std::string& s3_secret();
 
 }  // namespace config
 }  // namespace bcache
