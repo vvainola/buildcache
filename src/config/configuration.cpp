@@ -37,30 +37,40 @@ const int64_t DEFAULT_MAX_CACHE_SIZE = 5368709120L;        // 5 GiB
 const int64_t DEFAULT_MAX_LOCAL_ENTRY_SIZE = 134217728L;   // 128 MiB
 const int64_t DEFAULT_MAX_REMOTE_ENTRY_SIZE = 134217728L;  // 128 MiB
 
-// Configuration options.
-std::string s_dir;
+// Delimiter character for the LUA_PATH environment variable.
+#ifdef _WIN32
+const char PATH_DELIMITER_CHR = ';';
+#else
+const char PATH_DELIMITER_CHR = ':';
+#endif
+const auto PATH_DELIMITER = std::string(1, PATH_DELIMITER_CHR);
+
+// The configuration file for this configuration.
 std::string s_config_file;
-string_list_t s_lua_paths;
-std::string s_prefix;
+
+// Configuration options.
+config::cache_accuracy_t s_accuracy = config::cache_accuracy_t::DEFAULT;
+bool s_cache_link_commands = false;
+bool s_compress = false;
+config::compress_format_t s_compress_format = config::compress_format_t::DEFAULT;
+int32_t s_compress_level = -1;
+int32_t s_debug = -1;
+bool s_disable = false;
+std::string s_dir;
+bool s_hard_links = false;
 std::string s_impersonate;
-std::string s_remote;
-std::string s_s3_access;
-std::string s_s3_secret;
+std::string s_log_file;
+string_list_t s_lua_paths;
 int64_t s_max_cache_size = DEFAULT_MAX_CACHE_SIZE;
 int64_t s_max_local_entry_size = DEFAULT_MAX_LOCAL_ENTRY_SIZE;
 int64_t s_max_remote_entry_size = DEFAULT_MAX_REMOTE_ENTRY_SIZE;
-int32_t s_debug = -1;
-std::string s_log_file;
-bool s_hard_links = false;
-bool s_cache_link_commands = false;
-bool s_compress = false;
-int32_t s_compress_level = -1;
 bool s_perf = false;
-bool s_disable = false;
+std::string s_prefix;
 bool s_read_only = false;
 bool s_remote_locks = false;
-config::cache_accuracy_t s_accuracy = config::cache_accuracy_t::DEFAULT;
-config::compress_format_t s_compress_format = config::compress_format_t::DEFAULT;
+std::string s_remote;
+std::string s_s3_access;
+std::string s_s3_secret;
 
 std::string to_lower(const std::string& str) {
   std::string str_lower(str.size(), ' ');
@@ -138,7 +148,76 @@ void load_from_file(const std::string& file_name) {
     throw std::runtime_error(ss.str());
   }
 
-  // Get "lua_paths".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "accuracy");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_accuracy = to_cache_accuracy(std::string(node->valuestring));
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "cache_link_commands");
+    if (cJSON_IsBool(node)) {
+      s_cache_link_commands = cJSON_IsTrue(node);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress");
+    if (cJSON_IsBool(node)) {
+      s_compress = cJSON_IsTrue(node);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress_format");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_compress_format = to_compress_format(std::string(node->valuestring));
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress_level");
+    if (cJSON_IsNumber(node)) {
+      s_compress_level = static_cast<int32_t>(node->valueint);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "debug");
+    if (cJSON_IsNumber(node)) {
+      s_debug = static_cast<int32_t>(node->valueint);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "disable");
+    if (cJSON_IsBool(node)) {
+      s_disable = cJSON_IsTrue(node);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "hard_links");
+    if (cJSON_IsBool(node)) {
+      s_hard_links = cJSON_IsTrue(node);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "impersonate");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_impersonate = std::string(node->valuestring);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "log_file");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_log_file = std::string(node->valuestring);
+    }
+  }
+
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "lua_paths");
     cJSON* child_node;
@@ -148,47 +227,6 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
-  // Get "prefix".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "prefix");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
-      s_prefix = std::string(node->valuestring);
-    }
-  }
-
-  // Get "impersonate".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "impersonate");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
-      s_impersonate = std::string(node->valuestring);
-    }
-  }
-
-  // Get "remote".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "remote");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
-      s_remote = std::string(node->valuestring);
-    }
-  }
-
-  // Get "s3_access".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "s3_access");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
-      s_s3_access = std::string(node->valuestring);
-    }
-  }
-
-  // Get "s3_secret".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "s3_secret");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
-      s_s3_secret = std::string(node->valuestring);
-    }
-  }
-
-  // Get "max_cache_size".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "max_cache_size");
     if (cJSON_IsNumber(node)) {
@@ -196,7 +234,6 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
-  // Get "max_local_entry_size".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "max_local_entry_size");
     if (cJSON_IsNumber(node)) {
@@ -204,7 +241,6 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
-  // Get "max_remote_entry_size".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "max_remote_entry_size");
     if (cJSON_IsNumber(node)) {
@@ -212,55 +248,6 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
-  // Get "debug".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "debug");
-    if (cJSON_IsNumber(node)) {
-      s_debug = static_cast<int32_t>(node->valueint);
-    }
-  }
-
-  // Get "log_file".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "log_file");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
-      s_log_file = std::string(node->valuestring);
-    }
-  }
-
-  // Get "hard_links".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "hard_links");
-    if (cJSON_IsBool(node)) {
-      s_hard_links = cJSON_IsTrue(node);
-    }
-  }
-
-  // Get "cache_link_commands".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "cache_link_commands");
-    if (cJSON_IsBool(node)) {
-      s_cache_link_commands = cJSON_IsTrue(node);
-    }
-  }
-
-  // Get "compress".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress");
-    if (cJSON_IsBool(node)) {
-      s_compress = cJSON_IsTrue(node);
-    }
-  }
-
-  // Get "compression_level".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress_level");
-    if (cJSON_IsNumber(node)) {
-      s_compress_level = static_cast<int32_t>(node->valueint);
-    }
-  }
-
-  // Get "perf".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "perf");
     if (cJSON_IsBool(node)) {
@@ -268,31 +255,13 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
-  // Get "disable".
   {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "disable");
-    if (cJSON_IsBool(node)) {
-      s_disable = cJSON_IsTrue(node);
-    }
-  }
-
-  // Get "accuracy".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "accuracy");
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "prefix");
     if (cJSON_IsString(node) && node->valuestring != nullptr) {
-      s_accuracy = to_cache_accuracy(std::string(node->valuestring));
+      s_prefix = std::string(node->valuestring);
     }
   }
 
-  // Get "compress_format".
-  {
-    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress_format");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
-      s_compress_format = to_compress_format(std::string(node->valuestring));
-    }
-  }
-
-  // Get "read_only".
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "read_only");
     if (cJSON_IsBool(node)) {
@@ -300,11 +269,31 @@ void load_from_file(const std::string& file_name) {
     }
   }
 
-  // Get "remote_locks".
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "remote");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_remote = std::string(node->valuestring);
+    }
+  }
+
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "remote_locks");
     if (cJSON_IsBool(node)) {
       s_remote_locks = cJSON_IsTrue(node);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "s3_access");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_s3_access = std::string(node->valuestring);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "s3_secret");
+    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+      s_s3_secret = std::string(node->valuestring);
     }
   }
 
@@ -351,202 +340,178 @@ void init() {
     // Get the BuildCache home directory.
     s_dir = get_dir();
 
-    // Get the Lua paths from the environment.
-    // Note: We need do this before loading the configuration file, in order for the environment to
-    // have priority over the JSON file.
-    {
-      const env_var_t lua_path_env("BUILDCACHE_LUA_PATH");
-      if (lua_path_env) {
-#ifdef _WIN32
-        s_lua_paths += string_list_t(lua_path_env.as_string(), ";");
-#else
-        s_lua_paths += string_list_t(lua_path_env.as_string(), ":");
-#endif
-      }
-    }
-
     // Load any paramaters from the user configuration file.
     // Note: We do this before reading the configuration from the environment, so that the
     // environment overrides the configuration file.
     s_config_file = get_config_file(s_dir);
     load_from_file(s_config_file);
 
-    // We also look for Lua files in the cache root dir (e.g. ${BUILDCACHE_DIR}/lua).
-    // Note: We need do this after loading the configuration file, to give the default Lua path the
-    // lowest priority.
+    {
+      const env_var_t env("BUILDCACHE_ACCURACY");
+      if (env) {
+        s_accuracy = to_cache_accuracy(env.as_string());
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_CACHE_LINK_COMMANDS");
+      if (env) {
+        s_cache_link_commands = env.as_bool();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_COMPRESS");
+      if (env) {
+        s_compress = env.as_bool();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_COMPRESS_FORMAT");
+      if (env) {
+        s_compress_format = to_compress_format(env.as_string());
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_COMPRESS_LEVEL");
+      if (env) {
+        s_compress_level = static_cast<int32_t>(env.as_int64());
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_DEBUG");
+      if (env) {
+        try {
+          s_debug = static_cast<int32_t>(env.as_int64());
+        } catch (...) {
+          // Ignore...
+        }
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_DISABLE");
+      if (env) {
+        s_disable = env.as_bool();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_HARD_LINKS");
+      if (env) {
+        s_hard_links = env.as_bool();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_IMPERSONATE");
+      if (env) {
+        s_impersonate = env.as_string();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_LOG_FILE");
+      if (env) {
+        s_log_file = env.as_string();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_LUA_PATH");
+      if (env) {
+        s_lua_paths = string_list_t(env.as_string(), PATH_DELIMITER) + s_lua_paths;
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_MAX_CACHE_SIZE");
+      if (env) {
+        try {
+          s_max_cache_size = env.as_int64();
+        } catch (...) {
+          // Ignore...
+        }
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_MAX_LOCAL_ENTRY_SIZE");
+      if (env) {
+        try {
+          s_max_local_entry_size = env.as_int64();
+        } catch (...) {
+          // Ignore...
+        }
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_MAX_REMOTE_ENTRY_SIZE");
+      if (env) {
+        try {
+          s_max_remote_entry_size = env.as_int64();
+        } catch (...) {
+          // Ignore...
+        }
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_PERF");
+      if (env) {
+        s_perf = env.as_bool();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_PREFIX");
+      if (env) {
+        s_prefix = env.as_string();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_READ_ONLY");
+      if (env) {
+        s_read_only = env.as_bool();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_REMOTE");
+      if (env) {
+        s_remote = env.as_string();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_REMOTE_LOCKS");
+      if (env) {
+        s_remote_locks = env.as_bool();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_S3_ACCESS");
+      if (env) {
+        s_s3_access = env.as_string();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_S3_SECRET");
+      if (env) {
+        s_s3_secret = env.as_string();
+      }
+    }
+
+    // We also look for Lua files in the cache root dir (i.e. ${BUILDCACHE_DIR}/lua).
+    // Note: We give the default Lua path the lowest priority.
     s_lua_paths += file::append_path(s_dir, "lua");
-
-    // Get the command prefix from the environment.
-    {
-      const env_var_t prefix_env("BUILDCACHE_PREFIX");
-      if (prefix_env) {
-        s_prefix = prefix_env.as_string();
-      }
-    }
-
-    // Get the executable to impersonate from the environment.
-    {
-      const env_var_t impersonate_env("BUILDCACHE_IMPERSONATE");
-      if (impersonate_env) {
-        s_impersonate = impersonate_env.as_string();
-      }
-    }
-
-    // Get the remote cache address from the environment.
-    {
-      const env_var_t remote_env("BUILDCACHE_REMOTE");
-      if (remote_env) {
-        s_remote = remote_env.as_string();
-      }
-    }
-
-    // Get the S3 credentials from the environment.
-    {
-      const env_var_t s3_access_env("BUILDCACHE_S3_ACCESS");
-      if (s3_access_env) {
-        s_s3_access = s3_access_env.as_string();
-      }
-      const env_var_t s3_secret_env("BUILDCACHE_S3_SECRET");
-      if (s3_secret_env) {
-        s_s3_secret = s3_secret_env.as_string();
-      }
-    }
-
-    // Get the max cache size from the environment.
-    {
-      const env_var_t max_cache_size_env("BUILDCACHE_MAX_CACHE_SIZE");
-      if (max_cache_size_env) {
-        try {
-          s_max_cache_size = max_cache_size_env.as_int64();
-        } catch (...) {
-          // Ignore...
-        }
-      }
-    }
-
-    // Get the max local cache entry size from the environment.
-    {
-      const env_var_t max_local_entry_size_env("BUILDCACHE_MAX_LOCAL_ENTRY_SIZE");
-      if (max_local_entry_size_env) {
-        try {
-          s_max_local_entry_size = max_local_entry_size_env.as_int64();
-        } catch (...) {
-          // Ignore...
-        }
-      }
-    }
-
-    // Get the max remote cache entry size from the environment.
-    {
-      const env_var_t max_remote_entry_size_env("BUILDCACHE_MAX_REMOTE_ENTRY_SIZE");
-      if (max_remote_entry_size_env) {
-        try {
-          s_max_remote_entry_size = max_remote_entry_size_env.as_int64();
-        } catch (...) {
-          // Ignore...
-        }
-      }
-    }
-
-    // Get the debug level from the environment.
-    {
-      const env_var_t debug_env("BUILDCACHE_DEBUG");
-      if (debug_env) {
-        try {
-          s_debug = static_cast<int32_t>(debug_env.as_int64());
-        } catch (...) {
-          // Ignore...
-        }
-      }
-    }
-
-    // Get the log file from the environment.
-    {
-      const env_var_t log_file_env("BUILDCACHE_LOG_FILE");
-      if (log_file_env) {
-        s_log_file = log_file_env.as_string();
-      }
-    }
-
-    // Get the hard_links flag from the environment.
-    {
-      const env_var_t hard_links_env("BUILDCACHE_HARD_LINKS");
-      if (hard_links_env) {
-        s_hard_links = hard_links_env.as_bool();
-      }
-    }
-
-    // Get the cache_link_commands flag from the environment.
-    {
-      const env_var_t cache_link_commands_env("BUILDCACHE_CACHE_LINK_COMMANDS");
-      if (cache_link_commands_env) {
-        s_cache_link_commands = cache_link_commands_env.as_bool();
-      }
-    }
-
-    // Get the compress flag from the environment.
-    {
-      const env_var_t compress_env("BUILDCACHE_COMPRESS");
-      if (compress_env) {
-        s_compress = compress_env.as_bool();
-      }
-    }
-
-    // Get the compression level flag from the environment.
-    {
-      const env_var_t compress_level_env("BUILDCACHE_COMPRESS_LEVEL");
-      if (compress_level_env) {
-        s_compress_level = static_cast<int32_t>(compress_level_env.as_int64());
-      }
-    }
-
-    // Get the perf flag from the environment.
-    {
-      const env_var_t perf_env("BUILDCACHE_PERF");
-      if (perf_env) {
-        s_perf = perf_env.as_bool();
-      }
-    }
-
-    // Get the disabled flag from the environment.
-    {
-      const env_var_t disable_env("BUILDCACHE_DISABLE");
-      if (disable_env) {
-        s_disable = disable_env.as_bool();
-      }
-    }
-
-    // Get the cache accuracy from the environment.
-    {
-      const env_var_t accuracy_env("BUILDCACHE_ACCURACY");
-      if (accuracy_env) {
-        s_accuracy = to_cache_accuracy(accuracy_env.as_string());
-      }
-    }
-
-    // Get the compression format from the environment.
-    {
-      const env_var_t format_env("BUILDCACHE_COMPRESS_FORMAT");
-      if (format_env) {
-        s_compress_format = to_compress_format(format_env.as_string());
-      }
-    }
-
-    // Get the read only flag from the environment.
-    {
-      const env_var_t read_only_env("BUILDCACHE_READ_ONLY");
-      if (read_only_env) {
-        s_read_only = read_only_env.as_bool();
-      }
-    }
-
-    // Get the local lock flag from the environment.
-    {
-      const env_var_t remote_locks_env("BUILDCACHE_REMOTE_LOCKS");
-      if (remote_locks_env) {
-        s_remote_locks = remote_locks_env.as_bool();
-      }
-    }
   } catch (...) {
     // If we could not initialize the configuration, we can't proceed. We need to disable the cache.
     s_disable = true;
@@ -554,36 +519,56 @@ void init() {
   }
 }
 
-const std::string& dir() {
-  return s_dir;
-}
-
 const std::string& config_file() {
   return s_config_file;
 }
 
-const string_list_t& lua_paths() {
-  return s_lua_paths;
+cache_accuracy_t accuracy() {
+  return s_accuracy;
 }
 
-const std::string& prefix() {
-  return s_prefix;
+bool cache_link_commands() {
+  return s_cache_link_commands;
+}
+
+bool compress() {
+  return s_compress;
+}
+
+compress_format_t compress_format() {
+  return s_compress_format;
+}
+
+int32_t compress_level() {
+  return s_compress_level;
+}
+
+int32_t debug() {
+  return s_debug;
+}
+
+const std::string& dir() {
+  return s_dir;
+}
+
+bool disable() {
+  return s_disable;
+}
+
+bool hard_links() {
+  return s_hard_links;
 }
 
 const std::string& impersonate() {
   return s_impersonate;
 }
 
-const std::string& remote() {
-  return s_remote;
+const std::string& log_file() {
+  return s_log_file;
 }
 
-const std::string& s3_access() {
-  return s_s3_access;
-}
-
-const std::string& s3_secret() {
-  return s_s3_secret;
+const string_list_t& lua_paths() {
+  return s_lua_paths;
 }
 
 int64_t max_cache_size() {
@@ -598,52 +583,32 @@ int64_t max_remote_entry_size() {
   return s_max_remote_entry_size;
 }
 
-int32_t debug() {
-  return s_debug;
-}
-
-const std::string& log_file() {
-  return s_log_file;
-}
-
-bool hard_links() {
-  return s_hard_links;
-}
-
-bool cache_link_commands() {
-  return s_cache_link_commands;
-}
-
-bool compress() {
-  return s_compress;
-}
-
-int32_t compress_level() {
-  return s_compress_level;
-}
-
 bool perf() {
   return s_perf;
 }
 
-bool disable() {
-  return s_disable;
-}
-
-cache_accuracy_t accuracy() {
-  return s_accuracy;
-}
-
-compress_format_t compress_format() {
-  return s_compress_format;
+const std::string& prefix() {
+  return s_prefix;
 }
 
 bool read_only() {
   return s_read_only;
 }
 
+const std::string& remote() {
+  return s_remote;
+}
+
 bool remote_locks() {
   return s_remote_locks;
+}
+
+const std::string& s3_access() {
+  return s_s3_access;
+}
+
+const std::string& s3_secret() {
+  return s_s3_secret;
 }
 
 }  // namespace config
