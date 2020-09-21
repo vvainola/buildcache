@@ -159,9 +159,9 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
   int return_code = 0;
   try {
 #ifdef _WIN32
-    const std::string PATH_SEP = ";";
+    const std::string PATH_DELIMITER = ";";
 #else
-    const std::string PATH_SEP = ":";
+    const std::string PATH_DELIMITER = ":";
 #endif
 
     std::cout << "Configuration file: " << bcache::config::config_file() << "\n\n";
@@ -182,10 +182,10 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
               << (bcache::config::disable() ? "true" : "false") << "\n";
     std::cout << "  BUILDCACHE_HARD_LINKS:             "
               << (bcache::config::hard_links() ? "true" : "false") << "\n";
-    std::cout << "  BUILDCACHE_IMPERSONATE:            " << bcache::config::dir() << "\n";
+    std::cout << "  BUILDCACHE_IMPERSONATE:            " << bcache::config::impersonate() << "\n";
     std::cout << "  BUILDCACHE_LOG_FILE:               " << bcache::config::log_file() << "\n";
     std::cout << "  BUILDCACHE_LUA_PATH:               "
-              << bcache::config::lua_paths().join(PATH_SEP, false) << "\n";
+              << bcache::config::lua_paths().join(PATH_DELIMITER, false) << "\n";
     std::cout << "  BUILDCACHE_MAX_CACHE_SIZE:         " << bcache::config::max_cache_size() << " ("
               << bcache::file::human_readable_size(bcache::config::max_cache_size()) << ")\n";
     std::cout << "  BUILDCACHE_MAX_LOCAL_ENTRY_SIZE:   " << bcache::config::max_local_entry_size()
@@ -319,9 +319,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
       // to run the original command. At the same time this is a protection against endless symlink
       // recursion. Figure something out!
       PERF_START(FIND_EXECUTABLE);
-      const auto& exe_path =
-          bcache::config::impersonate().empty() ? args[0] : bcache::config::impersonate();
-      const auto true_exe_path = bcache::file::find_executable(exe_path, BUILDCACHE_EXE_NAME);
+      const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
       PERF_STOP(FIND_EXECUTABLE);
 
       // Replace the command with the true exe path. Most of the following operations rely on having
