@@ -53,16 +53,29 @@ bool cache_t::lookup(const hasher_t::hash_t hash,
                      const bool allow_hard_links,
                      const bool create_target_dirs,
                      int& return_code) {
-  // First try the local cache.
-  if (lookup_in_local_cache(
-          hash, expected_files, allow_hard_links, create_target_dirs, return_code)) {
-    return true;
+  // Note: We don't want to propagate exceptions here, since that would result in a fall-back run of
+  // the wrapped program, without adding the result to the cache. Instead we treat cache lookup
+  // errors as cache misses, and thus we can re-populate the cache if there is a corrupted cache
+  // entry for instance.
+
+  try {
+    // First try the local cache.
+    if (lookup_in_local_cache(
+            hash, expected_files, allow_hard_links, create_target_dirs, return_code)) {
+      return true;
+    }
+  } catch (const std::runtime_error& e) {
+    debug::log(debug::ERROR) << "Local lookup of " << hash.as_string() << " failed: " << e.what();
   }
 
-  // Then try the remote cache.
-  if (lookup_in_remote_cache(
-          hash, expected_files, allow_hard_links, create_target_dirs, return_code)) {
-    return true;
+  try {
+    // Then try the remote cache.
+    if (lookup_in_remote_cache(
+            hash, expected_files, allow_hard_links, create_target_dirs, return_code)) {
+      return true;
+    }
+  } catch (const std::runtime_error& e) {
+    debug::log(debug::ERROR) << "Remote lookup of " << hash.as_string() << " failed: " << e.what();
   }
 
   return false;
