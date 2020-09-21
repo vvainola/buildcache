@@ -159,9 +159,9 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
   int return_code = 0;
   try {
 #ifdef _WIN32
-    const std::string PATH_SEP = ";";
+    const std::string PATH_DELIMITER = ";";
 #else
-    const std::string PATH_SEP = ":";
+    const std::string PATH_DELIMITER = ":";
 #endif
 
     std::cout << "Configuration file: " << bcache::config::config_file() << "\n\n";
@@ -185,7 +185,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
     std::cout << "  BUILDCACHE_IMPERSONATE:            " << bcache::config::impersonate() << "\n";
     std::cout << "  BUILDCACHE_LOG_FILE:               " << bcache::config::log_file() << "\n";
     std::cout << "  BUILDCACHE_LUA_PATH:               "
-              << bcache::config::lua_paths().join(PATH_SEP, false) << "\n";
+              << bcache::config::lua_paths().join(PATH_DELIMITER, false) << "\n";
     std::cout << "  BUILDCACHE_MAX_CACHE_SIZE:         " << bcache::config::max_cache_size() << " ("
               << bcache::file::human_readable_size(bcache::config::max_cache_size()) << ")\n";
     std::cout << "  BUILDCACHE_MAX_LOCAL_ENTRY_SIZE:   " << bcache::config::max_local_entry_size()
