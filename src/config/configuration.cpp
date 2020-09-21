@@ -377,7 +377,11 @@ void init() {
     {
       const env_var_t env("BUILDCACHE_COMPRESS_LEVEL");
       if (env) {
-        s_compress_level = static_cast<int32_t>(env.as_int64());
+        try {
+          s_compress_level = static_cast<int32_t>(env.as_int64());
+        } catch (...) {
+          // Ignore...
+        }
       }
     }
 
