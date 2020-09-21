@@ -319,9 +319,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
       // to run the original command. At the same time this is a protection against endless symlink
       // recursion. Figure something out!
       PERF_START(FIND_EXECUTABLE);
-      const auto& exe_path =
-          bcache::config::impersonate().empty() ? args[0] : bcache::config::impersonate();
-      const auto true_exe_path = bcache::file::find_executable(exe_path, BUILDCACHE_EXE_NAME);
+      const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
       PERF_STOP(FIND_EXECUTABLE);
 
       // Replace the command with the true exe path. Most of the following operations rely on having
