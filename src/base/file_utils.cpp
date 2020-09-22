@@ -173,6 +173,57 @@ std::string to_id_part(const uint64_t x) {
   return part;
 }
 
+/// @brief Get implicit file extensions for executable files.
+///
+/// The list is on the form ["", ".foo", ".bar", ...]. The first item is an empty string
+/// (representing "no extra extension"), and the list is guaranteed to contain at least one item.
+///
+/// @returns a list of valid extensions.
+string_list_t get_exe_extensions() {
+#if defined(_WIN32)
+  // Use PATHEXT to determine valid executable file extensions. For more info, see:
+  // https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/start
+  std::string path_ext_str = ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC";
+  const env_var_t path_ext_env("PATHEXT");
+  if (path_ext_env) {
+    path_ext_str = path_ext_env.as_string();
+  }
+
+  // Note: We use lower case since we want to do case insensitive string compares.
+  return string_list_t({""}) + string_list_t(lower_case(path_ext_str), ";");
+#else
+  // On POSIX systems, there is no such thing as an exe extension that gets implicitly added when
+  // invoking a command.
+  return string_list_t({""});
+#endif
+}
+
+bool is_absolute_path(const std::string& path) {
+#ifdef _WIN32
+  const bool is_abs_drive =
+      (path.size() >= 3) && (path[1] == ':') && ((path[2] == '\\') || (path[2] == '/'));
+  const bool is_abs_net = (path.size() >= 2) && (path[0] == '\\') && (path[1] == '\\');
+  return is_abs_drive || is_abs_net;
+#else
+  return (path.size() >= 1) && (path[0] == PATH_SEPARATOR_CHR);
+#endif
+}
+
+bool is_relateive_path(const std::string& path) {
+  return get_last_path_separator_pos(path) != std::string::npos;
+}
+
+#if defined(_WIN32)
+std::string get_cwd() {
+  WCHAR buf[MAX_PATH + 1] = {0};
+  DWORD path_len = GetCurrentDirectoryW(MAX_PATH + 1, buf);
+  if (path_len > 0) {
+    return ucs2_to_utf8(std::wstring(buf, path_len));
+  }
+  return std::string();
+}
+#endif
+
 }  // namespace
 
 tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension) {
@@ -324,17 +375,6 @@ std::string get_user_home_dir() {
 #endif
 }
 
-bool is_absolute_path(const std::string& path) {
-#ifdef _WIN32
-  const bool is_abs_drive =
-      (path.size() >= 3) && (path[1] == ':') && ((path[2] == '\\') || (path[2] == '/'));
-  const bool is_abs_net = (path.size() >= 2) && (path[0] == '\\') && (path[1] == '\\');
-  return is_abs_drive || is_abs_net;
-#else
-  return (path.size() >= 1) && (path[0] == PATH_SEPARATOR_CHR);
-#endif
-}
-
 std::string resolve_path(const std::string& path) {
 #if defined(_WIN32)
   auto handle = CreateFileW(utf8_to_ucs2(path).c_str(),
@@ -369,43 +409,65 @@ std::string resolve_path(const std::string& path) {
 }
 
 std::string find_executable(const std::string& path, const std::string& exclude) {
-  auto file_to_find = path;
+  const auto extensions = get_exe_extensions();
 
-  // TODO(m): For Windows we should also look for files with ".exe" endings (e.g. if you have only
-  // specified "gcc", we should find "gcc.exe"). Furthermore we should also prepend the current
-  // working directory to the PATH, as Windows searches the CWD before searching the PATH.
+  std::string file_to_find;
 
   // Handle absolute and relative paths. Examples:
   //  - "C:\Foo\foo.exe"
   //  - "somedir/../mysubdir/foo"
-  if (is_absolute_path(file_to_find) ||
-      (get_last_path_separator_pos(file_to_find) != std::string::npos)) {
-    // Return the full path unless it points to the excluded executable.
-    const auto true_path = resolve_path(file_to_find);
-    if (true_path.empty()) {
-      throw std::runtime_error("Could not resolve absolute path for the executable file.");
-    }
-    if (lower_case(get_file_part(true_path, false)) != exclude) {
-      debug::log(debug::DEBUG) << "Found exe: " << true_path << " (looked for " << path << ")";
-      return true_path;
-    }
+  if (is_absolute_path(path) || is_relateive_path(path)) {
+    for (const auto& ext : extensions) {
+      const auto path_with_ext = path + ext;
 
-    // ...otherwise search for the named file (which should be a symlink) in the PATH.
-    file_to_find = get_file_part(file_to_find);
+      // Return the full path unless it points to the excluded executable.
+      const auto true_path = resolve_path(path_with_ext);
+      if (true_path.empty()) {
+        // Unable to resolve. Try next ext.
+        continue;
+      }
+      if (lower_case(get_file_part(true_path, false)) != exclude) {
+        debug::log(debug::DEBUG) << "Found exe: " << true_path << " (looked for " << path << ")";
+        return true_path;
+      }
+
+      // ...otherwise search for the named file (which should be a symlink) in the PATH.
+      file_to_find = get_file_part(path_with_ext);
+      break;
+    }
+  } else {
+    // The path is just a file name without a path.
+    file_to_find = path;
   }
 
-  // Get the PATH environment variable.
-  const auto search_path = string_list_t(get_env("PATH"), PATH_DELIMITER);
+  if (!file_to_find.empty()) {
+    // Get the PATH environment variable.
+    string_list_t search_path;
+#if defined(_WIN32)
+    {
+      // For Windows we prepend the current working directory to the PATH, as Windows searches the
+      // CWD before searching the PATH.
+      const auto cwd = get_cwd();
+      if (!cwd.empty()) {
+        search_path += cwd;
+      }
+    }
+#endif
+    search_path += string_list_t(get_env("PATH"), PATH_DELIMITER);
 
-  // Iterate the path from start to end and see if we can find the executable file.
-  for (const auto& base_path : search_path) {
-    const auto true_path = resolve_path(append_path(base_path, file_to_find));
-    if ((!true_path.empty()) && file_exists(true_path)) {
-      // Check that this is not the excluded file name.
-      if (lower_case(get_file_part(true_path, false)) != exclude) {
-        debug::log(debug::DEBUG) << "Found exe: " << true_path << " (looked for " << file_to_find
-                                 << ")";
-        return true_path;
+    // Iterate the path from start to end and see if we can find the executable file.
+    for (const auto& base_path : search_path) {
+      for (const auto& ext : extensions) {
+        const auto file_name = file_to_find + ext;
+        const auto true_path = resolve_path(append_path(base_path, file_name));
+        if ((!true_path.empty()) && file_exists(true_path)) {
+          // Check that this is not the excluded file name.
+          if (lower_case(get_file_part(true_path, false)) != exclude) {
+            debug::log(debug::DEBUG)
+                << "Found exe: " << true_path << " (looked for " << file_name << ")";
+            return true_path;
+          }
+        }
       }
     }
   }
