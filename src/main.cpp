@@ -199,6 +199,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
     std::cout << "  BUILDCACHE_PREFIX:                 " << bcache::config::prefix() << "\n";
     std::cout << "  BUILDCACHE_READ_ONLY:              "
               << (bcache::config::read_only() ? "true" : "false") << "\n";
+    std::cout << "  BUILDCACHE_READ_ONLY_REMOTE:       "
+              << (bcache::config::read_only_remote() ? "true" : "false") << "\n";
     std::cout << "  BUILDCACHE_REMOTE:                 " << bcache::config::remote() << "\n";
     std::cout << "  BUILDCACHE_REMOTE_LOCKS:           "
               << (bcache::config::remote_locks() ? "true" : "false") << "\n";

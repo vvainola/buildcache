@@ -67,6 +67,7 @@ int64_t s_max_remote_entry_size = DEFAULT_MAX_REMOTE_ENTRY_SIZE;
 bool s_perf = false;
 std::string s_prefix;
 bool s_read_only = false;
+bool s_read_only_remote = false;
 bool s_remote_locks = false;
 std::string s_remote;
 std::string s_s3_access;
@@ -266,6 +267,13 @@ void load_from_file(const std::string& file_name) {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "read_only");
     if (cJSON_IsBool(node)) {
       s_read_only = cJSON_IsTrue(node);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "read_only_remote");
+    if (cJSON_IsBool(node)) {
+      s_read_only_remote = cJSON_IsTrue(node);
     }
   }
 
@@ -486,6 +494,13 @@ void init() {
     }
 
     {
+      const env_var_t env("BUILDCACHE_READ_ONLY_REMOTE");
+      if (env) {
+        s_read_only_remote = env.as_bool();
+      }
+    }
+
+    {
       const env_var_t env("BUILDCACHE_REMOTE");
       if (env) {
         s_remote = env.as_string();
@@ -597,6 +612,10 @@ const std::string& prefix() {
 
 bool read_only() {
   return s_read_only;
+}
+
+bool read_only_remote() {
+  return s_read_only_remote;
 }
 
 const std::string& remote() {

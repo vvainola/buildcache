@@ -99,7 +99,7 @@ void cache_t::add(const hasher_t::hash_t hash,
   }
 
   // Add the entry to the remote cache.
-  if (m_remote_cache.is_connected()) {
+  if (m_remote_cache.is_connected() && !config::read_only_remote()) {
     const auto max_remote_size = config::max_remote_entry_size();
     if (size < max_remote_size || max_remote_size <= 0) {
       // Note: We always compress entries for the remote cache.

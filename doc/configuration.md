@@ -27,6 +27,7 @@ The following options control the behavior of BuildCache:
 | `BUILDCACHE_PERF` | `perf` | Enable performance logging | false |
 | `BUILDCACHE_PREFIX` | `prefix` | Prefix command for cache misses | None |
 | `BUILDCACHE_READ_ONLY` | `read_only` | Only read and use the cache without updating it | false |
+| `BUILDCACHE_READ_ONLY_REMOTE` | `read_only_remote` | Only read and use the remote cache without updating it (implied by `BUILDCACHE_READ_ONLY`) | false |
 | `BUILDCACHE_REMOTE` | `remote` | Address of remote cache server (`protocol://host:port/path`, where `protocol` can be `redis` or `s3`, and `port` and `path` are optional) | None |
 | `BUILDCACHE_REMOTE_LOCKS` | `remote_locks` | Use a (potentially slower) file locking mechanism that is safe if the local cache is on a fileshare | false |
 | `BUILDCACHE_S3_ACCESS` | `s3_access` | S3 access key | None |

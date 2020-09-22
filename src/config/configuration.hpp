@@ -114,6 +114,9 @@ const std::string& prefix();
 /// @returns true if the readonly mode is enabled.
 bool read_only();
 
+/// @returns true if the remote cache is read only.
+bool read_only_remote();
+
 /// @returns the remote cache service address.
 const std::string& remote();
 
