@@ -220,19 +220,27 @@ jobs:
       matrix:
         config:
         - {
-            name: "Windows Latest MSVC", artifact: "buildcache-win-msvc.zip",
+            name: "Windows Latest MSVC",
+            artifact: "buildcache-win-msvc.zip",
+            artifact_content_type: "application/zip",
             os: ubuntu-latest
           }
         - {
-            name: "Windows Latest MinGW", artifact: "buildcache-win-mingw.zip",
+            name: "Windows Latest MinGW",
+            artifact: "buildcache-win-mingw.zip",
+            artifact_content_type: "application/zip",
             os: ubuntu-latest
           }
         - {
-            name: "Ubuntu Latest GCC", artifact: "buildcache-linux.zip",
+            name: "Ubuntu Latest GCC",
+            artifact: "buildcache-linux.tar.gz",
+            artifact_content_type: "application/gzip",
             os: ubuntu-latest
           }
         - {
-            name: "macOS Latest Clang", artifact: "buildcache-macos.zip",
+            name: "macOS Latest Clang",
+            artifact: "buildcache-macos.zip",
+            artifact_content_type: "application/zip",
             os: ubuntu-latest
           }
     needs: release
@@ -263,4 +271,4 @@ jobs:
         upload_url: ${{ steps.set_upload_url.outputs.upload_url }}
         asset_path: ./${{ matrix.config.artifact }}
         asset_name: ${{ matrix.config.artifact }}
-        asset_content_type: application/zip
+        asset_content_type: ${{ matrix.config.artifact_content_type }}
