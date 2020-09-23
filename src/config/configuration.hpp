@@ -129,6 +129,9 @@ const std::string& s3_access();
 /// @returns the S3 secret key for the remote cache.
 const std::string& s3_secret();
 
+/// @returns true if a "terminate on a miss" mode is enabled.
+bool terminate_on_miss();
+
 }  // namespace config
 }  // namespace bcache
 
