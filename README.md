@@ -7,6 +7,10 @@ It is similar in spirit to [ccache](https://ccache.samba.org/),
 [sccache](https://github.com/mozilla/sccache) and
 [clcache](https://github.com/frerich/clcache).
 
+## Download
+
+Pre-built binaries of BuildCache can be downloaded [here](https://github.com/mbitsnbites/buildcache/releases/latest).
+
 ## Features
 
 * Works on different operating systems:
