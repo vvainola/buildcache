@@ -28,7 +28,6 @@
 #include <sys/perf_utils.hpp>
 #include <sys/sys_utils.hpp>
 
-#include <cstdlib>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -138,7 +137,8 @@ bool program_wrapper_t::handle_command(int& return_code) {
           files += file.second.path();
         }
         debug::log(debug::INFO) << "Terminating! Expected files: " << files.join(", ");
-        std::exit(EXIT_FAILURE);
+        return_code = 1;
+        return true;  // Don't fall back to running the command (we have "handled" it).
       }
     }
 
