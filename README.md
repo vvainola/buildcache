@@ -55,7 +55,12 @@ BuildCache has been used daily in production environments for years with near
 zero issues (any problem that has emereged has of course been fixed), which
 gives it a good track record.
 
-With that said, BuildCache is still considered to be under development.
+With that said, BuildCache is still considered to be under development and
+things like configuration parameters and cache formats may change between 0.x
+versions.
+
+Once BuildCache has reached version 1.0, all releases will be fully backwards
+compatible within a major version (e.g. 1.x).
 
 ## Documentation
 
