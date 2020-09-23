@@ -28,6 +28,7 @@
 #include <sys/perf_utils.hpp>
 #include <sys/sys_utils.hpp>
 
+#include <cstdlib>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -129,14 +130,15 @@ bool program_wrapper_t::handle_command(int& return_code) {
     } else {
       debug::log(debug::INFO) << "Cache miss (" << hash.as_string() << ")";
 
-      //If the "terminate on a miss" mode is enabled and we didn't find
-      //an entry in the cache, we exit
-      if(config::terminate_on_miss()) {
+      // If the "terminate on a miss" mode is enabled and we didn't find an entry in the cache, we
+      // exit with an error code.
+      if (config::terminate_on_miss()) {
+        string_list_t files;
         for (const auto& file : expected_files) {
-          std::cout << file.second.path() << '\n';
+          files += file.second.path();
         }
-        std::cout << "Terminate on a miss!\n";
-        std::exit(0);
+        debug::log(debug::INFO) << "Terminating! Expected files: " << files.join(", ");
+        std::exit(EXIT_FAILURE);
       }
     }
 
