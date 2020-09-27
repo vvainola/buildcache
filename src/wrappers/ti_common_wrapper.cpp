@@ -290,9 +290,28 @@ std::map<std::string, expected_file_t> ti_common_wrapper_t::get_build_files() {
 }
 
 void ti_common_wrapper_t::append_response_file(const std::string& response_file) {
-  auto args_string = file::read(response_file);
-  std::replace(args_string.begin(), args_string.end(), '\n', ' ');
-  m_resolved_args += string_list_t::split_args(args_string);
+  string_list_t lines(file::read(response_file), "\n");
+  for (auto& line : lines) {
+    if (line.empty()) {
+      // Ignore empty lines.
+      continue;
+    } else if (line.front() == '#') {
+      // Ignore line comments.
+      continue;
+    } else if (line.find("/*") != std::string::npos) {
+      // We do not support /* C style comments */ which, according to the
+      // documentation from TI, are allowed in response files.
+      throw std::runtime_error("C style comments are unsupported. Found in: " + response_file);
+    } else if (line.back() == '\r') {
+      // Remove trailing CR which will be present when a file which has CRLF
+      // as end of line marker is read on a system expecting only LF.
+      line.pop_back();
+      if (line.empty()) {
+        continue;
+      }
+    }
+    m_resolved_args += string_list_t::split_args(line);
+  }
 }
 
 }  // namespace bcache
