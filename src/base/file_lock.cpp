@@ -130,18 +130,18 @@ file_lock_t::file_lock_t(const std::string& path, const bool remote_lock) : m_pa
       if (m_file_handle != invalid_file_handle()) {
         // We got the lock!
         break;
-      } else {
-        // We were unable to create the file. We allow the following errors by waiting and trying
-        // again later: ERROR_SHARING_VIOLATION (the lock is already held by another process) and
-        // ERROR_ACCESS_DENIED (this can can in fact be due to a pending delete, see
-        // https://stackoverflow.com/q/6680491/5778708). Any other errors are treated as
-        // unrecoverable and result in an unlocked file_lock_t object.
-        const auto last_error = GetLastError();
-        if (last_error != ERROR_SHARING_VIOLATION && last_error != ERROR_ACCESS_DENIED) {
-          debug::log(debug::ERROR)
-              << "Failed to open the lock file " << path << " (error code: " << last_error << ")";
-          break;
-        }
+      }
+
+      // We were unable to create the file. We allow the following errors by waiting and trying
+      // again later: ERROR_SHARING_VIOLATION (the lock is already held by another process) and
+      // ERROR_ACCESS_DENIED (this can can in fact be due to a pending delete, see
+      // https://stackoverflow.com/q/6680491/5778708). Any other errors are treated as
+      // unrecoverable and result in an unlocked file_lock_t object.
+      const auto last_error = GetLastError();
+      if (last_error != ERROR_SHARING_VIOLATION && last_error != ERROR_ACCESS_DENIED) {
+        debug::log(debug::ERROR)
+            << "Failed to open the lock file " << path << " (error code: " << last_error << ")";
+        break;
       }
 
       // Wait for a small period of time to give other processes a chance to release the lock.
@@ -180,7 +180,8 @@ file_lock_t::file_lock_t(const std::string& path, const bool remote_lock) : m_pa
         debug::log(debug::ERROR) << "Failed to write our PID to the lock file " << path;
       }
       break;
-    } else if (errno != EEXIST) {
+    }
+    if (errno != EEXIST) {
       debug::log(debug::ERROR) << "Failed to open the lock file " << path;
       break;
     }

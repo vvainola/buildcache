@@ -37,7 +37,7 @@ constexpr char REMOTE_MISS_COUNT[] = "remote_miss_count";
 
 struct JSON_Deleter {
   void operator()(cJSON* obj) const {
-    if (obj) {
+    if (obj != nullptr) {
       cJSON_Delete(obj);
     }
   }
@@ -61,69 +61,69 @@ bool cache_stats_t::from_file(const std::string& path) noexcept {
 }
 
 bool cache_stats_t::from_json(cJSON const* obj) noexcept {
-  if (!obj) {
+  if (obj == nullptr) {
     return false;
   }
   auto* node = cJSON_GetObjectItemCaseSensitive(obj, LOCAL_HIT_COUNT);
-  if (node && cJSON_IsNumber(node)) {
+  if ((node != nullptr) && (cJSON_IsNumber(node) != 0)) {
     m_local_hit_count = node->valueint;
   }
   node = cJSON_GetObjectItemCaseSensitive(obj, LOCAL_MISS_COUNT);
-  if (node && cJSON_IsNumber(node)) {
+  if ((node != nullptr) && (cJSON_IsNumber(node) != 0)) {
     m_local_miss_count = node->valueint;
   }
   node = cJSON_GetObjectItemCaseSensitive(obj, REMOTE_HIT_COUNT);
-  if (node && cJSON_IsNumber(node)) {
+  if ((node != nullptr) && (cJSON_IsNumber(node) != 0)) {
     m_remote_hit_count = node->valueint;
   }
   node = cJSON_GetObjectItemCaseSensitive(obj, REMOTE_MISS_COUNT);
-  if (node && cJSON_IsNumber(node)) {
+  if ((node != nullptr) && (cJSON_IsNumber(node) != 0)) {
     m_remote_miss_count = node->valueint;
   }
   return true;
 }
 
 bool cache_stats_t::to_json(cJSON* obj) const noexcept {
-  if (!obj) {
+  if (obj == nullptr) {
     return false;
   }
   auto* node = cJSON_GetObjectItemCaseSensitive(obj, LOCAL_HIT_COUNT);
-  if (node) {
+  if (node != nullptr) {
     cJSON_SetNumberValue(node, m_local_hit_count);
   } else {
     node = cJSON_AddNumberToObject(obj, LOCAL_HIT_COUNT, m_local_hit_count);
   }
-  if (!node) {
+  if (node == nullptr) {
     debug::log(debug::ERROR) << "failed to serialize cache_stats object";
     return false;
   }
   node = cJSON_GetObjectItemCaseSensitive(obj, LOCAL_MISS_COUNT);
-  if (node) {
+  if (node != nullptr) {
     cJSON_SetNumberValue(node, m_local_miss_count);
   } else {
     node = cJSON_AddNumberToObject(obj, LOCAL_MISS_COUNT, m_local_miss_count);
   }
-  if (!node) {
+  if (node == nullptr) {
     debug::log(debug::ERROR) << "failed to serialize cache_stats object";
     return false;
   }
   node = cJSON_GetObjectItemCaseSensitive(obj, REMOTE_HIT_COUNT);
-  if (node) {
+  if (node != nullptr) {
     cJSON_SetNumberValue(node, m_remote_hit_count);
   } else {
     node = cJSON_AddNumberToObject(obj, REMOTE_HIT_COUNT, m_remote_hit_count);
   }
-  if (!node) {
+  if (node == nullptr) {
     debug::log(debug::ERROR) << "failed to serialize cache_stats object";
     return false;
   }
   node = cJSON_GetObjectItemCaseSensitive(obj, REMOTE_MISS_COUNT);
-  if (node) {
+  if (node != nullptr) {
     cJSON_SetNumberValue(node, m_remote_miss_count);
   } else {
     node = cJSON_AddNumberToObject(obj, REMOTE_MISS_COUNT, m_remote_miss_count);
   }
-  if (!node) {
+  if (node == nullptr) {
     debug::log(debug::ERROR) << "failed to serialize cache_stats object";
     return false;
   }

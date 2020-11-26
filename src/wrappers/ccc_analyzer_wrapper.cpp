@@ -36,11 +36,7 @@ bool ccc_analyzer_wrapper_t::can_handle_command() {
 
   // We recognize ccc-analyzer and c++-analyzer.
   const std::regex ccc_analyzer_re("c(\\+\\+|cc)-analyzer");
-  if (std::regex_match(cmd, ccc_analyzer_re)) {
-    return true;
-  }
-
-  return false;
+  return std::regex_match(cmd, ccc_analyzer_re);
 }
 
 std::map<std::string, std::string> ccc_analyzer_wrapper_t::get_relevant_env_vars() {

@@ -83,7 +83,7 @@ public:
   }
 
   /// @returns true if file is a directory.
-  int64_t is_dir() const {
+  bool is_dir() const {
     return m_is_dir;
   }
 

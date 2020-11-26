@@ -31,6 +31,7 @@ const int32_t ENTRY_DATA_FORMAT_VERSION = 3;
 
 std::vector<std::string> v2_files_to_vector(const std::map<std::string, std::string>& files) {
   std::vector<std::string> result;
+  result.reserve(files.size());
   for (const auto& file : files) {
     result.emplace_back(file.first);
   }

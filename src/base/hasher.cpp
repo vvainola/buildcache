@@ -37,12 +37,12 @@ bool is_ar_data(const std::string& data) {
 }
 }  // namespace
 
-const std::string hasher_t::hash_t::as_string() const {
+std::string hasher_t::hash_t::as_string() const {
   static const char digits[17] = "0123456789abcdef";
   std::string result(SIZE * 2, '0');
   for (size_t i = 0; i < SIZE; ++i) {
     result[i * 2] = digits[m_data[i] >> 4];
-    result[i * 2 + 1] = digits[m_data[i] & 0x0fu];
+    result[i * 2 + 1] = digits[m_data[i] & 0x0fU];
   }
   return result;
 }

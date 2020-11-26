@@ -34,8 +34,8 @@ bool remote_cache_provider_t::parse_host_description(const std::string& host_des
                                                      std::string& host,
                                                      int& port,
                                                      std::string& path) {
-  const auto colon_pos = host_description.find(":");
-  const auto slash_pos = host_description.find("/");
+  const auto colon_pos = host_description.find(':');
+  const auto slash_pos = host_description.find('/');
 
   // The slash, if any, must come after the colon, if any.
   if (slash_pos != std::string::npos && colon_pos != std::string::npos && slash_pos < colon_pos) {
@@ -52,7 +52,7 @@ bool remote_cache_provider_t::parse_host_description(const std::string& host_des
     host_end = host_description.size();
   }
   host = host_description.substr(0, host_end);
-  if (host.size() == 0) {
+  if (host.empty()) {
     debug::log(debug::ERROR) << "Invalid remote address: \"" << host_description << "\"";
     return false;
   }

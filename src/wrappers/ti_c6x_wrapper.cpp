@@ -32,11 +32,7 @@ bool ti_c6x_wrapper_t::can_handle_command() {
   // Is this the right compiler?
   const auto cmd = lower_case(file::get_file_part(m_args[0], true));
   const std::regex re(".*cl6x.*");
-  if (std::regex_match(cmd, re)) {
-    return true;
-  }
-
-  return false;
+  return std::regex_match(cmd, re);
 }
 
 }  // namespace bcache

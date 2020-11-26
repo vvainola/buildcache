@@ -34,8 +34,8 @@
 
 namespace bcache {
 namespace {
-static std::string PROGRAM_ID_CACHE_NAME = "prgid";
-static time::seconds_t PROGRAM_ID_CACHE_LIFE_TIME = 300;  // Five minutes.
+std::string PROGRAM_ID_CACHE_NAME = "prgid";
+time::seconds_t PROGRAM_ID_CACHE_LIFE_TIME = 300;  // Five minutes.
 
 /// @brief A helper class for managing wrapper capabilities.
 class capabilities_t {
@@ -133,20 +133,20 @@ bool program_wrapper_t::handle_command(int& return_code) {
                        capabilites.create_target_dirs(),
                        return_code)) {
       return true;
-    } else {
-      debug::log(debug::INFO) << "Cache miss (" << hash.as_string() << ")";
+    }
 
-      // If the "terminate on a miss" mode is enabled and we didn't find an entry in the cache, we
-      // exit with an error code.
-      if (config::terminate_on_miss()) {
-        string_list_t files;
-        for (const auto& file : expected_files) {
-          files += file.second.path();
-        }
-        debug::log(debug::INFO) << "Terminating! Expected files: " << files.join(", ");
-        return_code = 1;
-        return true;  // Don't fall back to running the command (we have "handled" it).
+    debug::log(debug::INFO) << "Cache miss (" << hash.as_string() << ")";
+
+    // If the "terminate on a miss" mode is enabled and we didn't find an entry in the cache, we
+    // exit with an error code.
+    if (config::terminate_on_miss()) {
+      string_list_t files;
+      for (const auto& file : expected_files) {
+        files += file.second.path();
       }
+      debug::log(debug::INFO) << "Terminating! Expected files: " << files.join(", ");
+      return_code = 1;
+      return true;  // Don't fall back to running the command (we have "handled" it).
     }
 
     // Run the actual program command to produce the build file(s).
@@ -263,7 +263,7 @@ std::string program_wrapper_t::get_program_id_cached() {
 
     // We had a miss. Query the program ID and add it to the meta store.
     debug::log(debug::DEBUG) << "Program ID cache miss for " << m_args[0];
-    const auto program_id = get_program_id();
+    auto program_id = get_program_id();
     store.store_item(key, program_id, PROGRAM_ID_CACHE_LIFE_TIME);
     return program_id;
   } catch (std::exception& e) {

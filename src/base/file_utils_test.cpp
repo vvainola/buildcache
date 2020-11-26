@@ -79,7 +79,7 @@ TEST_CASE("tmp_file_t produces expected results") {
 
   SUBCASE("A directory is created and completely removed") {
     const std::string base_path = file::get_temp_dir();
-    const std::string ext = "";
+    const std::string ext;
 
     std::string tmp_dir_path;
     std::string tmp_file_path;
@@ -115,7 +115,7 @@ TEST_CASE("append_path produces expected results") {
   }
 
   SUBCASE("An empty dir part results in the file part alone") {
-    const std::string part_1 = "";
+    const std::string part_1;
     const std::string part_2 = "world";
     const std::string result = file::append_path(part_1, part_2);
     CHECK_EQ(result, part_2);
@@ -123,7 +123,7 @@ TEST_CASE("append_path produces expected results") {
 
   SUBCASE("An empty file part results in the dir part alone") {
     const std::string part_1 = "hello";
-    const std::string part_2 = "";
+    const std::string part_2;
     const std::string result = file::append_path(part_1, part_2);
     CHECK_EQ(result, part_1);
   }

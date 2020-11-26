@@ -137,13 +137,13 @@ local_cache_t::local_cache_t() {
 local_cache_t::~local_cache_t() {
 }
 
-const std::string local_cache_t::get_cache_files_folder() const {
-  const auto cache_files_path = file::append_path(config::dir(), CACHE_FILES_FOLDER_NAME);
+std::string local_cache_t::get_cache_files_folder() const {
+  auto cache_files_path = file::append_path(config::dir(), CACHE_FILES_FOLDER_NAME);
   file::create_dir_with_parents(cache_files_path);
   return cache_files_path;
 }
 
-const std::string local_cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash) const {
+std::string local_cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash) const {
   const std::string str = hash.as_string();
   const auto parent_dir_path = file::append_path(get_cache_files_folder(), str.substr(0, 2));
   return file::append_path(parent_dir_path, str.substr(2));

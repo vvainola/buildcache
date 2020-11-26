@@ -37,7 +37,7 @@ std::string get_date_rfc2616_gmt() {
   // Set the locale to "C" (and save old locale).
   const auto* old_locale_ptr = ::setlocale(LC_ALL, nullptr);
   const auto old_locale =
-      old_locale_ptr ? std::string(::setlocale(LC_ALL, nullptr)) : std::string();
+      old_locale_ptr != nullptr ? std::string(::setlocale(LC_ALL, nullptr)) : std::string();
   ::setlocale(LC_ALL, "C");
 
   // Get the current date & time.

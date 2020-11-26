@@ -70,7 +70,7 @@ string_list_t ghs_wrapper_t::get_relevant_arguments() {
 
   // Note: We always skip the first arg since we have handled it already.
   bool skip_next_arg = true;
-  for (auto arg : m_args) {
+  for (const auto& arg : m_args) {
     if (!skip_next_arg) {
       // Does this argument specify a file (we don't want to hash those).
       const bool is_arg_plus_file_name =
@@ -115,7 +115,7 @@ std::string ghs_wrapper_t::get_program_id() {
 
   // Try to retrieve the version information for the OS files.
   std::string os_dir;
-  for (auto arg : m_args) {
+  for (const auto& arg : m_args) {
     if (arg.substr(0, 8) == "-os_dir=") {
       os_dir = arg.substr(8);
     }

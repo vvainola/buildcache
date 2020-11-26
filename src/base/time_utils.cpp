@@ -48,9 +48,9 @@ seconds_t seconds_since_epoch() {
   struct timeval now;
   if (::gettimeofday(&now, nullptr) == 0) {
     return static_cast<time::seconds_t>(now.tv_sec);
-  } else {
-    throw std::runtime_error("Could not get system time.");
   }
+  throw std::runtime_error("Could not get system time.");
+
 #endif
 }
 

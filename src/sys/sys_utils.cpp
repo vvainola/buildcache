@@ -94,10 +94,7 @@ bool try_start_editor(const std::string& program, const std::string& file) {
 bool print_raw(const char* str, const DWORD len, HANDLE handle) {
   // TODO(m): Handle bytes_written != bytes_read?
   DWORD bytes_written;
-  if (!WriteFile(handle, str, len, &bytes_written, nullptr)) {
-    return false;
-  }
-  return true;
+  return WriteFile(handle, str, len, &bytes_written, nullptr) != 0;
 }
 #endif  // _WIN32
 
@@ -112,8 +109,8 @@ bool read_from_pipe(HANDLE pipe_handle,
   auto has_more_data = true;
   while (has_more_data && success) {
     DWORD bytes_read = 0;
-    if (!ReadFile(
-            pipe_handle, buf.data(), static_cast<DWORD>(buf.size()), &bytes_read, nullptr)) {
+    if (ReadFile(pipe_handle, buf.data(), static_cast<DWORD>(buf.size()), &bytes_read, nullptr) ==
+        0) {
       const auto err = GetLastError();
       // ERROR_BROKEN_PIPE indicates that we're done (normal exit path).
       if (err != ERROR_BROKEN_PIPE) {
@@ -188,35 +185,35 @@ run_result_t run(const string_list_t& args, const bool quiet) {
     security_attr.lpSecurityDescriptor = nullptr;
 
     // Create a pipe for the child process's stdout.
-    if (!CreatePipe(&std_out_read_handle, &std_out_write_handle, &security_attr, 0)) {
+    if (CreatePipe(&std_out_read_handle, &std_out_write_handle, &security_attr, 0) == 0) {
       throw std::runtime_error("Unable to create stdout pipe.");
     }
-    if (!SetHandleInformation(std_out_read_handle, HANDLE_FLAG_INHERIT, 0)) {
+    if (SetHandleInformation(std_out_read_handle, HANDLE_FLAG_INHERIT, 0) == 0) {
       throw std::runtime_error("Unable to create stdout pipe.");
     }
 
     // Create a pipe for the child process's stderr.
-    if (!CreatePipe(&std_err_read_handle, &std_err_write_handle, &security_attr, 0)) {
+    if (CreatePipe(&std_err_read_handle, &std_err_write_handle, &security_attr, 0) == 0) {
       throw std::runtime_error("Unable to create stderr pipe.");
     }
-    if (!SetHandleInformation(std_err_read_handle, HANDLE_FLAG_INHERIT, 0)) {
+    if (SetHandleInformation(std_err_read_handle, HANDLE_FLAG_INHERIT, 0) == 0) {
       throw std::runtime_error("Unable to create stderr pipe.");
     }
 
     // Create a pipe for the child process's stdin.
-    if (!CreatePipe(&std_in_read_handle, &std_in_write_handle, &security_attr, 0)) {
+    if (CreatePipe(&std_in_read_handle, &std_in_write_handle, &security_attr, 0) == 0) {
       throw std::runtime_error("Unable to create stdin pipe.");
     }
-    if (!SetHandleInformation(std_in_write_handle, HANDLE_FLAG_INHERIT, 0)) {
+    if (SetHandleInformation(std_in_write_handle, HANDLE_FLAG_INHERIT, 0) == 0) {
       throw std::runtime_error("Unable to create stdin pipe.");
     }
 
     // Get the standard I/O handles of the BuildCache process.
-    auto stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    auto* stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
     if (stdout_handle == INVALID_HANDLE_VALUE) {
       throw std::runtime_error("Unable to get the stdout handle.");
     }
-    auto stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
+    auto* stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
     if (stderr_handle == INVALID_HANDLE_VALUE) {
       throw std::runtime_error("Unable to get the stderr handle.");
     }
@@ -236,16 +233,16 @@ run_result_t run(const string_list_t& args, const bool quiet) {
     // Start the child process.
     PROCESS_INFORMATION process_info;
     ZeroMemory(&process_info, sizeof(process_info));
-    if (!CreateProcessW(nullptr,
-                        &cmdw[0],
-                        nullptr,
-                        nullptr,
-                        TRUE,
-                        0,
-                        nullptr,
-                        nullptr,
-                        &startup_info,
-                        &process_info)) {
+    if (CreateProcessW(nullptr,
+                       &cmdw[0],
+                       nullptr,
+                       nullptr,
+                       TRUE,
+                       0,
+                       nullptr,
+                       nullptr,
+                       &startup_info,
+                       &process_info) == 0) {
       throw std::runtime_error("Unable to create child process.");
     }
 
@@ -281,7 +278,7 @@ run_result_t run(const string_list_t& args, const bool quiet) {
     if (WaitForSingleObject(process_info.hProcess, INFINITE) == WAIT_OBJECT_0) {
       // Get process return code.
       DWORD exit_code = 1;
-      if (GetExitCodeProcess(process_info.hProcess, &exit_code)) {
+      if (GetExitCodeProcess(process_info.hProcess, &exit_code) != 0) {
         result.return_code = static_cast<int>(exit_code);
         successfully_launched_program = true;
       } else {
@@ -317,7 +314,8 @@ run_result_t run(const string_list_t& args, const bool quiet) {
   }
 #else
   // Create pipes for stdout and stderr.
-  int pipe_stdout[2], pipe_stderr[2];
+  int pipe_stdout[2];
+  int pipe_stderr[2];
   if (pipe(pipe_stdout) == -1) {
     throw std::runtime_error("Error creating stdout pipe.");
   }
@@ -336,7 +334,8 @@ run_result_t run(const string_list_t& args, const bool quiet) {
         while (true) {
           if (dup2(fildes, fildes2) != -1) {
             break;
-          } else if (errno != EINTR) {
+          }
+          if (errno != EINTR) {
             throw std::runtime_error("Could not redirect stdout/stderr");
           }
         }
@@ -352,7 +351,7 @@ run_result_t run(const string_list_t& args, const bool quiet) {
 
       // Build a NULL-terminated argv array from args.
       std::vector<char*> argv;
-      for (auto& arg : args) {
+      for (const auto& arg : args) {
         argv.push_back(const_cast<char*>(arg.c_str()));
       }
       argv.push_back(nullptr);
@@ -408,15 +407,15 @@ run_result_t run(const string_list_t& args, const bool quiet) {
         }
         successfully_launched_program = true;
         break;
-      } else if (pid == -1 && errno == EINTR) {
+      }
+      if (pid == -1 && errno == EINTR) {
         // Our wait was interrupted. Try again.
         continue;
-      } else {
-        debug::log(debug::ERROR) << "Unexpected error waiting for pid " << child_pid
-                                 << " (errno: " << errno << ")";
-        result.return_code = 1;
-        break;
       }
+      debug::log(debug::ERROR) << "Unexpected error waiting for pid " << child_pid
+                               << " (errno: " << errno << ")";
+      result.return_code = 1;
+      break;
     }
 
     // If we didn't get all the stdout/stderr data from the child process, we can't guarantee
@@ -533,7 +532,7 @@ void open_in_default_editor(const std::string& path) {
 
 void print_raw_stdout(const std::string& str) {
 #if defined(_WIN32)
-  auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
+  auto* handle = GetStdHandle(STD_OUTPUT_HANDLE);
   if (handle == INVALID_HANDLE_VALUE || handle == NULL) {
     throw std::runtime_error("Unable to get the stdout handle.");
   }
@@ -547,7 +546,7 @@ void print_raw_stdout(const std::string& str) {
 
 void print_raw_stderr(const std::string& str) {
 #if defined(_WIN32)
-  auto handle = GetStdHandle(STD_ERROR_HANDLE);
+  auto* handle = GetStdHandle(STD_ERROR_HANDLE);
   if (handle == INVALID_HANDLE_VALUE || handle == NULL) {
     throw std::runtime_error("Unable to get the stderr handle.");
   }
@@ -559,8 +558,8 @@ void print_raw_stderr(const std::string& str) {
 #endif
 }
 
-const std::string get_local_temp_folder() {
-  const auto tmp_path = file::append_path(config::dir(), TEMP_FOLDER_NAME);
+std::string get_local_temp_folder() {
+  auto tmp_path = file::append_path(config::dir(), TEMP_FOLDER_NAME);
   file::create_dir_with_parents(tmp_path);
   return tmp_path;
 }

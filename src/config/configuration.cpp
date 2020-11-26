@@ -111,22 +111,22 @@ config::cache_accuracy_t to_cache_accuracy(const std::string& str) {
   const auto s = to_lower(str);
   if (s == "strict") {
     return config::cache_accuracy_t::STRICT;
-  } else if (s == "sloppy") {
-    return config::cache_accuracy_t::SLOPPY;
-  } else {
-    return config::cache_accuracy_t::DEFAULT;
   }
+  if (s == "sloppy") {
+    return config::cache_accuracy_t::SLOPPY;
+  }
+  return config::cache_accuracy_t::DEFAULT;
 }
 
 config::compress_format_t to_compress_format(const std::string& str) {
   const auto s = to_lower(str);
   if (s == "lz4") {
     return config::compress_format_t::LZ4;
-  } else if (s == "zstd") {
-    return config::compress_format_t::ZSTD;
-  } else {
-    return config::compress_format_t::DEFAULT;
   }
+  if (s == "zstd") {
+    return config::compress_format_t::ZSTD;
+  }
+  return config::compress_format_t::DEFAULT;
 }
 
 void load_from_file(const std::string& file_name) {
@@ -153,57 +153,57 @@ void load_from_file(const std::string& file_name) {
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "accuracy");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+    if ((cJSON_IsString(node) != 0) && node->valuestring != nullptr) {
       s_accuracy = to_cache_accuracy(std::string(node->valuestring));
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "cache_link_commands");
-    if (cJSON_IsBool(node)) {
-      s_cache_link_commands = cJSON_IsTrue(node);
+    if (cJSON_IsBool(node) != 0) {
+      s_cache_link_commands = (cJSON_IsTrue(node) != 0);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress");
-    if (cJSON_IsBool(node)) {
-      s_compress = cJSON_IsTrue(node);
+    if (cJSON_IsBool(node) != 0) {
+      s_compress = (cJSON_IsTrue(node) != 0);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress_format");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+    if ((cJSON_IsString(node) != 0) && node->valuestring != nullptr) {
       s_compress_format = to_compress_format(std::string(node->valuestring));
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "compress_level");
-    if (cJSON_IsNumber(node)) {
+    if (cJSON_IsNumber(node) != 0) {
       s_compress_level = static_cast<int32_t>(node->valueint);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "debug");
-    if (cJSON_IsNumber(node)) {
+    if (cJSON_IsNumber(node) != 0) {
       s_debug = static_cast<int32_t>(node->valueint);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "disable");
-    if (cJSON_IsBool(node)) {
-      s_disable = cJSON_IsTrue(node);
+    if (cJSON_IsBool(node) != 0) {
+      s_disable = (cJSON_IsTrue(node) != 0);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "hard_links");
-    if (cJSON_IsBool(node)) {
-      s_hard_links = cJSON_IsTrue(node);
+    if (cJSON_IsBool(node) != 0) {
+      s_hard_links = (cJSON_IsTrue(node) != 0);
     }
   }
 
@@ -218,14 +218,14 @@ void load_from_file(const std::string& file_name) {
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "impersonate");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+    if ((cJSON_IsString(node) != 0) && node->valuestring != nullptr) {
       s_impersonate = std::string(node->valuestring);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "log_file");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+    if ((cJSON_IsString(node) != 0) && node->valuestring != nullptr) {
       s_log_file = std::string(node->valuestring);
     }
   }
@@ -241,85 +241,85 @@ void load_from_file(const std::string& file_name) {
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "max_cache_size");
-    if (cJSON_IsNumber(node)) {
+    if (cJSON_IsNumber(node) != 0) {
       s_max_cache_size = static_cast<int64_t>(node->valuedouble);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "max_local_entry_size");
-    if (cJSON_IsNumber(node)) {
+    if (cJSON_IsNumber(node) != 0) {
       s_max_local_entry_size = static_cast<int64_t>(node->valuedouble);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "max_remote_entry_size");
-    if (cJSON_IsNumber(node)) {
+    if (cJSON_IsNumber(node) != 0) {
       s_max_remote_entry_size = static_cast<int64_t>(node->valuedouble);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "perf");
-    if (cJSON_IsBool(node)) {
-      s_perf = cJSON_IsTrue(node);
+    if (cJSON_IsBool(node) != 0) {
+      s_perf = (cJSON_IsTrue(node) != 0);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "prefix");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+    if ((cJSON_IsString(node) != 0) && node->valuestring != nullptr) {
       s_prefix = std::string(node->valuestring);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "read_only");
-    if (cJSON_IsBool(node)) {
-      s_read_only = cJSON_IsTrue(node);
+    if (cJSON_IsBool(node) != 0) {
+      s_read_only = (cJSON_IsTrue(node) != 0);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "read_only_remote");
-    if (cJSON_IsBool(node)) {
-      s_read_only_remote = cJSON_IsTrue(node);
+    if (cJSON_IsBool(node) != 0) {
+      s_read_only_remote = (cJSON_IsTrue(node) != 0);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "remote");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+    if ((cJSON_IsString(node) != 0) && node->valuestring != nullptr) {
       s_remote = std::string(node->valuestring);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "remote_locks");
-    if (cJSON_IsBool(node)) {
-      s_remote_locks = cJSON_IsTrue(node);
+    if (cJSON_IsBool(node) != 0) {
+      s_remote_locks = (cJSON_IsTrue(node) != 0);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "s3_access");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+    if ((cJSON_IsString(node) != 0) && node->valuestring != nullptr) {
       s_s3_access = std::string(node->valuestring);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "s3_secret");
-    if (cJSON_IsString(node) && node->valuestring != nullptr) {
+    if ((cJSON_IsString(node) != 0) && node->valuestring != nullptr) {
       s_s3_secret = std::string(node->valuestring);
     }
   }
 
   {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "terminate_on_miss");
-    if (cJSON_IsBool(node)) {
-      s_terminate_on_miss = cJSON_IsTrue(node);
+    if (cJSON_IsBool(node) != 0) {
+      s_terminate_on_miss = (cJSON_IsTrue(node) != 0);
     }
   }
 

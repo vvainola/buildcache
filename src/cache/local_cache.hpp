@@ -82,8 +82,8 @@ public:
   bool update_stats(const hasher_t::hash_t& hash, const cache_stats_t& delta) const noexcept;
 
 private:
-  const std::string hash_to_cache_entry_path(const hasher_t::hash_t& hash) const;
-  const std::string get_cache_files_folder() const;
+  std::string hash_to_cache_entry_path(const hasher_t::hash_t& hash) const;
+  std::string get_cache_files_folder() const;
 
   void perform_housekeeping();
 };

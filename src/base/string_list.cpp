@@ -30,7 +30,7 @@
 namespace bcache {
 
 string_list_t::string_list_t(const std::string& str, const std::string& delimiter) {
-  std::string::size_type current_str_start = 0u;
+  std::string::size_type current_str_start = 0U;
   while (current_str_start < str.size()) {
     const auto pos = str.find(delimiter, current_str_start);
     if (pos == std::string::npos) {
@@ -59,7 +59,7 @@ string_list_t string_list_t::split_args(const std::string& cmd) {
   auto is_inside_quote = false;
   auto has_arg = false;
   char last_char = 0;
-  for (auto& chr : cmd) {
+  for (const auto& chr : cmd) {
     const auto is_space = (chr == ' ');
     const auto is_quote = (chr == '\"') && (last_char != '\\');
 
@@ -95,10 +95,9 @@ string_list_t string_list_t::split_args(const std::string& cmd) {
   return args;
 }
 
-std::string string_list_t::join(const std::string& separator,
-                                               const bool escape) const {
+std::string string_list_t::join(const std::string& separator, const bool escape) const {
   std::string result;
-  for (auto arg : m_args) {
+  for (const auto& arg : m_args) {
     const auto escaped_arg = escape ? escape_arg(arg) : arg;
     if (result.empty()) {
       result += escaped_arg;

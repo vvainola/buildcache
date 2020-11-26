@@ -94,7 +94,7 @@ bool env_defined(const std::string& env_var) {
 #endif
 }
 
-const std::string get_env(const std::string& env_var) {
+std::string get_env(const std::string& env_var) {
 #if defined(_WIN32)
   const auto env_var_w = utf8_to_ucs2(env_var);
   const auto* value_w = ::_wgetenv(env_var_w.c_str());
