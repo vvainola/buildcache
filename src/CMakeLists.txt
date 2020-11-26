@@ -25,6 +25,9 @@ set(CMAKE_CXX_STANDARD 11)
 set(CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# For tooling (e.g. clang-tidy).
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # For tests.
 enable_testing()
 include(cmake/buildcache_add_test.cmake)
