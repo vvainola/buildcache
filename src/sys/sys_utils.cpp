@@ -38,10 +38,13 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+// Include order matters.
+// clang-format off
 #include <windows.h>
 #include <shellapi.h>
 #include <shlobj.h>
 #include <thread>
+// clang-format on
 #undef ERROR
 #undef log
 #else
@@ -100,10 +103,7 @@ bool print_raw(const char* str, const DWORD len, HANDLE handle) {
 
 // Helper function for reading data from a child process pipe.
 #if defined(_WIN32)
-bool read_from_pipe(HANDLE pipe_handle,
-                    std::string& data,
-                    const bool quiet,
-                    HANDLE& out_stream) {
+bool read_from_pipe(HANDLE pipe_handle, std::string& data, const bool quiet, HANDLE& out_stream) {
   std::vector<char> buf(4096);
   auto success = true;
   auto has_more_data = true;

@@ -146,7 +146,7 @@ TEST_CASE("get_dir_part produces expected results") {
 }
 
 #ifdef _WIN32
-TEST_CASE("dir_exists produces expected results"){
+TEST_CASE("dir_exists produces expected results") {
   SUBCASE("A Windows drive letter is assumed to exist.") {
     CHECK_EQ(file::dir_exists("c:"), true);
   }

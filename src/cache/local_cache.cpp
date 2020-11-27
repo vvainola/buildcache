@@ -319,8 +319,8 @@ std::pair<cache_entry_t, file::file_lock_t> local_cache_t::lookup(const hasher_t
   }
 }
 
-bool local_cache_t::update_stats(const hasher_t::hash_t& hash, const cache_stats_t& delta) const
-    noexcept {
+bool local_cache_t::update_stats(const hasher_t::hash_t& hash,
+                                 const cache_stats_t& delta) const noexcept {
   PERF_SCOPE(UPDATE_STATS);
   try {
     const auto cache_entry_path = hash_to_cache_entry_path(hash);
@@ -366,7 +366,7 @@ void local_cache_t::get_file(const hasher_t::hash_t& hash,
     file::copy(source_path, target_path);
   }
 
-  // Touch retrieved file to ensure that the file timestamp is up to date, 
+  // Touch retrieved file to ensure that the file timestamp is up to date,
   // and that it is picked up by build system file trackers such as MSBuild.
   file::touch(target_path);
 }

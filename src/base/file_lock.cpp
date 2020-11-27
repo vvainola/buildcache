@@ -139,8 +139,8 @@ file_lock_t::file_lock_t(const std::string& path, const bool remote_lock) : m_pa
       // unrecoverable and result in an unlocked file_lock_t object.
       const auto last_error = GetLastError();
       if (last_error != ERROR_SHARING_VIOLATION && last_error != ERROR_ACCESS_DENIED) {
-        debug::log(debug::ERROR)
-            << "Failed to open the lock file " << path << " (error code: " << last_error << ")";
+        debug::log(debug::ERROR) << "Failed to open the lock file " << path
+                                 << " (error code: " << last_error << ")";
         break;
       }
 

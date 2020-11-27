@@ -89,7 +89,7 @@ bool redis_cache_provider_t::connect(const std::string& host_description) {
   }
 
   // Connect to the remote Redis instance.
-  m_ctx = redisConnectWithTimeout(host.c_str(), port,  ms_to_timeval(connection_timeout_ms()));
+  m_ctx = redisConnectWithTimeout(host.c_str(), port, ms_to_timeval(connection_timeout_ms()));
   if (m_ctx == nullptr || (m_ctx->err != 0)) {
     if (m_ctx != nullptr) {
       debug::log(debug::log_level_t::ERROR) << "Failed connection: " << m_ctx->errstr;

@@ -29,9 +29,12 @@
 #define WIN32_LEAN_AND_MEAN
 #undef NOMINMAX
 #define NOMINMAX
+// Include order matters.
+// clang-format off
 #include <windows.h>
 #include <wincrypt.h>
 #include <cstring>
+// clang-format on
 #define HAS_WIN32_CRYPTO
 #endif
 

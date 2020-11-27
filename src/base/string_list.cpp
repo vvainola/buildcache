@@ -23,8 +23,11 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+// Include order matters.
+// clang-format off
 #include <windows.h>
 #include <shellapi.h>
+// clang-format on
 #endif
 
 namespace bcache {
