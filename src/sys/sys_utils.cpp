@@ -290,6 +290,12 @@ run_result_t run(const string_list_t& args, const bool quiet) {
 
     CloseHandle(process_info.hProcess);
     CloseHandle(process_info.hThread);
+
+    // If we didn't get all the stdout/stderr data from the child process, we can't guarantee
+    // correct operation.
+    if (read_pipes_failed) {
+      successfully_launched_program = false;
+    }
   } catch (...) {
     successfully_launched_program = false;
   }
