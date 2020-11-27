@@ -1,0 +1,17 @@
+---
+Checks: "\
+clang-diagnostic-*,\
+clang-analyzer-*,\
+performance-*,\
+readability-*,\
+-readability-convert-member-functions-to-static,\
+-readability-magic-numbers"
+
+CheckOptions:
+  - key:   readability-function-size.StatementThreshold
+    value: '200'
+
+FormatStyle: file
+HeaderFilterRegex: '/(?!third_party)/.*'
+...
+

@@ -54,7 +54,7 @@ std::string from_map(const std::map<std::string, std::string>& x) {
 }
 
 int32_t to_int(const std::string& data, std::string::size_type& pos) {
-  if ((pos + 4u) > data.size()) {
+  if ((pos + 4U) > data.size()) {
     throw std::runtime_error("Premature end of serialized data stream.");
   }
   pos += 4;
@@ -76,6 +76,7 @@ std::string to_string(const std::string& data, std::string::size_type& pos) {
 std::vector<std::string> to_vector(const std::string& data, std::string::size_type& pos) {
   const auto size = to_int(data, pos);
   std::vector<std::string> result;
+  result.reserve(size);
   for (int32_t i = 0; i < size; ++i) {
     result.emplace_back(to_string(data, pos));
   }

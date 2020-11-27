@@ -91,7 +91,7 @@ bool env_defined(const std::string& env_var);
 /// @param env_var Name of the environment variable.
 /// @returns the value as a string, or an empty string if the environment variable was not defined.
 /// @note Use @link env_defined @endlink to check if an environment variable is defined.
-const std::string get_env(const std::string& env_var);
+std::string get_env(const std::string& env_var);
 
 /// @brief Set the named environment variable for this process.
 /// @param env_var Name of the environment variable.

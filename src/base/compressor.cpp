@@ -46,8 +46,8 @@ namespace {
 // | 8         | (algorithm dependent)  | Compressed data                                 |
 // +-----------+------------------------+-------------------------------------------------+
 const int COMPR_HEADER_SIZE = 8;
-const uint32_t COMPR_FORMAT_LZ4 = 0x00345a4cu;
-const uint32_t COMPR_FORMAT_ZSTD = 0x4454535au;
+const uint32_t COMPR_FORMAT_LZ4 = 0x00345a4cU;
+const uint32_t COMPR_FORMAT_ZSTD = 0x4454535aU;
 
 void encode_uint32(std::string& buffer, const int offset, const uint32_t value) {
   buffer[offset + 0] = static_cast<char>(value);
@@ -119,9 +119,10 @@ std::string compress_zstd(const std::string& str, int32_t level) {
   const auto compressed_size = ZSTD_compress(
       &compressed_data[COMPR_HEADER_SIZE], max_compressed_size, str.c_str(), original_size, level);
 
-  if (ZSTD_isError(compressed_size)) {
+  if (ZSTD_isError(compressed_size) != 0U) {
     throw std::runtime_error("An error occurred while compressing the data.");
-  } else if (compressed_size == 0) {
+  }
+  if (compressed_size == 0) {
     throw std::runtime_error("Unable to compress the data.");
   }
 
@@ -192,7 +193,7 @@ std::string decompress(const std::string& compressed_str) {
                            compressed_str.data() + COMPR_HEADER_SIZE,
                            compressed_size);
 
-    if (ZSTD_isError(size)) {
+    if (ZSTD_isError(size) != 0U) {
       throw std::runtime_error("An error occurred while decompressing the data.");
     }
   }

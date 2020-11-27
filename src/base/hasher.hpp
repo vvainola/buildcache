@@ -43,10 +43,10 @@ public:
 
     /// @brief Convert a hash to a hexadecimal string.
     /// @returns A hexadecimal string representation of the given hash.
-    const std::string as_string() const;
+    std::string as_string() const;
 
     // The hash size is 128 bits.
-    static const size_t SIZE = 16u;
+    static const size_t SIZE = 16U;
 
   private:
     uint8_t m_data[SIZE]{};

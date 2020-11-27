@@ -53,9 +53,7 @@ bool get_host_description(std::string& protocol, std::string& host_description) 
 }  // namespace
 
 remote_cache_t::~remote_cache_t() {
-  if (m_provider != nullptr) {
-    delete m_provider;
-  }
+  delete m_provider;
 }
 
 bool remote_cache_t::connect() {
@@ -87,11 +85,7 @@ bool remote_cache_t::connect() {
   }
 
   // Connect to the remote cache instance.
-  if (!m_provider->connect(host_description)) {
-    return false;
-  }
-
-  return true;
+  return m_provider->connect(host_description);
 }
 
 bool remote_cache_t::is_connected() const {

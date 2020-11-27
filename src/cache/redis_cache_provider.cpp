@@ -63,7 +63,7 @@ struct timeval ms_to_timeval(const int time_in_ms) {
 }
 }  // namespace
 
-redis_cache_provider_t::redis_cache_provider_t() : remote_cache_provider_t() {
+redis_cache_provider_t::redis_cache_provider_t() {
 }
 
 redis_cache_provider_t::~redis_cache_provider_t() {
@@ -84,13 +84,13 @@ bool redis_cache_provider_t::connect(const std::string& host_description) {
     // The default port for Redis is 6379.
     port = 6379;
   }
-  if (path != "") {
+  if (!path.empty()) {
     debug::log(debug::INFO) << "Ignoring path part: " << path;
   }
 
   // Connect to the remote Redis instance.
-  m_ctx = redisConnectWithTimeout(host.c_str(), port,  ms_to_timeval(connection_timeout_ms()));
-  if (m_ctx == nullptr || m_ctx->err) {
+  m_ctx = redisConnectWithTimeout(host.c_str(), port, ms_to_timeval(connection_timeout_ms()));
+  if (m_ctx == nullptr || (m_ctx->err != 0)) {
     if (m_ctx != nullptr) {
       debug::log(debug::log_level_t::ERROR) << "Failed connection: " << m_ctx->errstr;
       disconnect();

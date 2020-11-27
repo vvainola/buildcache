@@ -29,9 +29,12 @@
 #define WIN32_LEAN_AND_MEAN
 #undef NOMINMAX
 #define NOMINMAX
+// Include order matters.
+// clang-format off
 #include <windows.h>
 #include <wincrypt.h>
 #include <cstring>
+// clang-format on
 #define HAS_WIN32_CRYPTO
 #endif
 
@@ -83,41 +86,41 @@ std::string sha1_hmac(const std::string& key, const std::string& data) {
       kb->hdr.reserved = 0;
       kb->key_length = static_cast<DWORD>(key.size());
       std::memcpy(&key_blob[sizeof(plain_text_key_blob_t)], key.data(), key.size());
-      if (!CryptImportKey(crypt_prov,
-                          key_blob.data(),
-                          static_cast<DWORD>(key_blob.size()),
-                          0,
-                          CRYPT_IPSEC_HMAC_KEY,
-                          &crypt_key)) {
+      if (CryptImportKey(crypt_prov,
+                         key_blob.data(),
+                         static_cast<DWORD>(key_blob.size()),
+                         0,
+                         CRYPT_IPSEC_HMAC_KEY,
+                         &crypt_key) == 0) {
         throw std::runtime_error("Unable to import the key");
       }
     }
 
-    if (!CryptCreateHash(crypt_prov, CALG_HMAC, crypt_key, 0, &crypt_hash)) {
+    if (CryptCreateHash(crypt_prov, CALG_HMAC, crypt_key, 0, &crypt_hash) == 0) {
       throw std::runtime_error("Unable to create the hash object");
     }
 
     HMAC_INFO hmac_info;
     ZeroMemory(&hmac_info, sizeof(hmac_info));
     hmac_info.HashAlgid = CALG_SHA1;
-    if (!CryptSetHashParam(
-            crypt_hash, HP_HMAC_INFO, reinterpret_cast<const BYTE*>(&hmac_info), 0)) {
+    if (CryptSetHashParam(crypt_hash, HP_HMAC_INFO, reinterpret_cast<const BYTE*>(&hmac_info), 0) ==
+        0) {
       throw std::runtime_error("Unable to set the hash parameters");
     }
 
-    if (!CryptHashData(crypt_hash,
-                       reinterpret_cast<const BYTE*>(data.data()),
-                       static_cast<DWORD>(data.size()),
-                       0)) {
+    if (CryptHashData(crypt_hash,
+                      reinterpret_cast<const BYTE*>(data.data()),
+                      static_cast<DWORD>(data.size()),
+                      0) == 0) {
       throw std::runtime_error("Unable to hash the data");
     }
 
     DWORD hash_len = 0;
-    if (!CryptGetHashParam(crypt_hash, HP_HASHVAL, 0, &hash_len, 0)) {
+    if (CryptGetHashParam(crypt_hash, HP_HASHVAL, 0, &hash_len, 0) == 0) {
       throw std::runtime_error("Unable to retrieve the hashed data");
     }
     digest.resize(hash_len);
-    if (!CryptGetHashParam(crypt_hash, HP_HASHVAL, digest.data(), &hash_len, 0)) {
+    if (CryptGetHashParam(crypt_hash, HP_HASHVAL, digest.data(), &hash_len, 0) == 0) {
       throw std::runtime_error("Unable to retrieve the hashed data");
     }
 
@@ -127,10 +130,12 @@ std::string sha1_hmac(const std::string& key, const std::string& data) {
     CryptReleaseContext(crypt_prov, 0);
   } catch (...) {
     // Release resources...
-    if (crypt_hash)
+    if (crypt_hash != 0U) {
       CryptDestroyHash(crypt_hash);
-    if (crypt_key)
+    }
+    if (crypt_key != 0U) {
       CryptDestroyKey(crypt_key);
+    }
     CryptReleaseContext(crypt_prov, 0);
 
     // ...and re-throw the exception.

@@ -245,15 +245,15 @@ int l_get_file_info(lua_State* state) {
   return 1;
 }
 
-static const luaL_Reg BCACHE_LIB_FUNCS[] = {{"split_args", l_split_args},
-                                            {"run", l_run},
-                                            {"dir_exists", l_dir_exists},
-                                            {"file_exists", l_file_exists},
-                                            {"get_extension", l_get_extension},
-                                            {"get_file_part", l_get_file_part},
-                                            {"get_dir_part", l_get_dir_part},
-                                            {"get_file_info", l_get_file_info},
-                                            {NULL, NULL}};
+const luaL_Reg BCACHE_LIB_FUNCS[] = {{"split_args", l_split_args},
+                                     {"run", l_run},
+                                     {"dir_exists", l_dir_exists},
+                                     {"file_exists", l_file_exists},
+                                     {"get_extension", l_get_extension},
+                                     {"get_file_part", l_get_file_part},
+                                     {"get_dir_part", l_get_dir_part},
+                                     {"get_file_info", l_get_file_info},
+                                     {NULL, NULL}};
 
 int luaopen_bcache(lua_State* state) {
   luaL_newlib(state, BCACHE_LIB_FUNCS);
@@ -495,58 +495,51 @@ void lua_wrapper_t::resolve_args() {
 string_list_t lua_wrapper_t::get_capabilities() {
   if (m_runner.call("get_capabilities")) {
     return pop_string_list(m_runner.state());
-  } else {
-    return program_wrapper_t::get_capabilities();
   }
+  return program_wrapper_t::get_capabilities();
 }
 
 std::string lua_wrapper_t::preprocess_source() {
   if (m_runner.call("preprocess_source")) {
     return pop_string(m_runner.state());
-  } else {
-    return program_wrapper_t::preprocess_source();
   }
+  return program_wrapper_t::preprocess_source();
 }
 
 string_list_t lua_wrapper_t::get_relevant_arguments() {
   if (m_runner.call("get_relevant_arguments")) {
     return pop_string_list(m_runner.state());
-  } else {
-    return program_wrapper_t::get_relevant_arguments();
   }
+  return program_wrapper_t::get_relevant_arguments();
 }
 
 std::map<std::string, std::string> lua_wrapper_t::get_relevant_env_vars() {
   if (m_runner.call("get_relevant_env_vars")) {
     return pop_map(m_runner.state());
-  } else {
-    return program_wrapper_t::get_relevant_env_vars();
   }
+  return program_wrapper_t::get_relevant_env_vars();
 }
 
 std::string lua_wrapper_t::get_program_id() {
   if (m_runner.call("get_program_id")) {
     return pop_string(m_runner.state());
-  } else {
-    return program_wrapper_t::get_program_id();
   }
+  return program_wrapper_t::get_program_id();
 }
 
 std::map<std::string, expected_file_t> lua_wrapper_t::get_build_files() {
   if (m_runner.call("get_build_files")) {
     const auto files_map = pop_map(m_runner.state());
     return to_expected_files_map(files_map);
-  } else {
-    return program_wrapper_t::get_build_files();
   }
+  return program_wrapper_t::get_build_files();
 }
 
 sys::run_result_t lua_wrapper_t::run_for_miss() {
   if (m_runner.call("run_for_miss")) {
     return pop_run_result(m_runner.state());
-  } else {
-    return program_wrapper_t::run_for_miss();
   }
+  return program_wrapper_t::run_for_miss();
 }
 
 }  // namespace bcache

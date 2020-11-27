@@ -68,9 +68,8 @@ bool arg_equals(const std::string& str, const std::string& sub_str) {
 std::string drop_leading_colon(const std::string& s) {
   if (s.length() > 0 && s[0] == ':') {
     return s.substr(1);
-  } else {
-    return s;
   }
+  return s;
 }
 
 string_list_t make_preprocessor_cmd(const string_list_t& args) {

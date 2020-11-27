@@ -74,7 +74,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
       // Find all .lua files in the given directory.
       const auto lua_files = bcache::file::walk_directory(lua_root_dir);
       for (const auto& file_info : lua_files) {
-        const auto script_path = file_info.path();
+        const auto& script_path = file_info.path();
         if ((!file_info.is_dir()) && is_lua_script(script_path)) {
           // Check if the given wrapper can handle this command (first match wins).
           wrapper.reset(new bcache::lua_wrapper_t(args, script_path));
@@ -82,9 +82,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
             bcache::debug::log(bcache::debug::DEBUG)
                 << "Found matching Lua wrapper for " << true_exe_path << ": " << script_path;
             break;
-          } else {
-            wrapper = nullptr;
           }
+          wrapper = nullptr;
         }
       }
     }
@@ -283,7 +282,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
     bcache::local_cache_t cache;
 
     // Get the name of the config file, and create an empty file if it does not already exist.
-    const auto config_file = bcache::config::config_file();
+    const auto& config_file = bcache::config::config_file();
     if (!bcache::file::file_exists(config_file)) {
       bcache::file::write("{\n}\n", config_file);
     }

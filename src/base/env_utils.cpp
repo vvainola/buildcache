@@ -20,8 +20,8 @@
 #include <base/env_utils.hpp>
 #include <base/unicode_utils.hpp>
 
-#include <algorithm>
 #include <stdlib.h>
+#include <algorithm>
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -58,7 +58,7 @@ int64_t env_var_t::as_int64() const {
 bool env_var_t::as_bool() const {
   const auto value_lower = to_lower(m_value);
   return m_defined && (!m_value.empty()) && (value_lower != "false") && (value_lower != "no") &&
-      (value_lower != "off") && (value_lower != "0");
+         (value_lower != "off") && (value_lower != "0");
 }
 
 scoped_set_env_t::scoped_set_env_t(const std::string& name, const std::string& value)
@@ -94,7 +94,7 @@ bool env_defined(const std::string& env_var) {
 #endif
 }
 
-const std::string get_env(const std::string& env_var) {
+std::string get_env(const std::string& env_var) {
 #if defined(_WIN32)
   const auto env_var_w = utf8_to_ucs2(env_var);
   const auto* value_w = ::_wgetenv(env_var_w.c_str());

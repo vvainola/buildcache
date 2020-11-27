@@ -137,13 +137,13 @@ local_cache_t::local_cache_t() {
 local_cache_t::~local_cache_t() {
 }
 
-const std::string local_cache_t::get_cache_files_folder() const {
-  const auto cache_files_path = file::append_path(config::dir(), CACHE_FILES_FOLDER_NAME);
+std::string local_cache_t::get_cache_files_folder() const {
+  auto cache_files_path = file::append_path(config::dir(), CACHE_FILES_FOLDER_NAME);
   file::create_dir_with_parents(cache_files_path);
   return cache_files_path;
 }
 
-const std::string local_cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash) const {
+std::string local_cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash) const {
   const std::string str = hash.as_string();
   const auto parent_dir_path = file::append_path(get_cache_files_folder(), str.substr(0, 2));
   return file::append_path(parent_dir_path, str.substr(2));
@@ -319,8 +319,8 @@ std::pair<cache_entry_t, file::file_lock_t> local_cache_t::lookup(const hasher_t
   }
 }
 
-bool local_cache_t::update_stats(const hasher_t::hash_t& hash, const cache_stats_t& delta) const
-    noexcept {
+bool local_cache_t::update_stats(const hasher_t::hash_t& hash,
+                                 const cache_stats_t& delta) const noexcept {
   PERF_SCOPE(UPDATE_STATS);
   try {
     const auto cache_entry_path = hash_to_cache_entry_path(hash);
@@ -366,7 +366,7 @@ void local_cache_t::get_file(const hasher_t::hash_t& hash,
     file::copy(source_path, target_path);
   }
 
-  // Touch retrieved file to ensure that the file timestamp is up to date, 
+  // Touch retrieved file to ensure that the file timestamp is up to date,
   // and that it is picked up by build system file trackers such as MSBuild.
   file::touch(target_path);
 }

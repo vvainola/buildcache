@@ -54,7 +54,7 @@ bool has_debug_symbols(const string_list_t& args) {
                                                "-gxcoff+",
                                                "-gvms"};
 
-  for (auto arg : args) {
+  for (const auto& arg : args) {
     if (debug_options.find(arg) != debug_options.end()) {
       return true;
     }
@@ -66,7 +66,7 @@ bool has_coverage_output(const string_list_t& args) {
   const std::set<std::string> coverage_options = {
       "-ftest-coverage", "-fprofile-arcs", "--coverage"};
 
-  for (auto arg : args) {
+  for (const auto& arg : args) {
     if (coverage_options.find(arg) != coverage_options.end()) {
       return true;
     }
@@ -187,7 +187,7 @@ std::string gcc_wrapper_t::preprocess_source() {
   // Check if this is a compilation command that we support.
   auto is_object_compilation = false;
   auto has_object_output = false;
-  for (auto arg : m_resolved_args) {
+  for (const auto& arg : m_resolved_args) {
     if (arg == "-c") {
       is_object_compilation = true;
     } else if (arg == "-o") {
@@ -207,7 +207,7 @@ std::string gcc_wrapper_t::preprocess_source() {
   }
 
   // Read and return the preprocessed file.
-  const auto preprocessed_source = file::read(preprocessed_file.path());
+  auto preprocessed_source = file::read(preprocessed_file.path());
   return preprocessed_source;
 }
 
@@ -219,7 +219,7 @@ string_list_t gcc_wrapper_t::get_relevant_arguments() {
 
   // Note: We always skip the first arg since we have handled it already.
   bool skip_next_arg = true;
-  for (auto arg : m_resolved_args) {
+  for (const auto& arg : m_resolved_args) {
     if (!skip_next_arg) {
       // Does this argument specify a file (we don't want to hash those).
       const bool is_arg_plus_file_name =
@@ -266,7 +266,7 @@ std::string gcc_wrapper_t::get_program_id() {
   }
 
   // Prepend the hash format version.
-  const auto id = HASH_VERSION + result.std_out;
+  auto id = HASH_VERSION + result.std_out;
 
   return id;
 }
@@ -274,8 +274,8 @@ std::string gcc_wrapper_t::get_program_id() {
 std::map<std::string, expected_file_t> gcc_wrapper_t::get_build_files() {
   std::map<std::string, expected_file_t> files;
   auto found_object_file = false;
-  for (size_t i = 0u; i < m_resolved_args.size(); ++i) {
-    const auto next_idx = i + 1u;
+  for (size_t i = 0U; i < m_resolved_args.size(); ++i) {
+    const auto next_idx = i + 1U;
     if ((m_resolved_args[i] == "-o") && (next_idx < m_resolved_args.size())) {
       if (found_object_file) {
         throw std::runtime_error("Only a single target object file can be specified.");

@@ -61,7 +61,7 @@ TEST_CASE("sha1_hmac() produces expected results") {
 
   SUBCASE("Case 3 - Empty data") {
     const std::string key = "abcdefghijklmnopqrstuvwxyz";
-    const std::string data = "";
+    const std::string data;
     const auto result = to_hex(sha1_hmac(key, data));
     CHECK_EQ(result, "28cfb82af65df022e08fa1a67121068c1d480bc8");
   }

@@ -102,8 +102,8 @@ int get_process_id() {
 
 std::string::size_type get_last_path_separator_pos(const std::string& path) {
 #if defined(_WIN32)
-  const auto pos1 = path.rfind("/");
-  const auto pos2 = path.rfind("\\");
+  const auto pos1 = path.rfind('/');
+  const auto pos2 = path.rfind('\\');
   std::string::size_type pos;
   if (pos1 == std::string::npos) {
     pos = pos2;
@@ -113,7 +113,7 @@ std::string::size_type get_last_path_separator_pos(const std::string& path) {
     pos = std::max(pos1, pos2);
   }
 #else
-  const auto pos = path.rfind(PATH_SEPARATOR);
+  const auto pos = path.rfind(PATH_SEPARATOR_CHR);
 #endif
   return pos;
 }
@@ -160,11 +160,11 @@ std::string to_id_part(const uint64_t x) {
   static const auto NUM_CHARS = static_cast<uint64_t>(sizeof(CHARS) / sizeof(CHARS[0]) - 1);
 
   std::string part;
-  if (x == 0u) {
+  if (x == 0U) {
     part += 'u';
   } else {
     auto q = x;
-    while (q != 0u) {
+    while (q != 0U) {
       part += CHARS[q % NUM_CHARS];
       q = q / NUM_CHARS;
     }
@@ -205,7 +205,7 @@ bool is_absolute_path(const std::string& path) {
   const bool is_abs_net = (path.size() >= 2) && (path[0] == '\\') && (path[1] == '\\');
   return is_abs_drive || is_abs_net;
 #else
-  return (path.size() >= 1) && (path[0] == PATH_SEPARATOR_CHR);
+  return (!path.empty()) && (path[0] == PATH_SEPARATOR_CHR);
 #endif
 }
 
@@ -270,7 +270,7 @@ std::string append_path(const std::string& path, const char* append) {
 }
 
 std::string get_extension(const std::string& path) {
-  const auto pos = path.rfind(".");
+  const auto pos = path.rfind('.');
 
   // Check that we did not pick up an extension before the last path separator.
   const auto sep_pos = get_last_path_separator_pos(path);
@@ -282,7 +282,7 @@ std::string get_extension(const std::string& path) {
 }
 
 std::string change_extension(const std::string& path, const std::string& new_ext) {
-  const auto pos = path.rfind(".");
+  const auto pos = path.rfind('.');
 
   // Check that we did not pick up an extension before the last path separator.
   const auto sep_pos = get_last_path_separator_pos(path);
@@ -296,7 +296,7 @@ std::string change_extension(const std::string& path, const std::string& new_ext
 std::string get_file_part(const std::string& path, const bool include_ext) {
   const auto pos = get_last_path_separator_pos(path);
   const auto file_name = (pos != std::string::npos) ? path.substr(pos + 1) : path;
-  const auto ext_pos = file_name.rfind(".");
+  const auto ext_pos = file_name.rfind('.');
   return (include_ext || (ext_pos == std::string::npos) || (ext_pos == 0))
              ? file_name
              : file_name.substr(0, ext_pos);
@@ -377,13 +377,13 @@ std::string get_user_home_dir() {
 
 std::string resolve_path(const std::string& path) {
 #if defined(_WIN32)
-  auto handle = CreateFileW(utf8_to_ucs2(path).c_str(),
-                            0,
-                            FILE_SHARE_READ | FILE_SHARE_WRITE,
-                            nullptr,
-                            OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL,
-                            nullptr);
+  auto* handle = CreateFileW(utf8_to_ucs2(path).c_str(),
+                             0,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             nullptr,
+                             OPEN_EXISTING,
+                             FILE_ATTRIBUTE_NORMAL,
+                             nullptr);
   if (INVALID_HANDLE_VALUE != handle) {
     std::wstring resolved_path;
     auto resolved_size = GetFinalPathNameByHandleW(handle, nullptr, 0, FILE_NAME_NORMALIZED);
@@ -400,7 +400,7 @@ std::string resolve_path(const std::string& path) {
 #else
   auto* char_ptr = realpath(path.c_str(), nullptr);
   if (char_ptr != nullptr) {
-    const auto result = std::string(char_ptr);
+    auto result = std::string(char_ptr);
     std::free(char_ptr);
     return result;
   }
@@ -421,7 +421,7 @@ std::string find_executable(const std::string& path, const std::string& exclude)
       const auto path_with_ext = path + ext;
 
       // Return the full path unless it points to the excluded executable.
-      const auto true_path = resolve_path(path_with_ext);
+      auto true_path = resolve_path(path_with_ext);
       if (true_path.empty()) {
         // Unable to resolve. Try next ext.
         continue;
@@ -459,7 +459,7 @@ std::string find_executable(const std::string& path, const std::string& exclude)
     for (const auto& base_path : search_path) {
       for (const auto& ext : extensions) {
         const auto file_name = file_to_find + ext;
-        const auto true_path = resolve_path(append_path(base_path, file_name));
+        auto true_path = resolve_path(append_path(base_path, file_name));
         if ((!true_path.empty()) && file_exists(true_path)) {
           // Check that this is not the excluded file name.
           if (lower_case(get_file_part(true_path, false)) != exclude) {
@@ -594,9 +594,9 @@ void copy(const std::string& from_path, const std::string& to_path) {
       static const int BUFFER_SIZE = 8192;
       std::vector<std::uint8_t> buf(BUFFER_SIZE);
       success = true;
-      while (!std::feof(from_file)) {
+      while (std::feof(from_file) == 0) {
         const auto bytes_read = std::fread(buf.data(), 1, buf.size(), from_file);
-        if (bytes_read == 0u) {
+        if (bytes_read == 0U) {
           break;
         }
         const auto bytes_written = std::fwrite(buf.data(), 1, bytes_read, to_file);
@@ -679,7 +679,7 @@ std::string read(const std::string& path) {
   std::string str;
   str.resize(static_cast<std::string::size_type>(file_size));
   auto bytes_left = file_size;
-  while ((bytes_left != 0u) && !std::feof(f)) {
+  while ((bytes_left != 0U) && (std::feof(f) == 0)) {
     auto* ptr = &str[file_size - bytes_left];
     const auto bytes_read = std::fread(ptr, 1, bytes_left, f);
     bytes_left -= bytes_read;
@@ -688,7 +688,7 @@ std::string read(const std::string& path) {
   // Close the file.
   std::fclose(f);
 
-  if (bytes_left != 0u) {
+  if (bytes_left != 0U) {
     throw std::runtime_error("Unable to read the file.");
   }
 
@@ -714,7 +714,7 @@ void write(const std::string& data, const std::string& path) {
   // Write the data to the file.
   const auto file_size = data.size();
   auto bytes_left = file_size;
-  while ((bytes_left != 0u) && !std::ferror(f)) {
+  while ((bytes_left != 0U) && (std::ferror(f) == 0)) {
     const auto* ptr = &data[file_size - bytes_left];
     const auto bytes_written = std::fwrite(ptr, 1, bytes_left, f);
     bytes_left -= bytes_written;
@@ -723,7 +723,7 @@ void write(const std::string& data, const std::string& path) {
   // Close the file.
   std::fclose(f);
 
-  if (bytes_left != 0u) {
+  if (bytes_left != 0U) {
     throw std::runtime_error("Unable to write the file.");
   }
 }
@@ -735,13 +735,13 @@ void append(const std::string& data, const std::string& path) {
 
 #ifdef _WIN32
   // Open the file.
-  auto handle = CreateFileW(utf8_to_ucs2(path).c_str(),
-                            FILE_APPEND_DATA,
-                            FILE_SHARE_READ | FILE_SHARE_WRITE,
-                            nullptr,
-                            OPEN_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL,
-                            nullptr);
+  auto* handle = CreateFileW(utf8_to_ucs2(path).c_str(),
+                             FILE_APPEND_DATA,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             nullptr,
+                             OPEN_ALWAYS,
+                             FILE_ATTRIBUTE_NORMAL,
+                             nullptr);
   if (handle == INVALID_HANDLE_VALUE) {
     throw std::runtime_error("Unable to open the file.");
   }
@@ -767,7 +767,7 @@ void append(const std::string& data, const std::string& path) {
   CloseHandle(handle);
 #else
   // Open the file (write pointer is at the end of the file).
-  auto f = std::fopen(path.c_str(), "ab");
+  auto* f = std::fopen(path.c_str(), "ab");
   if (f == nullptr) {
     throw std::runtime_error("Unable to open the file.");
   }
@@ -775,7 +775,7 @@ void append(const std::string& data, const std::string& path) {
   // Write the data to the file.
   const auto file_size = data.size();
   auto bytes_left = file_size;
-  while ((bytes_left != 0u) && !std::ferror(f)) {
+  while ((bytes_left != 0U) && (std::ferror(f) == 0)) {
     const auto* ptr = &data[file_size - bytes_left];
     const auto bytes_written = std::fwrite(ptr, 1, bytes_left, f);
     bytes_left -= bytes_written;
@@ -784,7 +784,7 @@ void append(const std::string& data, const std::string& path) {
   // Close the file.
   std::fclose(f);
 
-  if (bytes_left != 0u) {
+  if (bytes_left != 0U) {
     throw std::runtime_error("Unable to write the file.");
   }
 #endif
@@ -794,7 +794,7 @@ file_info_t get_file_info(const std::string& path) {
   // TODO(m): This is pretty much copy-paste from walk_directory(). Refactor.
 #ifdef _WIN32
   WIN32_FIND_DATAW find_data;
-  auto find_handle = FindFirstFileW(utf8_to_ucs2(path).c_str(), &find_data);
+  auto* find_handle = FindFirstFileW(utf8_to_ucs2(path).c_str(), &find_data);
   if (find_handle != INVALID_HANDLE_VALUE) {
     const auto name = ucs2_to_utf8(std::wstring(&find_data.cFileName[0]));
     const auto file_path = append_path(path, name);
@@ -862,7 +862,7 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
 #ifdef _WIN32
   const auto search_str = utf8_to_ucs2(append_path(path, "*"));
   WIN32_FIND_DATAW find_data;
-  auto find_handle = FindFirstFileW(search_str.c_str(), &find_data);
+  auto* find_handle = FindFirstFileW(search_str.c_str(), &find_data);
   if (find_handle == INVALID_HANDLE_VALUE) {
     throw std::runtime_error("Unable to walk the directory.");
   }

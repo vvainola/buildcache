@@ -49,7 +49,7 @@ bool has_debug_symbols(const string_list_t& args) {
   //   ARM default (spnu151v.pdf, 2.3.5):   --symdebug:dwarf
   //   ARP32 default (spruh24a.pdf, 2.3.5): --symdebug:skeletal
   bool result = true;
-  for (auto arg : args) {
+  for (const auto& arg : args) {
     if (starts_with(arg, "--symdebug:")) {
       result = (arg != "--symdebug:none");
     } else if (arg == "-g") {
@@ -122,7 +122,7 @@ void ti_common_wrapper_t::resolve_args() {
   for (const auto& arg : m_args) {
     std::string response_file;
     if (starts_with(arg, "--cmd_file=")) {
-      response_file = arg.substr(arg.find("=") + 1);
+      response_file = arg.substr(arg.find('=') + 1);
     } else if (starts_with(arg, "-@")) {
       response_file = arg.substr(2);
     }
@@ -165,12 +165,13 @@ std::string ti_common_wrapper_t::preprocess_source() {
 
     // Read and return the preprocessed file.
     return file::read(preprocessed_file.path());
-  } else if (is_link && has_output_file) {
+  }
+  if (is_link && has_output_file) {
     // Hash all the input files.
     hasher_t hasher;
     for (size_t i = 1; i < m_resolved_args.size(); ++i) {
       const auto& arg = m_resolved_args[i];
-      if (arg.size() > 0 && arg[0] != '-' && file::file_exists(arg)) {
+      if (!arg.empty() && arg[0] != '-' && file::file_exists(arg)) {
         if (lower_case(file::get_extension(arg)) == ".cmd") {
           debug::log(debug::DEBUG) << "Hashing cmd-file " << arg;
           hash_link_cmd_file(arg, hasher);
@@ -194,7 +195,7 @@ string_list_t ti_common_wrapper_t::get_relevant_arguments() {
   // Note: We always skip the first arg since we have handled it already.
   bool skip_next_arg = true;
   for (auto arg : m_resolved_args) {
-    if (arg.size() > 0 && !skip_next_arg) {
+    if (!arg.empty() && !skip_next_arg) {
       // Generally unwanted argument (things that will not change how we go from preprocessed code
       // to binary object files)?
       const auto first_two_chars = arg.substr(0, 2);
@@ -253,17 +254,17 @@ std::map<std::string, expected_file_t> ti_common_wrapper_t::get_build_files() {
       if (!output_file.empty()) {
         throw std::runtime_error("Only a single target file can be specified.");
       }
-      output_file = arg.substr(arg.find("=") + 1);
+      output_file = arg.substr(arg.find('=') + 1);
     } else if (starts_with(arg, "-ppd=") || starts_with(arg, "--preproc_dependency=")) {
       if (!dep_file.empty()) {
         throw std::runtime_error("Only a single dependency file can be specified.");
       }
-      dep_file = arg.substr(arg.find("=") + 1);
+      dep_file = arg.substr(arg.find('=') + 1);
     } else if (starts_with(arg, "--map_file=")) {
       if (!map_file.empty()) {
         throw std::runtime_error("Only a single map file can be specified.");
       }
-      map_file = arg.substr(arg.find("=") + 1);
+      map_file = arg.substr(arg.find('=') + 1);
     }
   }
   if (output_file.empty()) {
@@ -295,14 +296,17 @@ void ti_common_wrapper_t::append_response_file(const std::string& response_file)
     if (line.empty()) {
       // Ignore empty lines.
       continue;
-    } else if (line.front() == '#') {
+    }
+    if (line.front() == '#') {
       // Ignore line comments.
       continue;
-    } else if (line.find("/*") != std::string::npos) {
+    }
+    if (line.find("/*") != std::string::npos) {
       // We do not support /* C style comments */ which, according to the
       // documentation from TI, are allowed in response files.
       throw std::runtime_error("C style comments are unsupported. Found in: " + response_file);
-    } else if (line.back() == '\r') {
+    }
+    if (line.back() == '\r') {
       // Remove trailing CR which will be present when a file which has CRLF
       // as end of line marker is read on a system expecting only LF.
       line.pop_back();
