@@ -33,11 +33,11 @@ jobs:
             cxx: "g++"
           }
         - {
-            name: "Ubuntu Latest GCC",
+            name: "Ubuntu 20.04 GCC",
             artifact: "buildcache-linux.tar.gz",
             artifact_format: "gnutar",
             artifact_tar_flags: "z",
-            os: ubuntu-latest,
+            os: ubuntu-20.04,
             cc: "gcc",
             cxx: "g++"
           }
@@ -53,7 +53,12 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Download Ninja and CMake
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8.6
+
+    - name: Install dependencies
       id: cmake_and_ninja
       shell: cmake -P {0}
       run: |
@@ -92,6 +97,13 @@ jobs:
           execute_process(
             COMMAND chmod +x ninja
             COMMAND chmod +x ${cmake_dir}/cmake
+          )
+        endif()
+
+        if ("${{ runner.os }}" STREQUAL "Linux")
+          execute_process(
+            COMMAND sudo apt update
+            COMMAND sudo apt install -y clang-tidy clang-format
           )
         endif()
 
@@ -153,7 +165,7 @@ jobs:
         endif()
 
 
-    - name: Run tests
+    - name: Run unit tests
       shell: cmake -P {0}
       run: |
         include(ProcessorCount)
@@ -168,6 +180,20 @@ jobs:
         )
         if (NOT result EQUAL 0)
           message(FATAL_ERROR "Running tests failed!")
+        endif()
+
+
+    - name: Run static checks
+      shell: cmake -P {0}
+      run: |
+        if ("${{ runner.os }}" STREQUAL "Linux")
+          execute_process(
+            COMMAND test_scripts/run_linters.py -p build
+            RESULT_VARIABLE result
+          )
+          if (NOT result EQUAL 0)
+            message(FATAL_ERROR "Bad exit status")
+          endif()
         endif()
 
 
