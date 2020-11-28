@@ -25,6 +25,7 @@
 #include <base/unicode_utils.hpp>
 
 #include <cstdint>
+#include <cstring>
 
 #include <algorithm>
 
@@ -182,7 +183,8 @@ file_lock_t::file_lock_t(const std::string& path, const bool remote_lock) : m_pa
       break;
     }
     if (errno != EEXIST) {
-      debug::log(debug::ERROR) << "Failed to open the lock file " << path;
+      debug::log(debug::ERROR) << "Failed to open the lock file (\"" << std::strerror(errno)
+                               << "\")" << path;
       break;
     }
 

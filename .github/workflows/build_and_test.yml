@@ -1,10 +1,8 @@
-name: CMake Build Matrix
+name: Build and Test
 
 on: [push]
 
 env:
-  CMAKE_VERSION: 3.16.2
-  NINJA_VERSION: 1.9.0
   BUILD_TYPE: Release
 
 jobs:
@@ -58,54 +56,14 @@ jobs:
       with:
         python-version: 3.8.6
 
-    - name: Install dependencies
-      id: cmake_and_ninja
-      shell: cmake -P {0}
+    - name: Setup CMake and Ninja
+      uses: lukka/get-cmake@latest
+
+    - name: Setup Clang tools
+      if: ${{ runner.os == 'Linux' }}
       run: |
-        set(cmake_version $ENV{CMAKE_VERSION})
-        set(ninja_version $ENV{NINJA_VERSION})
-
-        message(STATUS "Using host CMake version: ${CMAKE_VERSION}")
-
-        if ("${{ runner.os }}" STREQUAL "Windows")
-          set(ninja_suffix "win.zip")
-          set(cmake_suffix "win64-x64.zip")
-          set(cmake_dir "cmake-${cmake_version}-win64-x64/bin")
-        elseif ("${{ runner.os }}" STREQUAL "Linux")
-          set(ninja_suffix "linux.zip")
-          set(cmake_suffix "Linux-x86_64.tar.gz")
-          set(cmake_dir "cmake-${cmake_version}-Linux-x86_64/bin")
-        elseif ("${{ runner.os }}" STREQUAL "macOS")
-          set(ninja_suffix "mac.zip")
-          set(cmake_suffix "Darwin-x86_64.tar.gz")
-          set(cmake_dir "cmake-${cmake_version}-Darwin-x86_64/CMake.app/Contents/bin")
-        endif()
-
-        set(ninja_url "https://github.com/ninja-build/ninja/releases/download/v${ninja_version}/ninja-${ninja_suffix}")
-        file(DOWNLOAD "${ninja_url}" ./ninja.zip SHOW_PROGRESS)
-        execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ./ninja.zip)
-
-        set(cmake_url "https://github.com/Kitware/CMake/releases/download/v${cmake_version}/cmake-${cmake_version}-${cmake_suffix}")
-        file(DOWNLOAD "${cmake_url}" ./cmake.zip SHOW_PROGRESS)
-        execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ./cmake.zip)
-
-        # Save the path for other steps
-        file(TO_CMAKE_PATH "$ENV{GITHUB_WORKSPACE}/${cmake_dir}" cmake_dir)
-        message("::set-output name=cmake_dir::${cmake_dir}")
-
-        if (NOT "${{ runner.os }}" STREQUAL "Windows")
-          execute_process(
-            COMMAND chmod +x ninja
-            COMMAND chmod +x ${cmake_dir}/cmake
-          )
-        endif()
-
-        if ("${{ runner.os }}" STREQUAL "Linux")
-          execute_process(
-            COMMAND sudo apt update
-            COMMAND sudo apt install -y clang-tidy clang-format
-          )
-        endif()
+        sudo apt update
+        sudo apt install -y clang-tidy clang-format
 
     - name: Configure
       shell: cmake -P {0}
@@ -126,15 +84,12 @@ jobs:
           endforeach()
         endif()
 
-        file(TO_CMAKE_PATH "$ENV{GITHUB_WORKSPACE}/ninja" ninja_program)
-
         execute_process(
-          COMMAND ${{ steps.cmake_and_ninja.outputs.cmake_dir }}/cmake
+          COMMAND cmake
             -S src
             -B build
             -D CMAKE_BUILD_TYPE=$ENV{BUILD_TYPE}
             -G Ninja
-            -D CMAKE_MAKE_PROGRAM=${ninja_program}
           RESULT_VARIABLE result
         )
         if (NOT result EQUAL 0)
@@ -157,7 +112,7 @@ jobs:
         endif()
 
         execute_process(
-          COMMAND ${{ steps.cmake_and_ninja.outputs.cmake_dir }}/cmake --build build
+          COMMAND cmake --build build
           RESULT_VARIABLE result
         )
         if (NOT result EQUAL 0)
@@ -174,7 +129,7 @@ jobs:
         set(ENV{CTEST_OUTPUT_ON_FAILURE} "ON")
 
         execute_process(
-          COMMAND ${{ steps.cmake_and_ninja.outputs.cmake_dir }}/ctest -j ${N}
+          COMMAND ctest -j ${N}
           WORKING_DIRECTORY build
           RESULT_VARIABLE result
         )
@@ -183,26 +138,25 @@ jobs:
         endif()
 
 
-    - name: Run static checks
-      shell: cmake -P {0}
+    - name: Run system tests
+      if: ${{ runner.os != 'Windows' }}
+      working-directory: build
       run: |
-        if ("${{ runner.os }}" STREQUAL "Linux")
-          execute_process(
-            COMMAND test_scripts/run_linters.py -p build
-            RESULT_VARIABLE result
-          )
-          if (NOT result EQUAL 0)
-            message(FATAL_ERROR "Bad exit status")
-          endif()
-        endif()
+        ../test_scripts/run_file_lock_stresstest.sh
+        ../test_scripts/build_with_buildcache.sh
+
+
+    - name: Run static checks
+      if: ${{ runner.os == 'Linux' }}
+      run: test_scripts/run_linters.py -p build
 
 
     - name: Install Strip
-      run: ${{ steps.cmake_and_ninja.outputs.cmake_dir }}/cmake --install build --prefix buildcache --strip
+      run: cmake --install build --prefix buildcache --strip
 
 
     - name: Pack
-      run: ${{ steps.cmake_and_ninja.outputs.cmake_dir }}/cmake -E tar cv${{ matrix.config.artifact_tar_flags }}f ${{ matrix.config.artifact }} --format=${{ matrix.config.artifact_format }} buildcache
+      run: cmake -E tar cv${{ matrix.config.artifact_tar_flags }}f ${{ matrix.config.artifact }} --format=${{ matrix.config.artifact_format }} buildcache
 
 
     - name: Upload

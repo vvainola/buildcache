@@ -1,4 +1,4 @@
-# BuildCache [![Build Status](https://github.com/mbitsnbites/buildcache/workflows/CMake%20Build%20Matrix/badge.svg)](https://github.com/mbitsnbites/buildcache/actions)
+# BuildCache [![Build and Test](https://github.com/mbitsnbites/buildcache/workflows/Build%20and%20Test/badge.svg)](https://github.com/mbitsnbites/buildcache/actions)
 
 This is a simple compiler accelerator that caches and reuses build results to
 avoid unnecessary re-compilations, and thereby speeding up the build process.
