@@ -35,7 +35,7 @@ if is_windows; then
 fi
 
 # Note: This script is expected to be run from the BuildCache build folder.
-BUILDCACHEDIR="$( realpath "$(pwd)" )"
+BUILDCACHEDIR="$(pwd)"
 
 # Install BuildCache and symlinks to BuildCache for common compilers.
 BUILDCACHEEXE="${BUILDCACHEDIR}/buildcache${EXESUFFIX}"
