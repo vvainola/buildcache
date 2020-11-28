@@ -140,6 +140,30 @@ jobs:
         endif()
 
 
+    - name: Run system tests
+      shell: cmake -P {0}
+      run: |
+        if (NOT ("${{ runner.os }}" STREQUAL "Windows"))
+          execute_process(
+            COMMAND ../test_scripts/run_file_lock_stresstest.sh
+            WORKING_DIRECTORY build
+            RESULT_VARIABLE result
+          )
+          if (NOT result EQUAL 0)
+            message(FATAL_ERROR "File lock stresstest failed")
+          endif()
+
+          execute_process(
+            COMMAND ../test_scripts/build_with_buildcache.sh
+            WORKING_DIRECTORY build
+            RESULT_VARIABLE result
+          )
+          if (NOT result EQUAL 0)
+            message(FATAL_ERROR "Build with cache test failed")
+          endif()
+        endif()
+
+
     - name: Run static checks
       shell: cmake -P {0}
       run: |
