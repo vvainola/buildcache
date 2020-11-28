@@ -60,12 +60,10 @@ jobs:
       uses: lukka/get-cmake@latest
 
     - name: Setup Clang tools
-      shell: cmake -P {0}
+      if: ${{ runner.os == 'Linux' }}
       run: |
-        if ("${{ runner.os }}" STREQUAL "Linux")
-          execute_process(COMMAND sudo apt update)
-          execute_process(COMMAND sudo apt install -y clang-tidy clang-format)
-        endif()
+        sudo apt update
+        sudo apt install -y clang-tidy clang-format
 
     - name: Configure
       shell: cmake -P {0}
@@ -141,41 +139,16 @@ jobs:
 
 
     - name: Run system tests
-      shell: cmake -P {0}
+      if: ${{ runner.os != 'Windows' }}
+      working-directory: build
       run: |
-        if (NOT ("${{ runner.os }}" STREQUAL "Windows"))
-          execute_process(
-            COMMAND ../test_scripts/run_file_lock_stresstest.sh
-            WORKING_DIRECTORY build
-            RESULT_VARIABLE result
-          )
-          if (NOT result EQUAL 0)
-            message(FATAL_ERROR "File lock stresstest failed")
-          endif()
-
-          execute_process(
-            COMMAND ../test_scripts/build_with_buildcache.sh
-            WORKING_DIRECTORY build
-            RESULT_VARIABLE result
-          )
-          if (NOT result EQUAL 0)
-            message(FATAL_ERROR "Build with cache test failed")
-          endif()
-        endif()
+        ../test_scripts/run_file_lock_stresstest.sh
+        ../test_scripts/build_with_buildcache.sh
 
 
     - name: Run static checks
-      shell: cmake -P {0}
-      run: |
-        if ("${{ runner.os }}" STREQUAL "Linux")
-          execute_process(
-            COMMAND test_scripts/run_linters.py -p build
-            RESULT_VARIABLE result
-          )
-          if (NOT result EQUAL 0)
-            message(FATAL_ERROR "Bad exit status")
-          endif()
-        endif()
+      if: ${{ runner.os == 'Linux' }}
+      run: test_scripts/run_linters.py -p build
 
 
     - name: Install Strip
