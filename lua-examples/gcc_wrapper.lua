@@ -2,6 +2,10 @@
 
 -------------------------------------------------------------------------------
 -- This is a re-implementation of the C++ class gcc_wrapper_t.
+--
+-- Note: The Lua and C++ implementations are not interchangeable (cache entries
+-- produced by one of them will not produce a cache hit for the other). The
+-- main purpose of this implementation is to serve as an example.
 -------------------------------------------------------------------------------
 
 require_std("io")
