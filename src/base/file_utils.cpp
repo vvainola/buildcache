@@ -41,7 +41,6 @@
 #endif
 #include <direct.h>
 #include <shlobj.h>
-#include <sys/utime.h>
 #include <userenv.h>
 #include <windows.h>
 #undef ERROR
@@ -645,7 +644,20 @@ void link_or_copy(const std::string& from_path, const std::string& to_path) {
 
 void touch(const std::string& path) {
 #ifdef _WIN32
-  bool success = (_wutime64(utf8_to_ucs2(path).c_str(), nullptr) == 0);
+  bool success = false;
+  HANDLE h = CreateFileW(utf8_to_ucs2(path).c_str(),
+                         FILE_WRITE_ATTRIBUTES,
+                         FILE_SHARE_WRITE,
+                         0,
+                         OPEN_EXISTING,
+                         FILE_FLAG_BACKUP_SEMANTICS,
+                         0);
+  if (h) {
+    FILETIME mtime;
+    GetSystemTimeAsFileTime(&mtime);
+    success = SetFileTime(h, 0, 0, &mtime);
+    CloseHandle(h);
+  }
 #else
   bool success = (utime(path.c_str(), nullptr) == 0);
 #endif
