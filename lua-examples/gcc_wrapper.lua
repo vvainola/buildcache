@@ -63,39 +63,37 @@ function get_capabilities ()
   return { "hard_links" }
 end
 
-function preprocess_source ()
-  -- Check if this is a compilation command that we support.
-  local is_object_compilation = false
-  local has_object_output = false
-  for i, arg in ipairs(ARGS) do
-    if arg == "-c" then
-      is_object_compilation = true
-    elseif arg == "-o" then
-      has_object_output = true
-    elseif arg:sub(1, 1) == "@" then
-      error("Response files are currently not supported.")
+function get_build_files ()
+  local files = {}
+  local found_object_file = false
+  for i = 2, #ARGS do
+    local next_idx = i + 1
+    if (ARGS[i] == "-o") and (next_idx <= #ARGS) then
+      if found_object_file then
+        error("Only a single target object file can be specified.")
+      end
+      files["object"] = ARGS[next_idx]
+      found_object_file = true
+    elseif (ARGS[i] == "-ftest-coverage") then
+      error("Code coverage data is currently not supported.")
     end
   end
-  if (not is_object_compilation) or (not has_object_output) then
-    error("Unsupported complation command.")
+  if not found_object_file then
+    error("Unable to get the target object file.")
   end
+  return files
+end
 
-  -- Run the preprocessor step.
-  local preprocessed_file = os.tmpname()
-  local preprocessor_args = make_preprocessor_cmd(ARGS, preprocessed_file)
-  local result = bcache.run(preprocessor_args)
+function get_program_id ()
+  -- TODO(m): Add things like executable file size too.
+
+  -- Get the version string for the compiler.
+  local result = bcache.run({ARGS[1], "--version"})
   if result.return_code ~= 0 then
-    os.remove(preprocessed_file)
-    error("Preprocessing command was unsuccessful.")
+    error("Unable to get the compiler version information string.")
   end
 
-  -- Read and return the preprocessed file.
-  local f = assert(io.open(preprocessed_file, "rb"))
-  local preprocessed_source = f:read("*all")
-  f:close()
-  os.remove(preprocessed_file)
-
-  return preprocessed_source
+  return result.std_out
 end
 
 function get_relevant_arguments ()
@@ -134,36 +132,37 @@ function get_relevant_arguments ()
   return filtered_args
 end
 
-function get_program_id ()
-  -- TODO(m): Add things like executable file size too.
-
-  -- Get the version string for the compiler.
-  local result = bcache.run({ARGS[1], "--version"})
-  if result.return_code ~= 0 then
-    error("Unable to get the compiler version information string.")
-  end
-
-  return result.std_out
-end
-
-function get_build_files ()
-  local files = {}
-  local found_object_file = false
-  for i = 2, #ARGS do
-    local next_idx = i + 1
-    if (ARGS[i] == "-o") and (next_idx <= #ARGS) then
-      if found_object_file then
-        error("Only a single target object file can be specified.")
-      end
-      files["object"] = ARGS[next_idx]
-      found_object_file = true
-    elseif (ARGS[i] == "-ftest-coverage") then
-      error("Code coverage data is currently not supported.")
+function preprocess_source ()
+  -- Check if this is a compilation command that we support.
+  local is_object_compilation = false
+  local has_object_output = false
+  for i, arg in ipairs(ARGS) do
+    if arg == "-c" then
+      is_object_compilation = true
+    elseif arg == "-o" then
+      has_object_output = true
+    elseif arg:sub(1, 1) == "@" then
+      error("Response files are currently not supported.")
     end
   end
-  if not found_object_file then
-    error("Unable to get the target object file.")
+  if (not is_object_compilation) or (not has_object_output) then
+    error("Unsupported complation command.")
   end
-  return files
-end
 
+  -- Run the preprocessor step.
+  local preprocessed_file = os.tmpname()
+  local preprocessor_args = make_preprocessor_cmd(ARGS, preprocessed_file)
+  local result = bcache.run(preprocessor_args)
+  if result.return_code ~= 0 then
+    os.remove(preprocessed_file)
+    error("Preprocessing command was unsuccessful.")
+  end
+
+  -- Read and return the preprocessed file.
+  local f = assert(io.open(preprocessed_file, "rb"))
+  local preprocessed_source = f:read("*all")
+  f:close()
+  os.remove(preprocessed_file)
+
+  return preprocessed_source
+end

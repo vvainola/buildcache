@@ -134,110 +134,6 @@ void ti_common_wrapper_t::resolve_args() {
   }
 }
 
-std::string ti_common_wrapper_t::preprocess_source() {
-  // Check what kind of compilation command this is.
-  bool is_object_compilation = false;
-  bool is_link = false;
-  bool has_output_file = false;
-  for (const auto& arg : m_resolved_args) {
-    if (arg == "--compile_only") {
-      is_object_compilation = true;
-    } else if (arg == "--run_linker") {
-      if (!bcache::config::cache_link_commands()) {
-        throw std::runtime_error("Caching link commands is disabled.");
-      }
-      is_link = true;
-    } else if (starts_with(arg, "--output_file=")) {
-      has_output_file = true;
-    } else if (starts_with(arg, "--cmd_file=") || starts_with(arg, "-@")) {
-      throw std::runtime_error("Recursive response files are not supported.");
-    }
-  }
-
-  if (is_object_compilation && has_output_file) {
-    // Run the preprocessor step.
-    file::tmp_file_t preprocessed_file(sys::get_local_temp_folder(), ".i");
-    const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args, preprocessed_file.path());
-    auto result = sys::run(preprocessor_args);
-    if (result.return_code != 0) {
-      throw std::runtime_error("Preprocessing command was unsuccessful.");
-    }
-
-    // Read and return the preprocessed file.
-    return file::read(preprocessed_file.path());
-  }
-  if (is_link && has_output_file) {
-    // Hash all the input files.
-    hasher_t hasher;
-    for (size_t i = 1; i < m_resolved_args.size(); ++i) {
-      const auto& arg = m_resolved_args[i];
-      if (!arg.empty() && arg[0] != '-' && file::file_exists(arg)) {
-        if (lower_case(file::get_extension(arg)) == ".cmd") {
-          debug::log(debug::DEBUG) << "Hashing cmd-file " << arg;
-          hash_link_cmd_file(arg, hasher);
-        } else {
-          hasher.update_from_file_deterministic(arg);
-        }
-      }
-    }
-    return hasher.final().as_string();
-  }
-
-  throw std::runtime_error("Unsupported complation command.");
-}
-
-string_list_t ti_common_wrapper_t::get_relevant_arguments() {
-  string_list_t filtered_args;
-
-  // The first argument is the compiler binary without the path.
-  filtered_args += file::get_file_part(m_resolved_args[0]);
-
-  // Note: We always skip the first arg since we have handled it already.
-  bool skip_next_arg = true;
-  for (auto arg : m_resolved_args) {
-    if (!arg.empty() && !skip_next_arg) {
-      // Generally unwanted argument (things that will not change how we go from preprocessed code
-      // to binary object files)?
-      const auto first_two_chars = arg.substr(0, 2);
-      const bool is_unwanted_arg = (first_two_chars == "-I") || starts_with(arg, "--include") ||
-                                   starts_with(arg, "--preinclude=") || (first_two_chars == "-D") ||
-                                   starts_with(arg, "--define=") || starts_with(arg, "--c_file=") ||
-                                   starts_with(arg, "--cpp_file=") ||
-                                   starts_with(arg, "--output_file=") ||
-                                   starts_with(arg, "--map_file=") || starts_with(arg, "-ppd=") ||
-                                   starts_with(arg, "--preproc_dependency=");
-      if (!is_unwanted_arg) {
-        // We don't want to include input file paths as part of the command line, since they may
-        // contain absolute paths. Input files are hashed as part of the preprocessing step.
-        const bool is_input_file = (arg[0] != '-') && file::file_exists(arg);
-        if (!is_input_file) {
-          filtered_args += arg;
-        }
-      }
-    }
-    skip_next_arg = false;
-  }
-
-  debug::log(debug::DEBUG) << "Filtered arguments: " << filtered_args.join(" ", true);
-
-  return filtered_args;
-}
-
-std::string ti_common_wrapper_t::get_program_id() {
-  // TODO(m): Add things like executable file size too.
-
-  // Get the help string from the compiler (it includes the version string).
-  string_list_t version_args;
-  version_args += m_resolved_args[0];
-  version_args += "--help";
-  const auto result = sys::run(version_args);
-  if (result.return_code != 0) {
-    throw std::runtime_error("Unable to get the compiler version information string.");
-  }
-
-  return result.std_out;
-}
-
 std::map<std::string, expected_file_t> ti_common_wrapper_t::get_build_files() {
   std::map<std::string, expected_file_t> files;
   std::string output_file;
@@ -288,6 +184,110 @@ std::map<std::string, expected_file_t> ti_common_wrapper_t::get_build_files() {
   }
 
   return files;
+}
+
+std::string ti_common_wrapper_t::get_program_id() {
+  // TODO(m): Add things like executable file size too.
+
+  // Get the help string from the compiler (it includes the version string).
+  string_list_t version_args;
+  version_args += m_resolved_args[0];
+  version_args += "--help";
+  const auto result = sys::run(version_args);
+  if (result.return_code != 0) {
+    throw std::runtime_error("Unable to get the compiler version information string.");
+  }
+
+  return result.std_out;
+}
+
+string_list_t ti_common_wrapper_t::get_relevant_arguments() {
+  string_list_t filtered_args;
+
+  // The first argument is the compiler binary without the path.
+  filtered_args += file::get_file_part(m_resolved_args[0]);
+
+  // Note: We always skip the first arg since we have handled it already.
+  bool skip_next_arg = true;
+  for (auto arg : m_resolved_args) {
+    if (!arg.empty() && !skip_next_arg) {
+      // Generally unwanted argument (things that will not change how we go from preprocessed code
+      // to binary object files)?
+      const auto first_two_chars = arg.substr(0, 2);
+      const bool is_unwanted_arg = (first_two_chars == "-I") || starts_with(arg, "--include") ||
+                                   starts_with(arg, "--preinclude=") || (first_two_chars == "-D") ||
+                                   starts_with(arg, "--define=") || starts_with(arg, "--c_file=") ||
+                                   starts_with(arg, "--cpp_file=") ||
+                                   starts_with(arg, "--output_file=") ||
+                                   starts_with(arg, "--map_file=") || starts_with(arg, "-ppd=") ||
+                                   starts_with(arg, "--preproc_dependency=");
+      if (!is_unwanted_arg) {
+        // We don't want to include input file paths as part of the command line, since they may
+        // contain absolute paths. Input files are hashed as part of the preprocessing step.
+        const bool is_input_file = (arg[0] != '-') && file::file_exists(arg);
+        if (!is_input_file) {
+          filtered_args += arg;
+        }
+      }
+    }
+    skip_next_arg = false;
+  }
+
+  debug::log(debug::DEBUG) << "Filtered arguments: " << filtered_args.join(" ", true);
+
+  return filtered_args;
+}
+
+std::string ti_common_wrapper_t::preprocess_source() {
+  // Check what kind of compilation command this is.
+  bool is_object_compilation = false;
+  bool is_link = false;
+  bool has_output_file = false;
+  for (const auto& arg : m_resolved_args) {
+    if (arg == "--compile_only") {
+      is_object_compilation = true;
+    } else if (arg == "--run_linker") {
+      if (!bcache::config::cache_link_commands()) {
+        throw std::runtime_error("Caching link commands is disabled.");
+      }
+      is_link = true;
+    } else if (starts_with(arg, "--output_file=")) {
+      has_output_file = true;
+    } else if (starts_with(arg, "--cmd_file=") || starts_with(arg, "-@")) {
+      throw std::runtime_error("Recursive response files are not supported.");
+    }
+  }
+
+  if (is_object_compilation && has_output_file) {
+    // Run the preprocessor step.
+    file::tmp_file_t preprocessed_file(sys::get_local_temp_folder(), ".i");
+    const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args, preprocessed_file.path());
+    auto result = sys::run(preprocessor_args);
+    if (result.return_code != 0) {
+      throw std::runtime_error("Preprocessing command was unsuccessful.");
+    }
+
+    // Read and return the preprocessed file.
+    return file::read(preprocessed_file.path());
+  }
+  if (is_link && has_output_file) {
+    // Hash all the input files.
+    hasher_t hasher;
+    for (size_t i = 1; i < m_resolved_args.size(); ++i) {
+      const auto& arg = m_resolved_args[i];
+      if (!arg.empty() && arg[0] != '-' && file::file_exists(arg)) {
+        if (lower_case(file::get_extension(arg)) == ".cmd") {
+          debug::log(debug::DEBUG) << "Hashing cmd-file " << arg;
+          hash_link_cmd_file(arg, hasher);
+        } else {
+          hasher.update_from_file_deterministic(arg);
+        }
+      }
+    }
+    return hasher.final().as_string();
+  }
+
+  throw std::runtime_error("Unsupported complation command.");
 }
 
 void ti_common_wrapper_t::append_response_file(const std::string& response_file) {

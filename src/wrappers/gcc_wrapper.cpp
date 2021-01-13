@@ -183,32 +183,44 @@ string_list_t gcc_wrapper_t::get_capabilities() {
   return string_list_t{"hard_links"};
 }
 
-std::string gcc_wrapper_t::preprocess_source() {
-  // Check if this is a compilation command that we support.
-  auto is_object_compilation = false;
-  auto has_object_output = false;
-  for (const auto& arg : m_resolved_args) {
-    if (arg == "-c") {
-      is_object_compilation = true;
-    } else if (arg == "-o") {
-      has_object_output = true;
+std::map<std::string, expected_file_t> gcc_wrapper_t::get_build_files() {
+  std::map<std::string, expected_file_t> files;
+  auto found_object_file = false;
+  for (size_t i = 0U; i < m_resolved_args.size(); ++i) {
+    const auto next_idx = i + 1U;
+    if ((m_resolved_args[i] == "-o") && (next_idx < m_resolved_args.size())) {
+      if (found_object_file) {
+        throw std::runtime_error("Only a single target object file can be specified.");
+      }
+      files["object"] = {m_resolved_args[next_idx], true};
+      found_object_file = true;
     }
   }
-  if ((!is_object_compilation) || (!has_object_output)) {
-    throw std::runtime_error("Unsupported complation command.");
+  if (!found_object_file) {
+    throw std::runtime_error("Unable to get the target object file.");
   }
+  if (has_coverage_output(m_resolved_args)) {
+    files["coverage"] = {file::change_extension(files["object"].path(), ".gcno"), true};
+  }
+  return files;
+}
 
-  // Run the preprocessor step.
-  file::tmp_file_t preprocessed_file(sys::get_local_temp_folder(), ".i");
-  const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args, preprocessed_file.path());
-  auto result = sys::run(preprocessor_args);
+std::string gcc_wrapper_t::get_program_id() {
+  // TODO(m): Add things like executable file size too.
+
+  // Get the version string for the compiler.
+  string_list_t version_args;
+  version_args += m_args[0];
+  version_args += "--version";
+  const auto result = sys::run(version_args);
   if (result.return_code != 0) {
-    throw std::runtime_error("Preprocessing command was unsuccessful.");
+    throw std::runtime_error("Unable to get the compiler version information string.");
   }
 
-  // Read and return the preprocessed file.
-  auto preprocessed_source = file::read(preprocessed_file.path());
-  return preprocessed_source;
+  // Prepend the hash format version.
+  auto id = HASH_VERSION + result.std_out;
+
+  return id;
 }
 
 string_list_t gcc_wrapper_t::get_relevant_arguments() {
@@ -253,43 +265,30 @@ std::map<std::string, std::string> gcc_wrapper_t::get_relevant_env_vars() {
   return env_vars;
 }
 
-std::string gcc_wrapper_t::get_program_id() {
-  // TODO(m): Add things like executable file size too.
-
-  // Get the version string for the compiler.
-  string_list_t version_args;
-  version_args += m_args[0];
-  version_args += "--version";
-  const auto result = sys::run(version_args);
-  if (result.return_code != 0) {
-    throw std::runtime_error("Unable to get the compiler version information string.");
-  }
-
-  // Prepend the hash format version.
-  auto id = HASH_VERSION + result.std_out;
-
-  return id;
-}
-
-std::map<std::string, expected_file_t> gcc_wrapper_t::get_build_files() {
-  std::map<std::string, expected_file_t> files;
-  auto found_object_file = false;
-  for (size_t i = 0U; i < m_resolved_args.size(); ++i) {
-    const auto next_idx = i + 1U;
-    if ((m_resolved_args[i] == "-o") && (next_idx < m_resolved_args.size())) {
-      if (found_object_file) {
-        throw std::runtime_error("Only a single target object file can be specified.");
-      }
-      files["object"] = {m_resolved_args[next_idx], true};
-      found_object_file = true;
+std::string gcc_wrapper_t::preprocess_source() {
+  // Check if this is a compilation command that we support.
+  auto is_object_compilation = false;
+  auto has_object_output = false;
+  for (const auto& arg : m_resolved_args) {
+    if (arg == "-c") {
+      is_object_compilation = true;
+    } else if (arg == "-o") {
+      has_object_output = true;
     }
   }
-  if (!found_object_file) {
-    throw std::runtime_error("Unable to get the target object file.");
+  if ((!is_object_compilation) || (!has_object_output)) {
+    throw std::runtime_error("Unsupported complation command.");
   }
-  if (has_coverage_output(m_resolved_args)) {
-    files["coverage"] = {file::change_extension(files["object"].path(), ".gcno"), true};
+
+  // Run the preprocessor step.
+  file::tmp_file_t preprocessed_file(sys::get_local_temp_folder(), ".i");
+  const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args, preprocessed_file.path());
+  auto result = sys::run(preprocessor_args);
+  if (result.return_code != 0) {
+    throw std::runtime_error("Preprocessing command was unsuccessful.");
   }
-  return files;
+
+  // Read and return the preprocessed file.
+  return file::read(preprocessed_file.path());
 }
 }  // namespace bcache
