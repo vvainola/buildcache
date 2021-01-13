@@ -42,25 +42,25 @@ class capabilities_t {
 public:
   capabilities_t(const string_list_t& cap_strings);
 
-  bool hard_links() const {
-    return m_hard_links;
-  }
-
   bool create_target_dirs() const {
     return m_create_target_dirs;
   }
 
+  bool hard_links() const {
+    return m_hard_links;
+  }
+
 private:
-  bool m_hard_links = false;
   bool m_create_target_dirs = false;
+  bool m_hard_links = false;
 };
 
 capabilities_t::capabilities_t(const string_list_t& cap_strings) {
   for (const auto& str : cap_strings) {
-    if (str == "hard_links") {
-      m_hard_links = true;
-    } else if (str == "create_target_dirs") {
+    if (str == "create_target_dirs") {
       m_create_target_dirs = true;
+    } else if (str == "hard_links") {
+      m_hard_links = true;
     } else {
       debug::log(debug::ERROR) << "Invalid capability string: " << str;
     }

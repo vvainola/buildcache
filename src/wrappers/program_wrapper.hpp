@@ -69,9 +69,11 @@ protected:
   ///
   /// The list of capabilites can contain zero or more of the following (case sensitive) strings:
   ///
-  /// | String     | Meaning                              |
-  /// | ---------- | ------------------------------------ |
-  /// | hard_links | Can use hard links for cached files  |
+  /// | String             | Meaning                                 |
+  /// | ------------------ | --------------------------------------- |
+  /// | create_target_dirs | Request creation of missing output dirs |
+  /// | hard_links         | Can use hard links for cached files     |
+  ///
   ///
   /// @returns a list of supported capabilites.
   /// @throws runtime_error if the request could not be completed.
