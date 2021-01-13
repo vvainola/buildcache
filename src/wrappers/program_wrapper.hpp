@@ -72,6 +72,7 @@ protected:
   /// | String             | Meaning                                 |
   /// | ------------------ | --------------------------------------- |
   /// | create_target_dirs | Request creation of missing output dirs |
+  /// | direct_mode        | Supports direct mode                    |
   /// | hard_links         | Can use hard links for cached files     |
   ///
   ///

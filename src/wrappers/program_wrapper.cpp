@@ -46,12 +46,17 @@ public:
     return m_create_target_dirs;
   }
 
+  bool direct_mode() const {
+    return m_direct_mode;
+  }
+
   bool hard_links() const {
     return m_hard_links;
   }
 
 private:
   bool m_create_target_dirs = false;
+  bool m_direct_mode = false;
   bool m_hard_links = false;
 };
 
@@ -59,6 +64,8 @@ capabilities_t::capabilities_t(const string_list_t& cap_strings) {
   for (const auto& str : cap_strings) {
     if (str == "create_target_dirs") {
       m_create_target_dirs = true;
+    } else if (str == "direct_mode") {
+      m_direct_mode = true;
     } else if (str == "hard_links") {
       m_hard_links = true;
     } else {
