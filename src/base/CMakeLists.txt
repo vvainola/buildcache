@@ -82,6 +82,10 @@ buildcache_add_test(NAME string_list_test
                     SOURCES string_list_test.cpp
                     LIBRARIES base)
 
+buildcache_add_test(NAME hasher_test
+                    SOURCES hasher_test.cpp
+                    LIBRARIES base)
+
 if(HAS_HMAC)
   buildcache_add_test(NAME hmac_test
                       SOURCES hmac_test.cpp
