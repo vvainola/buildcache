@@ -124,7 +124,7 @@ bool program_wrapper_t::handle_command(int& return_code) {
     PERF_STOP(PREPROCESS);
 
     // Finalize the hash.
-    const auto hash = hasher.final();
+    const auto hash = hasher.final().as_string();
 
     // Look up the entry in the cache(s).
     if (m_cache.lookup(hash,
@@ -135,7 +135,7 @@ bool program_wrapper_t::handle_command(int& return_code) {
       return true;
     }
 
-    debug::log(debug::INFO) << "Cache miss (" << hash.as_string() << ")";
+    debug::log(debug::INFO) << "Cache miss (" << hash << ")";
 
     // If the "terminate on a miss" mode is enabled and we didn't find an entry in the cache, we
     // exit with an error code.

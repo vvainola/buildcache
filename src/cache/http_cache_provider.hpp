@@ -32,11 +32,11 @@ public:
   // Implementation of the remote_cache_provider_t interface.
   bool connect(const std::string& host_description) override;
   bool is_connected() const override;
-  cache_entry_t lookup(const hasher_t::hash_t& hash) override;
-  void add(const hasher_t::hash_t& hash,
+  cache_entry_t lookup(const std::string& hash) override;
+  void add(const std::string& hash,
            const cache_entry_t& entry,
            const std::map<std::string, expected_file_t>& expected_files) override;
-  void get_file(const hasher_t::hash_t& hash,
+  void get_file(const std::string& hash,
                 const std::string& source_id,
                 const std::string& target_path,
                 const bool is_compressed) override;

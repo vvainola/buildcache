@@ -143,10 +143,9 @@ std::string local_cache_t::get_cache_files_folder() const {
   return cache_files_path;
 }
 
-std::string local_cache_t::hash_to_cache_entry_path(const hasher_t::hash_t& hash) const {
-  const std::string str = hash.as_string();
-  const auto parent_dir_path = file::append_path(get_cache_files_folder(), str.substr(0, 2));
-  return file::append_path(parent_dir_path, str.substr(2));
+std::string local_cache_t::hash_to_cache_entry_path(const std::string& hash) const {
+  const auto parent_dir_path = file::append_path(get_cache_files_folder(), hash.substr(0, 2));
+  return file::append_path(parent_dir_path, hash.substr(2));
 }
 
 void local_cache_t::clear() {
@@ -242,7 +241,7 @@ void local_cache_t::zero_stats() {
   }
 }
 
-void local_cache_t::add(const hasher_t::hash_t& hash,
+void local_cache_t::add(const std::string& hash,
                         const cache_entry_t& entry,
                         const std::map<std::string, expected_file_t>& expected_files,
                         const bool allow_hard_links) {
@@ -288,7 +287,7 @@ void local_cache_t::add(const hasher_t::hash_t& hash,
   }
 }
 
-std::pair<cache_entry_t, file::file_lock_t> local_cache_t::lookup(const hasher_t::hash_t& hash) {
+std::pair<cache_entry_t, file::file_lock_t> local_cache_t::lookup(const std::string& hash) {
   // Get the path to the cache entry.
   const auto cache_entry_path = hash_to_cache_entry_path(hash);
 
@@ -319,7 +318,7 @@ std::pair<cache_entry_t, file::file_lock_t> local_cache_t::lookup(const hasher_t
   }
 }
 
-bool local_cache_t::update_stats(const hasher_t::hash_t& hash,
+bool local_cache_t::update_stats(const std::string& hash,
                                  const cache_stats_t& delta) const noexcept {
   PERF_SCOPE(UPDATE_STATS);
   try {
@@ -350,7 +349,7 @@ bool local_cache_t::update_stats(const hasher_t::hash_t& hash,
   }
 }
 
-void local_cache_t::get_file(const hasher_t::hash_t& hash,
+void local_cache_t::get_file(const std::string& hash,
                              const std::string& source_id,
                              const std::string& target_path,
                              const bool is_compressed,

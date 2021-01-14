@@ -21,6 +21,7 @@
 
 #include <base/debug_utils.hpp>
 #include <base/file_utils.hpp>
+#include <base/hasher.hpp>
 #include <base/unicode_utils.hpp>
 #include <config/configuration.hpp>
 

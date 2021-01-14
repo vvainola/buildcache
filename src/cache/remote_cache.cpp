@@ -92,14 +92,14 @@ bool remote_cache_t::is_connected() const {
   return (m_provider != nullptr) && m_provider->is_connected();
 }
 
-cache_entry_t bcache::remote_cache_t::lookup(const hasher_t::hash_t& hash) {
+cache_entry_t bcache::remote_cache_t::lookup(const std::string& hash) {
   if (m_provider != nullptr) {
     return m_provider->lookup(hash);
   }
   return cache_entry_t();
 }
 
-void remote_cache_t::add(const hasher_t::hash_t& hash,
+void remote_cache_t::add(const std::string& hash,
                          const cache_entry_t& entry,
                          const std::map<std::string, expected_file_t>& expected_files) {
   if (m_provider != nullptr) {
@@ -111,7 +111,7 @@ void remote_cache_t::add(const hasher_t::hash_t& hash,
   }
 }
 
-void remote_cache_t::get_file(const hasher_t::hash_t& hash,
+void remote_cache_t::get_file(const std::string& hash,
                               const std::string& source_id,
                               const std::string& target_path,
                               const bool is_compressed) {

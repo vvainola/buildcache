@@ -91,8 +91,8 @@ std::string http_cache_provider_t::get_object_url(const std::string& key) {
   return ss.str();
 }
 
-cache_entry_t http_cache_provider_t::lookup(const hasher_t::hash_t& hash) {
-  const auto key = remote_key_name(hash.as_string(), CACHE_ENTRY_FILE_NAME);
+cache_entry_t http_cache_provider_t::lookup(const std::string& hash) {
+  const auto key = remote_key_name(hash, CACHE_ENTRY_FILE_NAME);
   try {
     // Try to get the cache entry item from the remote cache.
     return cache_entry_t::deserialize(get_data(key));
@@ -103,11 +103,9 @@ cache_entry_t http_cache_provider_t::lookup(const hasher_t::hash_t& hash) {
   }
 }
 
-void http_cache_provider_t::add(const hasher_t::hash_t& hash,
+void http_cache_provider_t::add(const std::string& hash,
                                 const cache_entry_t& entry,
                                 const std::map<std::string, expected_file_t>& expected_files) {
-  const auto hash_str = hash.as_string();
-
   // Upload (and optinally compress) the files to the remote cache.
   for (const auto& file_id : entry.file_ids()) {
     const auto& source_path = expected_files.at(file_id).path();
@@ -122,20 +120,20 @@ void http_cache_provider_t::add(const hasher_t::hash_t& hash,
     }
 
     // Upload the data.
-    const auto key = remote_key_name(hash_str, file_id);
+    const auto key = remote_key_name(hash, file_id);
     set_data(key, data);
   }
 
   // Create a cache entry file.
-  const auto key = remote_key_name(hash_str, CACHE_ENTRY_FILE_NAME);
+  const auto key = remote_key_name(hash, CACHE_ENTRY_FILE_NAME);
   set_data(key, entry.serialize());
 }
 
-void http_cache_provider_t::get_file(const hasher_t::hash_t& hash,
+void http_cache_provider_t::get_file(const std::string& hash,
                                      const std::string& source_id,
                                      const std::string& target_path,
                                      const bool is_compressed) {
-  const auto key = remote_key_name(hash.as_string(), source_id);
+  const auto key = remote_key_name(hash, source_id);
   auto data = get_data(key);
   if (is_compressed) {
     data = comp::decompress(data);
