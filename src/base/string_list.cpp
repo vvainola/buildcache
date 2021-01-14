@@ -37,10 +37,10 @@ string_list_t::string_list_t(const std::string& str, const std::string& delimite
   while (current_str_start < str.size()) {
     const auto pos = str.find(delimiter, current_str_start);
     if (pos == std::string::npos) {
-      m_args.emplace_back(str.substr(current_str_start));
+      m_strings.emplace_back(str.substr(current_str_start));
       current_str_start = str.size();
     } else {
-      m_args.emplace_back(str.substr(current_str_start, pos - current_str_start));
+      m_strings.emplace_back(str.substr(current_str_start, pos - current_str_start));
       current_str_start = pos + 1;
     }
   }
@@ -100,7 +100,7 @@ string_list_t string_list_t::split_args(const std::string& cmd) {
 
 std::string string_list_t::join(const std::string& separator, const bool escape) const {
   std::string result;
-  for (const auto& arg : m_args) {
+  for (const auto& arg : m_strings) {
     const auto escaped_arg = escape ? escape_arg(arg) : arg;
     if (result.empty()) {
       result += escaped_arg;
