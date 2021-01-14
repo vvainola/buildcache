@@ -20,6 +20,8 @@
 set(CACHE_SRCS
   cache.cpp
   cache.hpp
+  direct_mode_manifest.cpp
+  direct_mode_manifest.hpp
   expected_file.hpp
   cache_entry.cpp
   cache_entry.hpp
