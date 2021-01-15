@@ -34,6 +34,18 @@ namespace {
 // Tick this to a new number if the format has changed in a non-backwards-compatible way.
 const std::string HASH_VERSION = "3";
 
+bool is_arg_plus_file_name(const std::string& arg) {
+  // Is this an argument that is followed by a file path?
+  static const std::set<std::string> path_args = {"-I", "-MF", "-MT", "-MQ", "-o"};
+  return path_args.find(arg) != path_args.end();
+}
+
+bool is_arg_pair(const std::string& arg) {
+  // Is this an argument that is followed by an option?
+  // TODO(m): Recognize more arg pairs.
+  return is_arg_plus_file_name(arg);
+}
+
 bool is_source_file(const std::string& arg) {
   const auto ext = lower_case(file::get_extension(arg));
   return ((ext == ".cpp") || (ext == ".cc") || (ext == ".cxx") || (ext == ".c"));
@@ -110,7 +122,38 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
   preprocess_args += std::string("-o");
   preprocess_args += preprocessed_file;
 
+  // Add argument for listing include files (used for direct mode).
+  preprocess_args += std::string("-H");  // Supported by gcc, clang and ghc
+
   return preprocess_args;
+}
+
+string_list_t get_include_files(const std::string& std_err) {
+  // Turn the std_err string into a list of strings.
+  // TODO(m): Is this correct on Windows for instance?
+  string_list_t lines(std_err, "\n");
+
+  // Extract all unique include paths. Include path references in std_err start with one or more
+  // dots (.) followed by a single space character, and finally the full path. In the regex we also
+  // trim leading and trailing whitespaces from the path, just for good measure.
+  const std::regex incpath_re("\\.+\\s+(.*[^\\s])\\s*");
+  std::set<std::string> includes;
+  for (const auto& line : lines) {
+    std::smatch match;
+    if (std::regex_match(line, match, incpath_re)) {
+      if (match.size() == 2) {
+        const auto& include = match[1].str();
+        includes.insert(file::resolve_path(include));
+      }
+    }
+  }
+
+  // Convert the set of includes to a list of strings.
+  string_list_t result;
+  for (const auto& include : includes) {
+    result += include;
+  }
+  return result;
 }
 }  // namespace
 
@@ -179,8 +222,9 @@ bool gcc_wrapper_t::can_handle_command() {
 }
 
 string_list_t gcc_wrapper_t::get_capabilities() {
-  // We can use hard links with GCC since it will never overwrite already existing files.
-  return string_list_t{"hard_links"};
+  // direct_mode - We support direct mode.
+  // hard_links  - We can use hard links since GCC will never overwrite already existing files.
+  return string_list_t{"direct_mode", "hard_links"};
 }
 
 std::map<std::string, expected_file_t> gcc_wrapper_t::get_build_files() {
@@ -233,10 +277,6 @@ string_list_t gcc_wrapper_t::get_relevant_arguments() {
   bool skip_next_arg = true;
   for (const auto& arg : m_resolved_args) {
     if (!skip_next_arg) {
-      // Does this argument specify a file (we don't want to hash those).
-      const bool is_arg_plus_file_name =
-          ((arg == "-I") || (arg == "-MF") || (arg == "-MT") || (arg == "-MQ") || (arg == "-o"));
-
       // Generally unwanted argument (things that will not change how we go from preprocessed code
       // to binary object files)?
       const auto first_two_chars = arg.substr(0, 2);
@@ -244,7 +284,8 @@ string_list_t gcc_wrapper_t::get_relevant_arguments() {
           ((first_two_chars == "-I") || (first_two_chars == "-D") || (first_two_chars == "-M") ||
            (arg.substr(0, 10) == "--sysroot=") || is_source_file(arg));
 
-      if (is_arg_plus_file_name) {
+      if (is_arg_plus_file_name(arg)) {
+        // We don't want to hash file paths.
         skip_next_arg = true;
       } else if (!is_unwanted_arg) {
         filtered_args += arg;
@@ -263,6 +304,26 @@ std::map<std::string, std::string> gcc_wrapper_t::get_relevant_env_vars() {
   // TODO(m): What environment variables can affect the build result?
   std::map<std::string, std::string> env_vars;
   return env_vars;
+}
+
+string_list_t gcc_wrapper_t::get_input_files() {
+  string_list_t input_files;
+
+  // Iterate over the command line arguments to find input files.
+  // Note: We always skip the first arg (it's the program executable).
+  bool skip_next_arg = true;
+  for (const auto& arg : m_resolved_args) {
+    if (!skip_next_arg) {
+      if (is_arg_pair(arg)) {
+        skip_next_arg = true;
+      } else if (is_source_file(arg)) {
+        input_files += file::resolve_path(arg);
+      }
+    } else {
+      skip_next_arg = false;
+    }
+  }
+  return input_files;
 }
 
 std::string gcc_wrapper_t::preprocess_source() {
@@ -288,7 +349,14 @@ std::string gcc_wrapper_t::preprocess_source() {
     throw std::runtime_error("Preprocessing command was unsuccessful.");
   }
 
+  // Collect all the input files. They are reported in std_err.
+  m_implicit_input_files = get_include_files(result.std_err);
+
   // Read and return the preprocessed file.
   return file::read(preprocessed_file.path());
+}
+
+string_list_t gcc_wrapper_t::get_implicit_input_files() {
+  return m_implicit_input_files;
 }
 }  // namespace bcache
