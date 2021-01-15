@@ -64,6 +64,7 @@
 namespace bcache {
 namespace {
 const std::string CACHE_FILES_FOLDER_NAME = "c";
+const std::string DIRECT_CACHE_MANIFEST_FILE_NAME = ".manifest";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 const std::string FILE_LOCK_SUFFIX = ".lock";
 const std::string STATS_FILE_NAME = "stats.json";
@@ -283,6 +284,61 @@ void local_cache_t::zero_stats() {
     } catch (const std::exception& e) {
       debug::log(debug::DEBUG) << "Failed to remove stats file: " << e.what();
     }
+  }
+}
+
+void local_cache_t::add_direct(const std::string& direct_hash,
+                               const direct_mode_manifest_t& manifest) {
+  // Create the direct mode cache entry parent directory if necessary.
+  const auto cache_entry_path = hash_to_cache_entry_path(direct_hash);
+  const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
+  file::create_dir_with_parents(cache_entry_parent_path);
+
+  {
+    // Acquire a scoped exclusive lock for the cache entry.
+    file::file_lock_t lock(cache_entry_file_lock_path(cache_entry_path), config::remote_locks());
+    if (!lock.has_lock()) {
+      throw std::runtime_error("Unable to acquire a cache entry lock for writing.");
+    }
+
+    // Create the cache entry directory.
+    file::create_dir_with_parents(cache_entry_path);
+
+    // Store the manifest in the direct mode cache entry.
+    // TODO(m): We probably want to store multiple manifests per direct_hash.
+    const auto file_name = file::append_path(cache_entry_path, DIRECT_CACHE_MANIFEST_FILE_NAME);
+    file::write(manifest.serialize(), file_name);
+  }
+}
+
+std::pair<direct_mode_manifest_t, file::file_lock_t> local_cache_t::lookup_direct(
+    const std::string& direct_hash) {
+  // Get the path to the cache entry.
+  const auto cache_entry_path = hash_to_cache_entry_path(direct_hash);
+
+  try {
+    // If the cache parent dir does not exist yet, we can't possibly have a cache hit.
+    // Note: This is mostly a trick to avoid irrelevant error log printouts from the file_lock_t
+    // constructor later on.
+    const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
+    if (!file::dir_exists(cache_entry_parent_path)) {
+      throw std::runtime_error("Cache entry parent dir does not exist.");
+    }
+
+    // Acquire a scoped lock for the cache entry.
+    file::file_lock_t lock(cache_entry_file_lock_path(cache_entry_path), config::remote_locks());
+    if (!lock.has_lock()) {
+      throw std::runtime_error("Unable to acquire a cache entry lock for reading.");
+    }
+
+    // Read the cache manifest file (this will throw if the file does not exist - i.e. if we have a
+    // cache miss).
+    const auto cache_manifest_file_name =
+        file::append_path(cache_entry_path, DIRECT_CACHE_MANIFEST_FILE_NAME);
+    const auto manifest_data = file::read(cache_manifest_file_name);
+    return std::make_pair(direct_mode_manifest_t::deserialize(manifest_data), std::move(lock));
+  } catch (...) {
+    return std::make_pair(direct_mode_manifest_t(), file::file_lock_t());
   }
 }
 

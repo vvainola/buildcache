@@ -75,6 +75,8 @@ protected:
   /// | direct_mode        | Supports direct mode                    |
   /// | hard_links         | Can use hard links for cached files     |
   ///
+  /// In order to support direct mode, @c get_input_files() and @c get_implicit_input_files() need
+  /// to be implemented.
   ///
   /// @returns a list of supported capabilites.
   /// @throws runtime_error if the request could not be completed.
@@ -110,11 +112,29 @@ protected:
   /// affect program output.
   virtual std::map<std::string, std::string> get_relevant_env_vars();
 
+  /// @brief Get the paths to the input files for the command.
+  /// @returns the files that are used as primary input.
+  /// @throws runtime_error if the request could not be completed.
+  /// @note Only used in direct mode.
+  virtual string_list_t get_input_files();
+
   /// @brief Generate the preprocessed source text.
   /// @returns the preprocessed source code file as a string, or an empty string if the operation
   /// failed.
   /// @throws runtime_error if the request could not be completed.
   virtual std::string preprocess_source();
+
+  /// @brief Get a list of paths to implicit input files.
+  ///
+  /// This method is only used in direct mode, and the main use case is for collecting a list of
+  /// all include files for C/C++ builds.
+  /// @returns the list of implicit input files.
+  /// @throws runtime_error if the request could not be completed.
+  ///
+  /// @note The @c preprocess_source method has been called before calling this method (so the list
+  /// can be collected during the preprocessing step and later be returned by this method).
+  /// @note Only used in direct mode.
+  virtual string_list_t get_implicit_input_files();
 
   /// @brief Run the actual command (when there is a cache miss).
   /// @returns the run result for the child process.

@@ -20,6 +20,7 @@
 #ifndef BUILDCACHE_CACHE_HPP_
 #define BUILDCACHE_CACHE_HPP_
 
+#include <base/string_list.hpp>
 #include <cache/cache_entry.hpp>
 #include <cache/expected_file.hpp>
 #include <cache/local_cache.hpp>
@@ -32,6 +33,28 @@ namespace bcache {
 /// @brief An interface to the different caches.
 class cache_t {
 public:
+  /// @brief Perform a direct mode cache lookup.
+  /// @param direct_hash The hash of the direct mode cache entry.
+  /// @param expected_files Paths to the actual files in the local file system (map from file ID to
+  /// an expected file descriptor).
+  /// @param allow_hard_links True if we are allowed to use hard links.
+  /// @param create_target_dirs True if the target directory of the cached file must be created.
+  /// @param[out] return_code The return code of the program.
+  /// @returns true if we had a cache hit, otherwise false.
+  bool lookup_direct(const std::string& direct_hash,
+                     const std::map<std::string, expected_file_t>& expected_files,
+                     const bool allow_hard_links,
+                     const bool create_target_dirs,
+                     int& return_code) noexcept;
+
+  /// @brief Add a new direct mode entry to the cache.
+  /// @param direct_hash The hash of the direct mode cache entry.
+  /// @param hash The hash of the preprocessor mode cache entry.
+  /// @param implicit_input_files A list of implicit input file paths.
+  void add_direct(const std::string& direct_hash,
+                  const std::string& hash,
+                  const string_list_t& implicit_input_files);
+
   /// @brief Perform a cache lookup.
   /// @param hash The hash of the cache entry.
   /// @param expected_files Paths to the actual files in the local file system (map from file ID to
@@ -44,7 +67,7 @@ public:
               const std::map<std::string, expected_file_t>& expected_files,
               const bool allow_hard_links,
               const bool create_target_dirs,
-              int& return_code);
+              int& return_code) noexcept;
 
   /// @brief Add a new entry to the cache(s).
   /// @param hash The hash of the cache entry.
