@@ -66,6 +66,18 @@ hasher_t::~hasher_t() {
   XXH3_freeState(reinterpret_cast<XXH3_state_t*>(m_state));
 }
 
+hasher_t::hasher_t(const hasher_t& other) {
+  m_state = XXH3_createState();
+  XXH3_copyState(reinterpret_cast<XXH3_state_t*>(m_state),
+                 reinterpret_cast<const XXH3_state_t*>(other.m_state));
+}
+
+hasher_t& hasher_t::operator=(const hasher_t& other) {
+  XXH3_copyState(reinterpret_cast<XXH3_state_t*>(m_state),
+                 reinterpret_cast<const XXH3_state_t*>(other.m_state));
+  return *this;
+}
+
 void hasher_t::update(const void* data, const size_t size) {
   if (XXH3_128bits_update(reinterpret_cast<XXH3_state_t*>(m_state), data, size) == XXH_ERROR) {
     throw std::runtime_error("Hash update failure.");

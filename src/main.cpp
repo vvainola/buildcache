@@ -252,11 +252,11 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
 
   // Print a list of third party components.
   std::cout << "\nThird party components:\n";
+  std::cout << "  cJSON " << CJSON_VERSION_MAJOR << "." << CJSON_VERSION_MINOR << "."
+            << CJSON_VERSION_PATCH << "\n";
 #ifdef ENABLE_S3
   std::cout << "  cpp-base64 2.rc.04\n";
 #endif
-  std::cout << "  cJSON " << CJSON_VERSION_MAJOR << "." << CJSON_VERSION_MINOR << "."
-            << CJSON_VERSION_PATCH << "\n";
   std::cout << "  hiredis " << HIREDIS_MAJOR << "." << HIREDIS_MINOR << "." << HIREDIS_PATCH
             << "\n";
 #ifdef ENABLE_S3
@@ -265,12 +265,12 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
   std::cout << "  lua " << LUA_VERSION_MAJOR << "." << LUA_VERSION_MINOR << "."
             << LUA_VERSION_RELEASE << "\n";
   std::cout << "  lz4 " << LZ4_VERSION_STRING << "\n";
-  std::cout << "  zstd " << ZSTD_VERSION_STRING << "\n";
-  std::cout << "  xxhash " << XXH_VERSION_MAJOR << "." << XXH_VERSION_MINOR << "."
-            << XXH_VERSION_RELEASE << "\n";
 #ifdef USE_MINGW_THREADS
   std::cout << "  mingw-std-threads\n";
 #endif
+  std::cout << "  xxhash " << XXH_VERSION_MAJOR << "." << XXH_VERSION_MINOR << "."
+            << XXH_VERSION_RELEASE << "\n";
+  std::cout << "  zstd " << ZSTD_VERSION_STRING << "\n";
 
   std::exit(0);
 }
@@ -312,27 +312,27 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
       throw std::runtime_error("Missing arguments.");
     }
 
+    // Find the true path to the executable file. This affects things like if we can match the
+    // compiler name or not, and what version string we get. We also want to avoid incorrectly
+    // identifying other compiler accelerators (e.g. ccache) as actual compilers.
+    // TODO(m): This call may throw an exception, which currently means that we will not even try
+    // to run the original command. At the same time this is a protection against endless symlink
+    // recursion. Figure something out!
+    PERF_START(FIND_EXECUTABLE);
+    const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
+    PERF_STOP(FIND_EXECUTABLE);
+
+    // Replace the command with the true exe path. Most of the following operations rely on having
+    // a correct executable path. Also, this is important to avoid recursions when we are invoked
+    // from a symlink, for instance.
+    args[0] = true_exe_path;
+
     // Is the caching mechanism disabled?
     if (bcache::config::disable()) {
       // Bypass all the cache logic and call the intended command directly.
       auto result = bcache::sys::run(args, false);
       return_code = result.return_code;
     } else {
-      // Find the true path to the executable file. This affects things like if we can match the
-      // compiler name or not, and what version string we get. We also want to avoid incorrectly
-      // identifying other compiler accelerators (e.g. ccache) as actual compilers.
-      // TODO(m): This call may throw an exception, which currently means that we will not even try
-      // to run the original command. At the same time this is a protection against endless symlink
-      // recursion. Figure something out!
-      PERF_START(FIND_EXECUTABLE);
-      const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
-      PERF_STOP(FIND_EXECUTABLE);
-
-      // Replace the command with the true exe path. Most of the following operations rely on having
-      // a correct executable path. Also, this is important to avoid recursions when we are invoked
-      // from a symlink, for instance.
-      args[0] = true_exe_path;
-
       try {
         return_code = 1;
 

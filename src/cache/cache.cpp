@@ -48,7 +48,7 @@ int64_t get_total_entry_size(const cache_entry_t& entry,
 }
 }  // namespace
 
-bool cache_t::lookup(const hasher_t::hash_t hash,
+bool cache_t::lookup(const std::string& hash,
                      const std::map<std::string, expected_file_t>& expected_files,
                      const bool allow_hard_links,
                      const bool create_target_dirs,
@@ -65,7 +65,7 @@ bool cache_t::lookup(const hasher_t::hash_t hash,
       return true;
     }
   } catch (const std::runtime_error& e) {
-    debug::log(debug::ERROR) << "Local lookup of " << hash.as_string() << " failed: " << e.what();
+    debug::log(debug::ERROR) << "Local lookup of " << hash << " failed: " << e.what();
   }
 
   try {
@@ -75,13 +75,13 @@ bool cache_t::lookup(const hasher_t::hash_t hash,
       return true;
     }
   } catch (const std::runtime_error& e) {
-    debug::log(debug::ERROR) << "Remote lookup of " << hash.as_string() << " failed: " << e.what();
+    debug::log(debug::ERROR) << "Remote lookup of " << hash << " failed: " << e.what();
   }
 
   return false;
 }
 
-void cache_t::add(const hasher_t::hash_t hash,
+void cache_t::add(const std::string& hash,
                   const cache_entry_t& entry,
                   const std::map<std::string, expected_file_t>& expected_files,
                   const bool allow_hard_links) {
@@ -117,7 +117,7 @@ void cache_t::add(const hasher_t::hash_t hash,
   PERF_STOP(ADD_TO_CACHE);
 }
 
-bool cache_t::lookup_in_local_cache(const hasher_t::hash_t hash,
+bool cache_t::lookup_in_local_cache(const std::string& hash,
                                     const std::map<std::string, expected_file_t>& expected_files,
                                     const bool allow_hard_links,
                                     const bool create_target_dirs,
@@ -138,8 +138,7 @@ bool cache_t::lookup_in_local_cache(const hasher_t::hash_t hash,
   PERF_START(RETRIEVE_CACHED_FILES);
   for (const auto& file_id : cached_entry.file_ids()) {
     const auto& target_path = expected_files.at(file_id).path();
-    debug::log(debug::INFO) << "Cache hit (" << hash.as_string() << "): " << file_id << " => "
-                            << target_path;
+    debug::log(debug::INFO) << "Cache hit (" << hash << "): " << file_id << " => " << target_path;
 
     if (create_target_dirs) {
       file::create_dir_with_parents(file::get_dir_part(target_path));
@@ -158,7 +157,7 @@ bool cache_t::lookup_in_local_cache(const hasher_t::hash_t hash,
   return true;
 }
 
-bool cache_t::lookup_in_remote_cache(const hasher_t::hash_t hash,
+bool cache_t::lookup_in_remote_cache(const std::string& hash,
                                      const std::map<std::string, expected_file_t>& expected_files,
                                      const bool allow_hard_links,
                                      const bool create_target_dirs,
@@ -183,8 +182,8 @@ bool cache_t::lookup_in_remote_cache(const hasher_t::hash_t hash,
   PERF_START(RETRIEVE_CACHED_FILES);
   for (const auto& file_id : cached_entry.file_ids()) {
     const auto& target_path = expected_files.at(file_id).path();
-    debug::log(debug::INFO) << "Remote cache hit (" << hash.as_string() << "): " << file_id
-                            << " => " << target_path;
+    debug::log(debug::INFO) << "Remote cache hit (" << hash << "): " << file_id << " => "
+                            << target_path;
 
     if (create_target_dirs) {
       file::create_dir_with_parents(file::get_dir_part(target_path));

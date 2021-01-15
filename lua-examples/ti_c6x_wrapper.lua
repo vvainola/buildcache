@@ -3,6 +3,10 @@
 -------------------------------------------------------------------------------
 -- This is a Lua re-implementation of the TI C6000 DSP compiler wrapper,
 -- ti_c6x_wrapper_t.
+--
+-- Note: The Lua and C++ implementations are not interchangeable (cache entries
+-- produced by one of them will not produce a cache hit for the other). The
+-- main purpose of this implementation is to serve as an example.
 -------------------------------------------------------------------------------
 
 require_std("io")
@@ -88,39 +92,43 @@ function resolve_args ()
   ARGS = new_args
 end
 
-function preprocess_source ()
-  -- Check if this is a compilation command that we support.
-  local is_object_compilation = false
-  local has_object_output = false
-  for i, arg in ipairs(ARGS) do
-    if arg == "--compile_only" then
-      is_object_compilation = true
-    elseif starts_with(arg, "--output_file=") then
-      has_object_output = true
-    elseif starts_with(arg, "--cmd_file=") or starts_with(arg, "-@") then
-      error("Response files are currently not supported.")
+function get_build_files ()
+  local files = {}
+  local found_object_file = false
+  local found_dep_file = false
+  for i = 2, #ARGS do
+    local next_idx = i + 1
+    if starts_with(ARGS[i], "--output_file=") then
+      if found_object_file then
+        error("Only a single target object file can be specified.")
+      end
+      files["object"] = ARGS[i]:sub(15)
+      found_object_file = true
+    elseif starts_with(ARGS[i], "-ppd=") or starts_with(ARGS[i], "--preproc_dependency=") then
+      if found_dep_file then
+        error("Only a single dependency file can be specified.")
+      end
+      local eq = ARGS[i]:find("=")
+      files["dep"] = ARGS[i]:sub(eq + 1)
+      found_dep_file = true
     end
   end
-  if (not is_object_compilation) or (not has_object_output) then
-    error("Unsupported complation command.")
+  if not found_object_file then
+    error("Unable to get the target object file.")
   end
+  return files
+end
 
-  -- Run the preprocessor step.
-  local preprocessed_file = os.tmpname()
-  local preprocessor_args = make_preprocessor_cmd(ARGS, preprocessed_file)
-  local result = bcache.run(preprocessor_args)
+function get_program_id ()
+  -- TODO(m): Add things like executable file size too.
+
+  -- Get the help string from the compiler (it includes the version string).
+  local result = bcache.run({ARGS[1], "--help"})
   if result.return_code ~= 0 then
-    os.remove(preprocessed_file)
-    error("Preprocessing command was unsuccessful.")
+    error("Unable to get the compiler version information string.")
   end
 
-  -- Read and return the preprocessed file.
-  local f = assert(io.open(preprocessed_file, "rb"))
-  local preprocessed_source = f:read("*all")
-  f:close()
-  os.remove(preprocessed_file)
-
-  return preprocessed_source
+  return result.std_out
 end
 
 function get_relevant_arguments ()
@@ -156,43 +164,37 @@ function get_relevant_arguments ()
   return filtered_args
 end
 
-function get_program_id ()
-  -- TODO(m): Add things like executable file size too.
-
-  -- Get the help string from the compiler (it includes the version string).
-  local result = bcache.run({ARGS[1], "--help"})
-  if result.return_code ~= 0 then
-    error("Unable to get the compiler version information string.")
-  end
-
-  return result.std_out
-end
-
-function get_build_files ()
-  local files = {}
-  local found_object_file = false
-  local found_dep_file = false
-  for i = 2, #ARGS do
-    local next_idx = i + 1
-    if starts_with(ARGS[i], "--output_file=") then
-      if found_object_file then
-        error("Only a single target object file can be specified.")
-      end
-      files["object"] = ARGS[i]:sub(15)
-      found_object_file = true
-    elseif starts_with(ARGS[i], "-ppd=") or starts_with(ARGS[i], "--preproc_dependency=") then
-      if found_dep_file then
-        error("Only a single dependency file can be specified.")
-      end
-      local eq = ARGS[i]:find("=")
-      files["dep"] = ARGS[i]:sub(eq + 1)
-      found_dep_file = true
+function preprocess_source ()
+  -- Check if this is a compilation command that we support.
+  local is_object_compilation = false
+  local has_object_output = false
+  for i, arg in ipairs(ARGS) do
+    if arg == "--compile_only" then
+      is_object_compilation = true
+    elseif starts_with(arg, "--output_file=") then
+      has_object_output = true
+    elseif starts_with(arg, "--cmd_file=") or starts_with(arg, "-@") then
+      error("Response files are currently not supported.")
     end
   end
-  if not found_object_file then
-    error("Unable to get the target object file.")
+  if (not is_object_compilation) or (not has_object_output) then
+    error("Unsupported complation command.")
   end
-  return files
+
+  -- Run the preprocessor step.
+  local preprocessed_file = os.tmpname()
+  local preprocessor_args = make_preprocessor_cmd(ARGS, preprocessed_file)
+  local result = bcache.run(preprocessor_args)
+  if result.return_code ~= 0 then
+    os.remove(preprocessed_file)
+    error("Preprocessing command was unsuccessful.")
+  end
+
+  -- Read and return the preprocessed file.
+  local f = assert(io.open(preprocessed_file, "rb"))
+  local preprocessed_source = f:read("*all")
+  f:close()
+  os.remove(preprocessed_file)
+
+  return preprocessed_source
 end
-
-

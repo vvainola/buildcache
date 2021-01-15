@@ -499,11 +499,19 @@ string_list_t lua_wrapper_t::get_capabilities() {
   return program_wrapper_t::get_capabilities();
 }
 
-std::string lua_wrapper_t::preprocess_source() {
-  if (m_runner.call("preprocess_source")) {
+std::map<std::string, expected_file_t> lua_wrapper_t::get_build_files() {
+  if (m_runner.call("get_build_files")) {
+    const auto files_map = pop_map(m_runner.state());
+    return to_expected_files_map(files_map);
+  }
+  return program_wrapper_t::get_build_files();
+}
+
+std::string lua_wrapper_t::get_program_id() {
+  if (m_runner.call("get_program_id")) {
     return pop_string(m_runner.state());
   }
-  return program_wrapper_t::preprocess_source();
+  return program_wrapper_t::get_program_id();
 }
 
 string_list_t lua_wrapper_t::get_relevant_arguments() {
@@ -520,19 +528,11 @@ std::map<std::string, std::string> lua_wrapper_t::get_relevant_env_vars() {
   return program_wrapper_t::get_relevant_env_vars();
 }
 
-std::string lua_wrapper_t::get_program_id() {
-  if (m_runner.call("get_program_id")) {
+std::string lua_wrapper_t::preprocess_source() {
+  if (m_runner.call("preprocess_source")) {
     return pop_string(m_runner.state());
   }
-  return program_wrapper_t::get_program_id();
-}
-
-std::map<std::string, expected_file_t> lua_wrapper_t::get_build_files() {
-  if (m_runner.call("get_build_files")) {
-    const auto files_map = pop_map(m_runner.state());
-    return to_expected_files_map(files_map);
-  }
-  return program_wrapper_t::get_build_files();
+  return program_wrapper_t::preprocess_source();
 }
 
 sys::run_result_t lua_wrapper_t::run_for_miss() {

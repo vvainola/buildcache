@@ -25,6 +25,8 @@
 #include <vector>
 
 namespace bcache {
+/// @brief A convenient vector of strings container with support functions for program argument
+/// handling.
 class string_list_t {
 public:
   typedef typename std::vector<std::string>::iterator iterator;
@@ -36,7 +38,12 @@ public:
 
   /// @brief Construct a list from an initializer list.
   /// @param list The strings to add to the string list object.
-  string_list_t(std::initializer_list<std::string> list) : m_args(list) {
+  string_list_t(std::initializer_list<std::string> list) : m_strings(list) {
+  }
+
+  /// @brief Construct a list from a vector of strings.
+  /// @param vec The strings to add to the string list object.
+  string_list_t(const std::vector<std::string>& vec) : m_strings(vec) {
   }
 
   /// @brief Construct a list from command line arguments.
@@ -45,7 +52,7 @@ public:
   /// @note This is useful for handling command line arguments from a program main() function.
   string_list_t(const int argc, const char** argv) {
     for (int i = 0; i < argc; ++i) {
-      m_args.emplace_back(std::string(argv[i]));
+      m_strings.emplace_back(std::string(argv[i]));
     }
   }
 
@@ -72,25 +79,25 @@ public:
 
   /// @brief Remove all the elements.
   void clear() {
-    m_args.clear();
+    m_strings.clear();
   }
 
   std::string& operator[](const size_t idx) {
-    return m_args[idx];
+    return m_strings[idx];
   }
 
   const std::string& operator[](const size_t idx) const {
-    return m_args[idx];
+    return m_strings[idx];
   }
 
   string_list_t& operator+=(const std::string& str) {
-    m_args.emplace_back(str);
+    m_strings.emplace_back(str);
     return *this;
   }
 
   string_list_t& operator+=(const string_list_t& list) {
     for (const auto& str : list) {
-      m_args.emplace_back(str);
+      m_strings.emplace_back(str);
     }
     return *this;
   }
@@ -108,31 +115,31 @@ public:
   }
 
   size_t size() const {
-    return m_args.size();
+    return m_strings.size();
   }
 
   iterator begin() {
-    return m_args.begin();
+    return m_strings.begin();
   }
 
   const_iterator begin() const {
-    return m_args.begin();
+    return m_strings.begin();
   }
 
   const_iterator cbegin() const {
-    return m_args.cbegin();
+    return m_strings.cbegin();
   }
 
   iterator end() {
-    return m_args.end();
+    return m_strings.end();
   }
 
   const_iterator end() const {
-    return m_args.end();
+    return m_strings.end();
   }
 
   const_iterator cend() const {
-    return m_args.cend();
+    return m_strings.cend();
   }
 
 private:
@@ -140,7 +147,7 @@ private:
 
   static std::string unescape_arg(const std::string& arg);
 
-  std::vector<std::string> m_args;
+  std::vector<std::string> m_strings;
 };
 }  // namespace bcache
 

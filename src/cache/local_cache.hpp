@@ -22,11 +22,11 @@
 
 #include <base/file_lock.hpp>
 #include <base/file_utils.hpp>
-#include <base/hasher.hpp>
 #include <cache/cache_entry.hpp>
 #include <cache/cache_stats.hpp>
 #include <cache/expected_file.hpp>
 
+#include <map>
 #include <string>
 #include <utility>
 
@@ -56,7 +56,7 @@ public:
   /// @param expected_files Paths to the actual files in the local file system (map from file ID to
   /// an expected file descriptor).
   /// @param allow_hard_links Whether or not to allow hard links to be used when caching files.
-  void add(const hasher_t::hash_t& hash,
+  void add(const std::string& hash,
            const cache_entry_t& entry,
            const std::map<std::string, expected_file_t>& expected_files,
            const bool allow_hard_links);
@@ -64,7 +64,7 @@ public:
   /// @brief Check if an entry exists in the cache.
   /// @returns A pair of a cache entry struct and a file lock object. If there was no cache hit,
   /// the entry will be empty, and the file lock object will not hold any lock.
-  std::pair<cache_entry_t, file::file_lock_t> lookup(const hasher_t::hash_t& hash);
+  std::pair<cache_entry_t, file::file_lock_t> lookup(const std::string& hash);
 
   /// @brief Copy a cached file to the local file system.
   /// @param hash The cache entry identifier.
@@ -72,17 +72,17 @@ public:
   /// @param target_path The path to the local file.
   /// @param is_compressed True if the cached data is compressed.
   /// @param allow_hard_links True if hard links are allowed.
-  void get_file(const hasher_t::hash_t& hash,
+  void get_file(const std::string& hash,
                 const std::string& source_id,
                 const std::string& target_path,
                 const bool is_compressed,
                 const bool allow_hard_links);
 
   /// @brief Update statistics associated with the given entry
-  bool update_stats(const hasher_t::hash_t& hash, const cache_stats_t& delta) const noexcept;
+  bool update_stats(const std::string& hash, const cache_stats_t& delta) const noexcept;
 
 private:
-  std::string hash_to_cache_entry_path(const hasher_t::hash_t& hash) const;
+  std::string hash_to_cache_entry_path(const std::string& hash) const;
   std::string get_cache_files_folder() const;
 
   void perform_housekeeping();

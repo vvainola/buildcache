@@ -33,8 +33,8 @@ public:
   bool can_handle_command() override;
 
 private:
-  std::map<std::string, std::string> get_relevant_env_vars() override;
   std::map<std::string, expected_file_t> get_build_files() override;
+  std::map<std::string, std::string> get_relevant_env_vars() override;
   sys::run_result_t run_for_miss() override;
 
   static const int MAX_NUM_REPORTS = 10;

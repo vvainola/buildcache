@@ -20,7 +20,6 @@
 #ifndef BUILDCACHE_CACHE_HPP_
 #define BUILDCACHE_CACHE_HPP_
 
-#include <base/hasher.hpp>
 #include <cache/cache_entry.hpp>
 #include <cache/expected_file.hpp>
 #include <cache/local_cache.hpp>
@@ -41,7 +40,7 @@ public:
   /// @param create_target_dirs True if the target directory of the cached file must be created.
   /// @param[out] return_code The return code of the program.
   /// @returns true if we had a cache hit, otherwise false.
-  bool lookup(const hasher_t::hash_t hash,
+  bool lookup(const std::string& hash,
               const std::map<std::string, expected_file_t>& expected_files,
               const bool allow_hard_links,
               const bool create_target_dirs,
@@ -53,19 +52,19 @@ public:
   /// @param expected_files Paths to the actual files in the local file system (map from file ID to
   /// an expected file descriptor).
   /// @param allow_hard_links True if we are allowed to use hard links.
-  void add(const hasher_t::hash_t hash,
+  void add(const std::string& hash,
            const cache_entry_t& entry,
            const std::map<std::string, expected_file_t>& expected_files,
            const bool allow_hard_links);
 
 private:
-  bool lookup_in_local_cache(const hasher_t::hash_t hash,
+  bool lookup_in_local_cache(const std::string& hash,
                              const std::map<std::string, expected_file_t>& expected_files,
                              const bool allow_hard_links,
                              const bool create_target_dirs,
                              int& return_code);
 
-  bool lookup_in_remote_cache(const hasher_t::hash_t hash,
+  bool lookup_in_remote_cache(const std::string& hash,
                               const std::map<std::string, expected_file_t>& expected_files,
                               const bool allow_hard_links,
                               const bool create_target_dirs,

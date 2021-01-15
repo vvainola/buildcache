@@ -55,6 +55,14 @@ public:
   hasher_t();
   ~hasher_t();
 
+  /// @brief Copy the hash state into a new hasher_t object.
+  /// @param other The source state to be duplicated.
+  hasher_t(const hasher_t& other);
+
+  /// @brief Copy the hash state to an existing hasher_t object.
+  /// @param other The source state to be duplicated.
+  hasher_t& operator=(const hasher_t& other);
+
   /// @brief Update the hash with more data.
   /// @param data Pointer to the data to hash.
   /// @param size The number of bytes to hash.

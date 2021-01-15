@@ -366,7 +366,14 @@ run_result_t run(const string_list_t& args, const bool quiet) {
       execv(argv[0], &argv[0]);
 
       // If execv returns, it must have failed.
-      throw std::runtime_error("Unable to launch command via execv()");
+      switch (errno) {
+        case ENOENT:
+          throw std::runtime_error("execv(): No such file: " + args[0]);
+        case EACCES:
+          throw std::runtime_error("execv(): Permission denied: " + args[0]);
+        default:
+          throw std::runtime_error("execv(): Unable to launch command: " + args[0]);
+      }
     } catch (std::exception& e) {
       // TODO(m): Signal this error to the parent process somehow.
       std::cerr << "*** BuildCache error: " << e.what() << "\n";

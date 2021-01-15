@@ -166,35 +166,41 @@ string_list_t msvc_wrapper_t::get_capabilities() {
   return string_list_t{"hard_links"};
 }
 
-std::string msvc_wrapper_t::preprocess_source() {
-  // Check if this is a compilation command that we support.
-  auto is_object_compilation = false;
-  auto has_object_output = false;
+std::map<std::string, expected_file_t> msvc_wrapper_t::get_build_files() {
+  std::map<std::string, expected_file_t> files;
+  auto found_object_file = false;
   for (const auto& arg : m_resolved_args) {
-    if (arg_equals(arg, "c")) {
-      is_object_compilation = true;
-    } else if (arg_starts_with(arg, "Fo") && (is_object_file(file::get_extension(arg)))) {
-      has_object_output = true;
-    } else if (arg_equals(arg, "Zi") || arg_equals(arg, "ZI")) {
-      throw std::runtime_error("PDB generation is not supported.");
+    if (arg_starts_with(arg, "Fo") && (is_object_file(file::get_extension(arg)))) {
+      if (found_object_file) {
+        throw std::runtime_error("Only a single target object file can be specified.");
+      }
+      files["object"] = {drop_leading_colon(arg.substr(3)), true};
+      found_object_file = true;
     }
   }
-  if ((!is_object_compilation) || (!has_object_output)) {
-    throw std::runtime_error("Unsupported complation command.");
+  if (!found_object_file) {
+    throw std::runtime_error("Unable to get the target object file.");
   }
+  return files;
+}
 
-  // Disable unwanted printing of source file name in Visual Studio.
+std::string msvc_wrapper_t::get_program_id() {
+  // TODO(m): Add things like executable file size too.
+
+  // Get the version string for the compiler.
+  // Just calling "cl.exe" will return the version information. Note, though, that the version
+  // information is given on stderr.
   scoped_unset_env_t scoped_off(ENV_VS_OUTPUT_REDIRECTION);
 
-  // Run the preprocessor step.
-  const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args);
-  auto result = sys::run(preprocessor_args);
-  if (result.return_code != 0) {
-    throw std::runtime_error("Preprocessing command was unsuccessful.");
+  string_list_t version_args;
+  version_args += m_args[0];
+
+  const auto result = sys::run(version_args, true);
+  if (result.std_err.empty()) {
+    throw std::runtime_error("Unable to get the compiler version information string.");
   }
 
-  // Return the preprocessed file (from stdout).
-  return result.std_out;
+  return HASH_VERSION + result.std_err;
 }
 
 string_list_t msvc_wrapper_t::get_relevant_arguments() {
@@ -241,41 +247,35 @@ std::map<std::string, std::string> msvc_wrapper_t::get_relevant_env_vars() {
   return env_vars;
 }
 
-std::string msvc_wrapper_t::get_program_id() {
-  // TODO(m): Add things like executable file size too.
-
-  // Get the version string for the compiler.
-  // Just calling "cl.exe" will return the version information. Note, though, that the version
-  // information is given on stderr.
-  scoped_unset_env_t scoped_off(ENV_VS_OUTPUT_REDIRECTION);
-
-  string_list_t version_args;
-  version_args += m_args[0];
-
-  const auto result = sys::run(version_args, true);
-  if (result.std_err.empty()) {
-    throw std::runtime_error("Unable to get the compiler version information string.");
-  }
-
-  return HASH_VERSION + result.std_err;
-}
-
-std::map<std::string, expected_file_t> msvc_wrapper_t::get_build_files() {
-  std::map<std::string, expected_file_t> files;
-  auto found_object_file = false;
+std::string msvc_wrapper_t::preprocess_source() {
+  // Check if this is a compilation command that we support.
+  auto is_object_compilation = false;
+  auto has_object_output = false;
   for (const auto& arg : m_resolved_args) {
-    if (arg_starts_with(arg, "Fo") && (is_object_file(file::get_extension(arg)))) {
-      if (found_object_file) {
-        throw std::runtime_error("Only a single target object file can be specified.");
-      }
-      files["object"] = {drop_leading_colon(arg.substr(3)), true};
-      found_object_file = true;
+    if (arg_equals(arg, "c")) {
+      is_object_compilation = true;
+    } else if (arg_starts_with(arg, "Fo") && (is_object_file(file::get_extension(arg)))) {
+      has_object_output = true;
+    } else if (arg_equals(arg, "Zi") || arg_equals(arg, "ZI")) {
+      throw std::runtime_error("PDB generation is not supported.");
     }
   }
-  if (!found_object_file) {
-    throw std::runtime_error("Unable to get the target object file.");
+  if ((!is_object_compilation) || (!has_object_output)) {
+    throw std::runtime_error("Unsupported complation command.");
   }
-  return files;
+
+  // Disable unwanted printing of source file name in Visual Studio.
+  scoped_unset_env_t scoped_off(ENV_VS_OUTPUT_REDIRECTION);
+
+  // Run the preprocessor step.
+  const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args);
+  auto result = sys::run(preprocessor_args);
+  if (result.return_code != 0) {
+    throw std::runtime_error("Preprocessing command was unsuccessful.");
+  }
+
+  // Return the preprocessed file (from stdout).
+  return result.std_out;
 }
 
 sys::run_result_t msvc_wrapper_t::run_for_miss() {
