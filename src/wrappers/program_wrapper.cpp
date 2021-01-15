@@ -114,7 +114,7 @@ bool program_wrapper_t::handle_command(int& return_code) {
 
     // Hash the (filtered) command line flags and environment variables.
     PERF_START(FILTER_ARGS);
-    hasher.update(get_relevant_arguments().join(" ", true));
+    hasher.update(get_relevant_arguments());
     hasher.update(get_relevant_env_vars());
     PERF_STOP(FILTER_ARGS);
 

@@ -20,6 +20,8 @@
 #ifndef BUILDCACHE_HASHER_HPP_
 #define BUILDCACHE_HASHER_HPP_
 
+#include <base/string_list.hpp>
+
 #include <cstdint>
 
 #include <map>
@@ -76,6 +78,10 @@ public:
 
   /// @brief Update the hash with more data.
   /// @param data The data to hash.
+  void update(const string_list_t& data);
+
+  /// @brief Update the hash with more data.
+  /// @param data The data to hash.
   void update(const std::map<std::string, std::string>& data);
 
   /// @brief Update the hash with more data.
@@ -90,6 +96,12 @@ public:
   /// @param path Path to a file that contains the data to hash.
   /// @throws runtime_error if the operation could not be completed.
   void update_from_file_deterministic(const std::string& path);
+
+  /// @brief Update the hash with a separator sequence.
+  ///
+  /// Injecting a separator sequence between other data items is useful for avoiding hash collisions
+  /// due to similarities of adjacent elements (e.g. "hello","world" v.s. "hell","oworld").
+  void inject_separator();
 
   /// @brief Finalize the hash calculation.
   /// @returns the result of the hash.
