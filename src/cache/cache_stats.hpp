@@ -27,6 +27,8 @@ struct cJSON;
 namespace bcache {
 
 class cache_stats_t {
+  int m_direct_miss_count{0};
+  int m_direct_hit_count{0};
   int m_local_miss_count{0};
   int m_local_hit_count{0};
   int m_remote_hit_count{0};
@@ -39,11 +41,22 @@ public:
   bool to_file(const std::string& path) const noexcept;
 
   cache_stats_t& operator+=(const cache_stats_t& other) noexcept {
+    m_direct_hit_count += other.m_direct_hit_count;
+    m_direct_miss_count += other.m_direct_miss_count;
     m_local_hit_count += other.m_local_hit_count;
     m_local_miss_count += other.m_local_miss_count;
     m_remote_hit_count += other.m_remote_hit_count;
     m_remote_miss_count += other.m_remote_miss_count;
     return *this;
+  }
+
+  double direct_hit_ratio() const noexcept {
+    int total = m_direct_hit_count + m_direct_miss_count;
+    if (total != 0) {
+      return (100.0 * m_direct_hit_count) / total;
+    } else {
+      return 0.0;
+    }
   }
 
   double local_hit_ratio() const noexcept {
@@ -85,21 +98,28 @@ public:
     }
   }
 
+  static cache_stats_t direct_hit() noexcept {
+    cache_stats_t st;
+    st.m_direct_hit_count = 1;
+    return st;
+  }
+  static cache_stats_t direct_miss() noexcept {
+    cache_stats_t st;
+    st.m_direct_miss_count = 1;
+    return st;
+  }
   static cache_stats_t local_hit() noexcept {
     cache_stats_t st;
     st.m_local_hit_count = 1;
-    st.m_local_miss_count = 0;
     return st;
   }
   static cache_stats_t local_miss() noexcept {
     cache_stats_t st;
-    st.m_local_hit_count = 0;
     st.m_local_miss_count = 1;
     return st;
   }
   static cache_stats_t remote_miss() noexcept {
     cache_stats_t st;
-    st.m_remote_hit_count = 0;
     st.m_remote_miss_count = 1;
     return st;
   }
@@ -109,32 +129,8 @@ public:
     st.m_remote_miss_count = 0;
     return st;
   }
-  void dump(std::ostream& os, const std::string& prefix) const;
 
-  int local_hit_count() const {
-    return m_local_hit_count;
-  }
-  int local_miss_count() const {
-    return m_local_miss_count;
-  }
-  int remote_hit_count() const {
-    return m_remote_hit_count;
-  }
-  int remote_miss_count() const {
-    return m_remote_miss_count;
-  }
-  void set_local_hit_count(int value) {
-    m_local_hit_count = value;
-  }
-  void set_local_miss_count(int value) {
-    m_local_miss_count = value;
-  }
-  void set_remote_hit_count(int value) {
-    m_remote_hit_count = value;
-  }
-  void set_remote_miss_value(int value) {
-    m_remote_miss_count = value;
-  }
+  void dump(std::ostream& os, const std::string& prefix) const;
 };
 
 }  // namespace bcache

@@ -30,6 +30,8 @@ namespace bcache {
 
 namespace {
 
+constexpr char DIRECT_HIT_COUNT[] = "direct_hit_count";
+constexpr char DIRECT_MISS_COUNT[] = "direct_miss_count";
 constexpr char LOCAL_HIT_COUNT[] = "local_hit_count";
 constexpr char LOCAL_MISS_COUNT[] = "local_miss_count";
 constexpr char REMOTE_HIT_COUNT[] = "remote_hit_count";
@@ -64,7 +66,15 @@ bool cache_stats_t::from_json(cJSON const* obj) noexcept {
   if (obj == nullptr) {
     return false;
   }
-  auto* node = cJSON_GetObjectItemCaseSensitive(obj, LOCAL_HIT_COUNT);
+  auto* node = cJSON_GetObjectItemCaseSensitive(obj, DIRECT_HIT_COUNT);
+  if ((node != nullptr) && (cJSON_IsNumber(node) != 0)) {
+    m_direct_hit_count = node->valueint;
+  }
+  node = cJSON_GetObjectItemCaseSensitive(obj, DIRECT_MISS_COUNT);
+  if ((node != nullptr) && (cJSON_IsNumber(node) != 0)) {
+    m_direct_miss_count = node->valueint;
+  }
+  node = cJSON_GetObjectItemCaseSensitive(obj, LOCAL_HIT_COUNT);
   if ((node != nullptr) && (cJSON_IsNumber(node) != 0)) {
     m_local_hit_count = node->valueint;
   }
@@ -87,7 +97,27 @@ bool cache_stats_t::to_json(cJSON* obj) const noexcept {
   if (obj == nullptr) {
     return false;
   }
-  auto* node = cJSON_GetObjectItemCaseSensitive(obj, LOCAL_HIT_COUNT);
+  auto* node = cJSON_GetObjectItemCaseSensitive(obj, DIRECT_HIT_COUNT);
+  if (node != nullptr) {
+    cJSON_SetNumberValue(node, m_direct_hit_count);
+  } else {
+    node = cJSON_AddNumberToObject(obj, DIRECT_HIT_COUNT, m_direct_hit_count);
+  }
+  if (node == nullptr) {
+    debug::log(debug::ERROR) << "failed to serialize cache_stats object";
+    return false;
+  }
+  node = cJSON_GetObjectItemCaseSensitive(obj, DIRECT_MISS_COUNT);
+  if (node != nullptr) {
+    cJSON_SetNumberValue(node, m_direct_miss_count);
+  } else {
+    node = cJSON_AddNumberToObject(obj, DIRECT_MISS_COUNT, m_direct_miss_count);
+  }
+  if (node == nullptr) {
+    debug::log(debug::ERROR) << "failed to serialize cache_stats object";
+    return false;
+  }
+  node = cJSON_GetObjectItemCaseSensitive(obj, LOCAL_HIT_COUNT);
   if (node != nullptr) {
     cJSON_SetNumberValue(node, m_local_hit_count);
   } else {
@@ -151,11 +181,14 @@ bool cache_stats_t::to_file(const std::string& path) const noexcept {
 }
 
 void cache_stats_t::dump(std::ostream& os, const std::string& prefix) const {
+  os << prefix << "Direct hits:       " << m_direct_hit_count << std::endl;
+  os << prefix << "Direct misses:     " << m_direct_miss_count << std::endl;
   os << prefix << "Local hits:        " << m_local_hit_count << std::endl;
   os << prefix << "Local misses:      " << m_local_miss_count << std::endl;
   os << prefix << "Remote hits:       " << m_remote_hit_count << std::endl;
   os << prefix << "Remote misses:     " << m_remote_miss_count << std::endl;
   os << prefix << "Misses:            " << global_miss_count() << std::endl;
+  os << prefix << "Direct hit ratio:  " << direct_hit_ratio() << '%' << std::endl;
   os << prefix << "Local hit ratio:   " << local_hit_ratio() << '%' << std::endl;
   os << prefix << "Remote hit ratio:  " << remote_hit_ratio() << '%' << std::endl;
   os << prefix << "Hit ratio:         " << global_hit_ratio() << '%' << std::endl;
