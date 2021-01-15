@@ -16,6 +16,7 @@ The following options control the behavior of BuildCache:
 | `BUILDCACHE_COMPRESS_LEVEL` | `compress_level` | Cache compresion level (see below) | -1 |
 | `BUILDCACHE_DEBUG` | `debug` | Debug level | None |
 | `BUILDCACHE_DIR` | - | The cache root directory | `$HOME/.buildcache` |
+| `BUILDCACHE_DIRECT_MODE` | `direct_mode` | Enable direct mode | false |
 | `BUILDCACHE_DISABLE` | `disable` | Disable caching (bypass BuildCache) | false |
 | `BUILDCACHE_HARD_LINKS` | `hard_links` | Allow the use of hard links when caching | false |
 | `BUILDCACHE_HASH_EXTRA_FILES` | `hash_extra_files` | Extra file(s) whose content to add to the hash | None |
@@ -82,6 +83,15 @@ $ BUILDCACHE_DEBUG=2 buildcache g++ -c -O2 hello.cpp -o hello.o
 
 It is also possible to redirect the log output to a file using the
 `BUILDCACHE_LOG_FILE` setting.
+
+## Direct mode (experimental)
+
+In direct mode BuildCache will try to find a cache hit based on the hash of
+the input file and its indirect input files (e.g. C/C++ include files),
+without running the preprocessor step. This can be significantly faster than
+the standard method of running the preprocessor to get a hash.
+
+The direct mode is enabled when `BUILDCACHE_DIRECT_MODE` is set to true.
 
 ## Caching accuracy
 
