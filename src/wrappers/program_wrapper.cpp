@@ -147,6 +147,14 @@ bool program_wrapper_t::handle_command(int& return_code) {
           // Hash all the input files.
           PERF_START(HASH_INPUT_FILES);
           for (const auto& file : input_files) {
+            // Hash the complete source file path. This ensures that we get different direct mode
+            // cache entries for different source paths, which should minimize cache thrashing when
+            // different work folders are used (e.g. in a CI system with several concurrent
+            // executors).
+            dm_hasher.update(file::resolve_path(file));
+            dm_hasher.inject_separator();
+
+            // Hash the source file content.
             // TODO(m): Check file for disqualifying content (e.g. __TIME__ in C/C++ files).
             dm_hasher.update_from_file(file);
           }
