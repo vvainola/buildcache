@@ -78,26 +78,28 @@ void report() {
     old_fmt.copyfmt(std::cerr);
     std::cerr << std::setiosflags(std::ios::fixed) << std::setprecision(1);
 
-    std::cerr << "Find exectuable:       " << perf_us_t(ID_FIND_EXECUTABLE) << "\n";
-    std::cerr << "Find wrapper:          " << perf_us_t(ID_FIND_WRAPPER) << "\n";
-    std::cerr << "Lua - Init:            " << perf_us_t(ID_LUA_INIT) << "\n";
-    std::cerr << "Lua - Load script:     " << perf_us_t(ID_LUA_LOAD_SCRIPT) << "\n";
-    std::cerr << "Lua - Run:             " << perf_us_t(ID_LUA_RUN) << "\n";
-    std::cerr << "Resolve args:          " << perf_us_t(ID_RESOLVE_ARGS) << "\n";
-    std::cerr << "Get capabilities:      " << perf_us_t(ID_GET_CAPABILITIES) << "\n";
-    std::cerr << "Get build files:       " << perf_us_t(ID_GET_BUILD_FILES) << "\n";
-    std::cerr << "Hash extra files:      " << perf_us_t(ID_HASH_EXTRA_FILES) << "\n";
-    std::cerr << "Get program id:        " << perf_us_t(ID_GET_PRG_ID) << "\n";
-    std::cerr << "Filter arguments:      " << perf_us_t(ID_FILTER_ARGS) << "\n";
-    std::cerr << "Preprocess:            " << perf_us_t(ID_PREPROCESS) << "\n";
-    std::cerr << "Cache lookup:          " << perf_us_t(ID_CACHE_LOOKUP) << "\n";
-    std::cerr << "Retreive cached files: " << perf_us_t(ID_RETRIEVE_CACHED_FILES) << "\n";
-    std::cerr << "Run cmd (miss):        " << perf_us_t(ID_RUN_FOR_MISS) << "\n";
-    std::cerr << "Add to cache:          " << perf_us_t(ID_ADD_TO_CACHE) << "\n";
-    std::cerr << "Run cmd (fallback):    " << perf_us_t(ID_RUN_FOR_FALLBACK) << "\n";
-    std::cerr << "Update stats:          " << perf_us_t(ID_UPDATE_STATS) << "\n";
+    std::cerr << "Find exectuable:         " << perf_us_t(ID_FIND_EXECUTABLE) << "\n";
+    std::cerr << "Find wrapper:            " << perf_us_t(ID_FIND_WRAPPER) << "\n";
+    std::cerr << "Lua - Init:              " << perf_us_t(ID_LUA_INIT) << "\n";
+    std::cerr << "Lua - Load script:       " << perf_us_t(ID_LUA_LOAD_SCRIPT) << "\n";
+    std::cerr << "Lua - Run:               " << perf_us_t(ID_LUA_RUN) << "\n";
+    std::cerr << "Resolve args:            " << perf_us_t(ID_RESOLVE_ARGS) << "\n";
+    std::cerr << "Get capabilities:        " << perf_us_t(ID_GET_CAPABILITIES) << "\n";
+    std::cerr << "Get build files:         " << perf_us_t(ID_GET_BUILD_FILES) << "\n";
+    std::cerr << "Hash extra files:        " << perf_us_t(ID_HASH_EXTRA_FILES) << "\n";
+    std::cerr << "Get program id:          " << perf_us_t(ID_GET_PRG_ID) << "\n";
+    std::cerr << "Filter arguments:        " << perf_us_t(ID_FILTER_ARGS) << "\n";
+    std::cerr << "Hash input files (DM):   " << perf_us_t(ID_HASH_INPUT_FILES) << "\n";
+    std::cerr << "Hash include files (DM): " << perf_us_t(ID_HASH_INCLUDE_FILES) << "\n";
+    std::cerr << "Preprocess:              " << perf_us_t(ID_PREPROCESS) << "\n";
+    std::cerr << "Cache lookup:            " << perf_us_t(ID_CACHE_LOOKUP) << "\n";
+    std::cerr << "Retreive cached files:   " << perf_us_t(ID_RETRIEVE_CACHED_FILES) << "\n";
+    std::cerr << "Run cmd (miss):          " << perf_us_t(ID_RUN_FOR_MISS) << "\n";
+    std::cerr << "Add to cache:            " << perf_us_t(ID_ADD_TO_CACHE) << "\n";
+    std::cerr << "Run cmd (fallback):      " << perf_us_t(ID_RUN_FOR_FALLBACK) << "\n";
+    std::cerr << "Update stats:            " << perf_us_t(ID_UPDATE_STATS) << "\n";
     std::cerr << "\n";
-    std::cerr << "TOTAL:                 " << perf_ms_t(ID_TOTAL) << "\n";
+    std::cerr << "TOTAL:                   " << perf_ms_t(ID_TOTAL) << "\n";
 
     // Restore format.
     std::cerr.copyfmt(old_fmt);

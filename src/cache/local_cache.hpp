@@ -24,6 +24,7 @@
 #include <base/file_utils.hpp>
 #include <cache/cache_entry.hpp>
 #include <cache/cache_stats.hpp>
+#include <cache/direct_mode_manifest.hpp>
 #include <cache/expected_file.hpp>
 
 #include <map>
@@ -50,7 +51,19 @@ public:
   /// @brief Clear the cache statistics.
   void zero_stats();
 
-  /// @brief Add a set of files to the cache
+  /// @brief Add a new direct mode entry to the cache.
+  /// @param direct_hash The hash of the direct mode cache entry.
+  /// @param manifest The direct mode manifest.
+  void add_direct(const std::string& direct_hash, const direct_mode_manifest_t& manifest);
+
+  /// @brief Check if a direct mode entry exists in the cache.
+  /// @param direct_hash The hash of the direct mode cache entry.
+  /// @returns A pair of a direct mode manifest and a file lock object. If there was no cache hit,
+  /// the manifest will be empty, and the file lock object will not hold any lock.
+  std::pair<direct_mode_manifest_t, file::file_lock_t> lookup_direct(
+      const std::string& direct_hash);
+
+  /// @brief Add a set of files to the cache.
   /// @param hash The cache entry identifier.
   /// @param entry The cache entry data (files, stdout, etc).
   /// @param expected_files Paths to the actual files in the local file system (map from file ID to
@@ -62,6 +75,7 @@ public:
            const bool allow_hard_links);
 
   /// @brief Check if an entry exists in the cache.
+  /// @param hash The cache entry identifier.
   /// @returns A pair of a cache entry struct and a file lock object. If there was no cache hit,
   /// the entry will be empty, and the file lock object will not hold any lock.
   std::pair<cache_entry_t, file::file_lock_t> lookup(const std::string& hash);
@@ -78,7 +92,12 @@ public:
                 const bool is_compressed,
                 const bool allow_hard_links);
 
-  /// @brief Update statistics associated with the given entry
+  /// @brief Update statistics associated with the given entry.
+  /// @param hash The hash of the entry to which the stats belong.
+  /// @param delta The incremental stats delta.
+  /// @returns true if the stats were successfully updated, otherwise false.
+  /// @note The hash argument is only used for selecting where in the local cache structure to store
+  /// the stats file.
   bool update_stats(const std::string& hash, const cache_stats_t& delta) const noexcept;
 
 private:

@@ -64,6 +64,7 @@
 namespace bcache {
 namespace {
 const std::string CACHE_FILES_FOLDER_NAME = "c";
+const std::string DIRECT_CACHE_MANIFEST_FILE_NAME = ".manifest";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 const std::string FILE_LOCK_SUFFIX = ".lock";
 const std::string STATS_FILE_NAME = "stats.json";
@@ -72,18 +73,44 @@ std::string cache_entry_file_lock_path(const std::string& cache_entry_path) {
   return cache_entry_path + FILE_LOCK_SUFFIX;
 }
 
-bool is_cache_entry_dir_path(const std::string& path) {
-  const auto entry_dir_name = file::get_file_part(path);
-  const auto hash_prefix_dir_name = file::get_file_part(file::get_dir_part(path));
-
-  // Is the hash prefix dir name 2 characters long and the endtry dir name 30 characters long?
-  if ((hash_prefix_dir_name.length() != 2) || (entry_dir_name.length() != 30)) {
+bool is_cache_prefix_dir_path(const std::string& path) {
+  // Is the parent dir the cache files dir?
+  if (file::get_file_part(file::get_dir_part(path)) != CACHE_FILES_FOLDER_NAME) {
     return false;
   }
 
-  // Is the hash prefix dir + entry dir name a valid hash (i.a. all characters are hex)?
-  const auto hash_str = hash_prefix_dir_name + entry_dir_name;
-  for (const auto c : hash_str) {
+  const auto hash_prefix_dir_name = file::get_file_part(path);
+
+  // Is the hash prefix dir name 2 characters long?
+  if (hash_prefix_dir_name.length() != 2) {
+    return false;
+  }
+
+  // Is the hash prefix dir name made up of all hex characters?
+  for (const auto c : hash_prefix_dir_name) {
+    if ((c < '0') || (c > 'f') || ((c > '9') && (c < 'a'))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool is_cache_entry_dir_path(const std::string& path) {
+  // Is the parent dir a prefix dir?
+  if (!is_cache_prefix_dir_path(file::get_dir_part(path))) {
+    return false;
+  }
+
+  const auto entry_dir_name = file::get_file_part(path);
+
+  // Is the endtry dir name 30 characters long?
+  if (entry_dir_name.length() != 30) {
+    return false;
+  }
+
+  // Is the entry dir name made up of all hex characters?
+  for (const auto c : entry_dir_name) {
     if ((c < '0') || (c > 'f') || ((c > '9') && (c < 'a'))) {
       return false;
     }
@@ -113,6 +140,29 @@ std::vector<file::file_info_t> get_cache_entry_dirs(const std::string& root_fold
   }
 
   return cache_dirs;
+}
+
+std::vector<file::file_info_t> get_cache_prefix_dirs(const std::string& root_folder) {
+  std::vector<file::file_info_t> prefix_dirs;
+
+  try {
+    const auto cache_files_dir = file::append_path(root_folder, CACHE_FILES_FOLDER_NAME);
+    if (file::dir_exists(cache_files_dir)) {
+      // Get all the files in the cache dir.
+      const auto files = file::walk_directory(cache_files_dir);
+
+      // Return only the directories that are valid cache entries.
+      for (const auto& file : files) {
+        if (file.is_dir() && is_cache_prefix_dir_path(file.path())) {
+          prefix_dirs.push_back(file);
+        }
+      }
+    }
+  } catch (const std::exception& e) {
+    debug::log(debug::ERROR) << e.what();
+  }
+
+  return prefix_dirs;
 }
 
 bool is_time_for_housekeeping() {
@@ -190,13 +240,13 @@ void local_cache_t::show_stats() {
     cache_stats_t stats;
     file::file_lock_t lock{stats_path + FILE_LOCK_SUFFIX, config::remote_locks()};
     if (!lock.has_lock()) {
-      debug::log(debug::DEBUG) << "failed to lock stats, skipping";
+      debug::log(debug::DEBUG) << "Failed to lock stats, skipping";
       return;
     }
     if (stats.from_file(stats_path)) {
       overall_stats += stats;
     } else {
-      debug::log(debug::DEBUG) << "failed to load stats for dir " << firstLevelDirPath;
+      debug::log(debug::DEBUG) << "Failed to load stats for dir " << firstLevelDirPath;
     }
   };
 
@@ -221,16 +271,12 @@ void local_cache_t::show_stats() {
 
 void local_cache_t::zero_stats() {
   // Get all first level dirs (each of which may contain a stats file).
-  auto dirs = get_cache_entry_dirs(config::dir());
-  std::set<std::string> first_level_dirs;
-  for (const auto& dir : dirs) {
-    first_level_dirs.insert(file::get_dir_part(dir.path()));
-  }
+  const auto dirs = get_cache_prefix_dirs(config::dir());
 
   // Remove all the stats files.
-  for (const auto& dir : first_level_dirs) {
+  for (const auto& dir : dirs) {
     try {
-      const auto stats_path = file::append_path(dir, STATS_FILE_NAME);
+      const auto stats_path = file::append_path(dir.path(), STATS_FILE_NAME);
       file::file_lock_t lock{stats_path + FILE_LOCK_SUFFIX, config::remote_locks()};
       if (lock.has_lock()) {
         file::remove_file(stats_path);
@@ -238,6 +284,61 @@ void local_cache_t::zero_stats() {
     } catch (const std::exception& e) {
       debug::log(debug::DEBUG) << "Failed to remove stats file: " << e.what();
     }
+  }
+}
+
+void local_cache_t::add_direct(const std::string& direct_hash,
+                               const direct_mode_manifest_t& manifest) {
+  // Create the direct mode cache entry parent directory if necessary.
+  const auto cache_entry_path = hash_to_cache_entry_path(direct_hash);
+  const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
+  file::create_dir_with_parents(cache_entry_parent_path);
+
+  {
+    // Acquire a scoped exclusive lock for the cache entry.
+    file::file_lock_t lock(cache_entry_file_lock_path(cache_entry_path), config::remote_locks());
+    if (!lock.has_lock()) {
+      throw std::runtime_error("Unable to acquire a cache entry lock for writing.");
+    }
+
+    // Create the cache entry directory.
+    file::create_dir_with_parents(cache_entry_path);
+
+    // Store the manifest in the direct mode cache entry.
+    // TODO(m): We probably want to store multiple manifests per direct_hash.
+    const auto file_name = file::append_path(cache_entry_path, DIRECT_CACHE_MANIFEST_FILE_NAME);
+    file::write(manifest.serialize(), file_name);
+  }
+}
+
+std::pair<direct_mode_manifest_t, file::file_lock_t> local_cache_t::lookup_direct(
+    const std::string& direct_hash) {
+  // Get the path to the cache entry.
+  const auto cache_entry_path = hash_to_cache_entry_path(direct_hash);
+
+  try {
+    // If the cache parent dir does not exist yet, we can't possibly have a cache hit.
+    // Note: This is mostly a trick to avoid irrelevant error log printouts from the file_lock_t
+    // constructor later on.
+    const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
+    if (!file::dir_exists(cache_entry_parent_path)) {
+      throw std::runtime_error("Cache entry parent dir does not exist.");
+    }
+
+    // Acquire a scoped lock for the cache entry.
+    file::file_lock_t lock(cache_entry_file_lock_path(cache_entry_path), config::remote_locks());
+    if (!lock.has_lock()) {
+      throw std::runtime_error("Unable to acquire a cache entry lock for reading.");
+    }
+
+    // Read the cache manifest file (this will throw if the file does not exist - i.e. if we have a
+    // cache miss).
+    const auto cache_manifest_file_name =
+        file::append_path(cache_entry_path, DIRECT_CACHE_MANIFEST_FILE_NAME);
+    const auto manifest_data = file::read(cache_manifest_file_name);
+    return std::make_pair(direct_mode_manifest_t::deserialize(manifest_data), std::move(lock));
+  } catch (...) {
+    return std::make_pair(direct_mode_manifest_t(), file::file_lock_t());
   }
 }
 

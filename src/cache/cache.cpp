@@ -21,6 +21,8 @@
 
 #include <base/debug_utils.hpp>
 #include <base/file_utils.hpp>
+#include <base/hasher.hpp>
+#include <cache/direct_mode_manifest.hpp>
 #include <config/configuration.hpp>
 #include <sys/perf_utils.hpp>
 #include <sys/sys_utils.hpp>
@@ -48,11 +50,91 @@ int64_t get_total_entry_size(const cache_entry_t& entry,
 }
 }  // namespace
 
+bool cache_t::lookup_direct(const std::string& direct_hash,
+                            const std::map<std::string, expected_file_t>& expected_files,
+                            const bool allow_hard_links,
+                            const bool create_target_dirs,
+                            int& return_code) noexcept {
+  // Note: We don't want to propagate exceptions here, since that would result in a fall-back run of
+  // the wrapped program, without adding the result to the cache. Instead we treat cache lookup
+  // errors as cache misses, and thus we can re-populate the cache if there is a corrupted cache
+  // entry for instance.
+  std::string hash;
+  try {
+    // First lookup the manifest from the direct mode hash.
+    // Note: The lookup will give us a file lock that is locked until we go out of scope.
+    PERF_START(CACHE_LOOKUP);
+    const auto result = m_local_cache.lookup_direct(direct_hash);
+    const auto& manifest = result.first;
+    PERF_STOP(CACHE_LOOKUP);
+
+    if (!manifest) {
+      throw std::runtime_error("No matching direct mode entry found");
+    }
+
+    // Validate the hashes for all the implicit input files.
+    {
+      PERF_SCOPE(HASH_INCLUDE_FILES);
+      for (const auto& item : manifest.files_width_hashes()) {
+        const auto& path = item.first;
+        const auto& expected_file_hash = item.second;
+
+        // Check that the file has not changed.
+        hasher_t hasher;
+        hasher.update_from_file(path);
+        const auto file_hash = hasher.final().as_string();
+        if (file_hash != expected_file_hash) {
+          throw std::runtime_error("Implicit input files have changed");
+        }
+      }
+    }
+
+    // If we got this far we had a positive direct mode cache hit. The manifest contains the
+    // corresponding preprocessor mode cache entry hash.
+    hash = manifest.hash();
+    debug::log(debug::INFO) << "Direct mode cache hit (" << direct_hash << "): " << hash;
+    m_local_cache.update_stats(direct_hash, cache_stats_t::direct_hit());
+  } catch (const std::runtime_error& e) {
+    debug::log(debug::INFO) << "Direct mode cache miss (" << direct_hash << "): " << e.what();
+    m_local_cache.update_stats(direct_hash, cache_stats_t::direct_miss());
+    return false;
+  }
+
+  // With the preprocessor mode hash we can now do a regular lookup.
+  return lookup(hash, expected_files, allow_hard_links, create_target_dirs, return_code);
+}
+
+void cache_t::add_direct(const std::string& direct_hash,
+                         const std::string& hash,
+                         const string_list_t& implicit_input_files) {
+  try {
+    // Calculate the hashes for all the implicit input files.
+    std::map<std::string, std::string> files_with_hashes;
+    {
+      PERF_SCOPE(HASH_INCLUDE_FILES);
+      for (const auto& path : implicit_input_files) {
+        hasher_t hasher;
+        hasher.update_from_file(path);
+        files_with_hashes.insert(std::make_pair(path, hasher.final().as_string()));
+      }
+    }
+
+    // Create a direct mode manifest.
+    const auto manifest = direct_mode_manifest_t(hash, files_with_hashes);
+
+    // Add the direct mode entry to the local cache.
+    m_local_cache.add_direct(direct_hash, manifest);
+  } catch (const std::runtime_error& e) {
+    debug::log(debug::ERROR) << "Creation of direct mode entry " << direct_hash
+                             << " failed: " << e.what();
+  }
+}
+
 bool cache_t::lookup(const std::string& hash,
                      const std::map<std::string, expected_file_t>& expected_files,
                      const bool allow_hard_links,
                      const bool create_target_dirs,
-                     int& return_code) {
+                     int& return_code) noexcept {
   // Note: We don't want to propagate exceptions here, since that would result in a fall-back run of
   // the wrapped program, without adding the result to the cache. Instead we treat cache lookup
   // errors as cache misses, and thus we can re-populate the cache if there is a corrupted cache

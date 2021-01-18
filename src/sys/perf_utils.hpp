@@ -45,6 +45,8 @@ enum id_t {
   ID_UPDATE_STATS = 16,
   ID_TOTAL = 17,
   ID_HASH_EXTRA_FILES = 18,
+  ID_HASH_INPUT_FILES = 19,
+  ID_HASH_INCLUDE_FILES = 20,
   NUM_PERF_IDS
 };
 
@@ -79,7 +81,7 @@ private:
 
 // Convenience macros.
 #define PERF_START(id) const auto t0_ID_##id = bcache::perf::start()
-#define PERF_STOP(id) bcache::perf::stop(t0_ID_##id, bcache::perf::ID_##id);
-#define PERF_SCOPE(id) bcache::perf::perf_scope_t p_ID_##id(bcache::perf::ID_##id);
+#define PERF_STOP(id) bcache::perf::stop(t0_ID_##id, bcache::perf::ID_##id)
+#define PERF_SCOPE(id) bcache::perf::perf_scope_t p_ID_##id(bcache::perf::ID_##id)
 
 #endif  // BUILDCACHE_PERF_UTILS_HPP_

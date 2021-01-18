@@ -81,6 +81,9 @@ int32_t debug();
 /// @returns the BuildCache home directory.
 const std::string& dir();
 
+/// @returns true if direct mode shall be used.
+bool direct_mode();
+
 /// @returns true if BuildCache is disabled.
 bool disable();
 

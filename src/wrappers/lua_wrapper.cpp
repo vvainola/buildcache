@@ -528,11 +528,25 @@ std::map<std::string, std::string> lua_wrapper_t::get_relevant_env_vars() {
   return program_wrapper_t::get_relevant_env_vars();
 }
 
+string_list_t lua_wrapper_t::get_input_files() {
+  if (m_runner.call("get_input_files")) {
+    return pop_string_list(m_runner.state());
+  }
+  return program_wrapper_t::get_input_files();
+}
+
 std::string lua_wrapper_t::preprocess_source() {
   if (m_runner.call("preprocess_source")) {
     return pop_string(m_runner.state());
   }
   return program_wrapper_t::preprocess_source();
+}
+
+string_list_t lua_wrapper_t::get_implicit_input_files() {
+  if (m_runner.call("get_implicit_input_files")) {
+    return pop_string_list(m_runner.state());
+  }
+  return program_wrapper_t::get_implicit_input_files();
 }
 
 sys::run_result_t lua_wrapper_t::run_for_miss() {

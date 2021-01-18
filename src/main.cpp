@@ -177,6 +177,8 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
               << "\n";
     std::cout << "  BUILDCACHE_DEBUG:                  " << bcache::config::debug() << "\n";
     std::cout << "  BUILDCACHE_DIR:                    " << bcache::config::dir() << "\n";
+    std::cout << "  BUILDCACHE_DIRECT_MODE:            "
+              << (bcache::config::direct_mode() ? "true" : "false") << "\n";
     std::cout << "  BUILDCACHE_DISABLE:                "
               << (bcache::config::disable() ? "true" : "false") << "\n";
     std::cout << "  BUILDCACHE_HARD_LINKS:             "
