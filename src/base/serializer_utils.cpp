@@ -24,6 +24,12 @@
 namespace bcache {
 namespace serialize {
 
+std::string from_bool(const bool x) {
+  auto data = std::string(1, 0);
+  data[0] = static_cast<char>(x ? 1 : 0);
+  return data;
+}
+
 std::string from_int(const int32_t x) {
   auto data = std::string(4, 0);
   data[0] = static_cast<char>(x);
@@ -51,6 +57,14 @@ std::string from_map(const std::map<std::string, std::string>& x) {
     result += (from_string(element.first) + from_string(element.second));
   }
   return result;
+}
+
+bool to_bool(const std::string& data, std::string::size_type& pos) {
+  if ((pos + 1U) > data.size()) {
+    throw std::runtime_error("Premature end of serialized data stream.");
+  }
+  pos += 1;
+  return static_cast<uint8_t>(data[pos - 1]) != 0;
 }
 
 int32_t to_int(const std::string& data, std::string::size_type& pos) {
