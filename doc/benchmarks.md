@@ -2,56 +2,76 @@
 
 ## LLVM Compilation
 
-For this benchmark, LLVM *(2019-10-22, Git commit: 2c4ca6832fa6b306ee6a7010bfb80a3f2596f824)* was built from source as follows:
+For this benchmark, LLVM *(2021-01-17, Git commit: cfec6cd50c36f3db2fcd4084a8ef4df834a4eb24)* was built from source as follows:
 
 ```sh
 mkdir build && cd build
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
 time ninja
 ```
 
 The system used for the benchmark was:
 
-* **CPU**: AMD Ryzen 7 1800x (8-core x86-64, 3.6 GHz).
+* **CPU**: AMD Ryzen 7 1800x (8-core x86-64, underclocked to 3.0 GHz).
 * **Disk**: 1TB NVMe (960 EVO)
 * **RAM**: 32GiB DDR4 @ 3000 MHz
-* **OS**: Linux (Ubuntu 18.04)
-* **Compiler**: GCC 7.5.0
-* **BuildCache**: 0.19.0
+* **OS**: Linux (Ubuntu 20.04)
+* **Compiler**: GCC 9.3.0
+* **BuildCache**: 0.24.0
 
 ### No cache
 
 | Time | Speed |
 |---|---|
-| 12m17.8s | 1.0x |
+| 19m50.9s | 1.0x |
 
 
-### Local cache, no compression
-
-|  | Time | Speed |
-|---|---|---|
-| Cold cache | 12m56.9s | 0.95x |
-| Warm cache | 1m3.5s | 11.6x |
-
-Cache size: **196.8 MiB**
-
-
-### Local cache, LZ4 compression
+### Local cache, no compression, preprocessor mode
 
 |  | Time | Speed |
 |---|---|---|
-| Cold cache | 12m56.3s | 0.95x |
-| Warm cache | 1m5.8s | 11.2x |
+| Cold cache | 20m55.7s | 0.95x |
+| Warm cache | 1m38.7s | 12.1x |
 
-Cache size: **75.3 MiB**
+Cache size: **240.8 MiB**
 
 
-### Local cache, ZSTD compression
+### Local cache, no compression, direct mode
 
 |  | Time | Speed |
 |---|---|---|
-| Cold cache | 12m56.6s | 0.95x |
-| Warm cache | 1m2.6s | 11.8x |
+| Cold cache | 20m56.2s | 0.95x |
+| Warm cache | 0m32.0s | 37.2x |
 
-Cache size: **49.7 MiB**
+Cache size: **326.7 MiB**
 
+
+### Local cache, LZ4 compression, direct mode
+
+|  | Time | Speed |
+|---|---|---|
+| Cold cache | 20m59.0s | 0.95x |
+| Warm cache | 0m31.8s | 37.4x |
+
+Cache size: **177.0 MiB**
+
+
+### Local cache, ZSTD compression, direct mode
+
+|  | Time | Speed |
+|---|---|---|
+| Cold cache | 20m56.7s | 0.95x |
+| Warm cache | 0m31.9s | 37.3x |
+
+Cache size: **145.4 MiB**
+
+### Ccache
+
+For reference, the same compilation was performed with Ccache version 3.7.7 (using the default configuration) on the same system, with the following results:
+
+|  | Time | Speed |
+|---|---|---|
+| Cold cache | 20m55.7s | 0.95x |
+| Warm cache | 0m36.0s | 33.1x |
+
+Cache size: **354.8 MiB**
