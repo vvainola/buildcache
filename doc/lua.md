@@ -39,10 +39,15 @@ documentation):
 | get_program_id () | A unique program identification | The MD4 hash of the program binary |
 | get_relevant_arguments () | Arguments that can affect the build output | All arguments |
 | get_relevant_env_vars () | Environment variables that can affect the build output | An empty table |
+| get_input_files ()\* | Get the paths to the input files for the command | And empty table |
 | preprocess_source () | The preprocessed source code (e.g. for C/C++) | An empty string |
-| run_for_miss () | A `sys::run_result_t` compatible table | *See note\** |
+| get_implicit_input_files ()\* | Get a list of paths to implicit input files (includes) | And empty table |
+| run_for_miss () | A `sys::run_result_t` compatible table | *See note\*\** |
 
-\*: `run_for_miss`, when defined, shall run the actual command (as specified by
+\*: `get_input_files` and `get_implicit_input_files` are only used in direct
+mode, which requires that `direct_mode` is reported by `get_capabilities`.
+
+\*\*: `run_for_miss`, when defined, shall run the actual command (as specified by
 `ARGS`) if a cache miss occurs. The return value shall be a table consisting of
 `std_out`, `std_err` and `return_code` (see
 [sys::run_result_t](../src/sys/sys_utils.hpp)). The default implementation is
