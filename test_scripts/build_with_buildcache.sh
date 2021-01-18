@@ -37,12 +37,17 @@ if is_windows; then
     EXESUFFIX=".exe"
 fi
 
-# Note: This script is expected to be run from the BuildCache build folder.
+# Find the buildcache executable.
 BUILDCACHEDIR="$(pwd)"
+BUILDCACHEEXE="${BUILDCACHEDIR}/buildcache${EXESUFFIX}"
+if [[ ! -x "${BUILDCACHEEXE}" ]]; then
+    echo "ERROR: Not a BuildCache executable: ${BUILDCACHEEXE}"
+    echo "Note: This script is expected to be run from the BuildCache build folder."
+    exit 1
+fi
+echo "BuildCache executable: ${BUILDCACHEEXE}"
 
 # Install BuildCache and symlinks to BuildCache for common compilers.
-BUILDCACHEEXE="${BUILDCACHEDIR}/buildcache${EXESUFFIX}"
-echo "Buildcache executable: ${BUILDCACHEEXE}"
 SYMLINKSDIR="${BUILDCACHEDIR}/symlinks"
 echo "Install symlinks in: ${SYMLINKSDIR}"
 rm -rf "${SYMLINKSDIR}" ; mkdir -p "${SYMLINKSDIR}"
