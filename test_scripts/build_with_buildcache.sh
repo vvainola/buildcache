@@ -64,6 +64,7 @@ export PATH="${SYMLINKSDIR}:${BUILDCACHEDIR}:${PATH}"
 export BUILDCACHE_DIR=/tmp/.buildcache-$$
 rm -rf "${BUILDCACHE_DIR}" ; mkdir -p "${BUILDCACHE_DIR}"
 export BUILDCACHE_DEBUG=2
+export BUILDCACHE_DIRECT_MODE=true
 export LOG_DIR=/tmp/.buildcache-logs-$$
 rm -rf "${LOG_DIR}" ; mkdir -p "${LOG_DIR}"
 
@@ -89,27 +90,46 @@ buildcache -s
 echo "--- LOG (pass 1) ---"
 cat "${LOG_DIR}/test-pass-1.log"
 
-echo "======== Second build (warm cache) ========"
+echo "======== Second build (warm cache, direct mode OFF ) ========"
 cd "${PROJDIR}"
 rm -rf "${BUILDDIR}" ; mkdir -p "${BUILDDIR}"
 cd "${BUILDDIR}"
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release "${SRCDIR}"
 
-time BUILDCACHE_LOG_FILE="${LOG_DIR}/test-pass-2.log" ninja
+time BUILDCACHE_LOG_FILE="${LOG_DIR}/test-pass-2.log" BUILDCACHE_DIRECT_MODE=false ninja
 buildcache -s
 echo "--- LOG (pass 2) ---"
 cat "${LOG_DIR}/test-pass-2.log"
+
+echo "======== Third build (warm cache, direct mode ON ) ========"
+cd "${PROJDIR}"
+rm -rf "${BUILDDIR}" ; mkdir -p "${BUILDDIR}"
+cd "${BUILDDIR}"
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release "${SRCDIR}"
+
+time BUILDCACHE_LOG_FILE="${LOG_DIR}/test-pass-3.log" ninja
+buildcache -s
+echo "--- LOG (pass 3) ---"
+cat "${LOG_DIR}/test-pass-3.log"
 
 # Make sure that there were no cache misses during the second pass.
 EXIT_CODE=0
 if grep -q "Cache miss" "${LOG_DIR}/test-pass-2.log"; then
     echo "*** FAIL: The second build pass contained cache misses."
     EXIT_CODE=1
-else
-    echo "The test passed!"
+fi
+
+# Make sure that there were no direct mode cache misses during the third pass.
+if grep -q "Direct mode cache miss" "${LOG_DIR}/test-pass-3.log"; then
+    echo "*** FAIL: The third build pass contained cache misses."
+    EXIT_CODE=1
 fi
 
 # Clean up.
 cleanup
 
+if [[ "${EXIT_CODE}" == "0" ]]; then
+    echo "----------------------------------------------------------"
+    echo "The test passed!"
+fi
 exit ${EXIT_CODE}
