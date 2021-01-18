@@ -19,14 +19,16 @@
 
 #include <cache/direct_mode_manifest.hpp>
 
+#include <base/compressor.hpp>
 #include <base/serializer_utils.hpp>
+#include <config/configuration.hpp>
 
 #include <stdexcept>
 
 namespace bcache {
 namespace {
 // The version of the manifest file serialization data format.
-const int32_t MANIFEST_DATA_FORMAT_VERSION = 1;
+const int32_t MANIFEST_DATA_FORMAT_VERSION = 2;
 }  // namespace
 
 direct_mode_manifest_t::direct_mode_manifest_t() {
@@ -39,24 +41,48 @@ direct_mode_manifest_t::direct_mode_manifest_t(
 }
 
 std::string direct_mode_manifest_t::serialize() const {
-  std::string data = serialize::from_int(MANIFEST_DATA_FORMAT_VERSION);
-  data += serialize::from_string(m_hash);
-  data += serialize::from_map(m_files_width_hashes);
+  // Should we compress the manifest data?
+  const auto compress = config::compress();
+
+  // Manifest header.
+  auto data = serialize::from_int(MANIFEST_DATA_FORMAT_VERSION);
+  data += serialize::from_bool(compress);
+
+  // Manifest data body.
+  if (compress) {
+    auto uncompressed_data = serialize::from_string(m_hash);
+    uncompressed_data += serialize::from_map(m_files_width_hashes);
+    data += comp::compress(uncompressed_data);
+  } else {
+    data += serialize::from_string(m_hash);
+    data += serialize::from_map(m_files_width_hashes);
+  }
+
   return data;
 }
 
 direct_mode_manifest_t direct_mode_manifest_t::deserialize(const std::string& data) {
   std::string::size_type pos = 0;
 
-  // Read and check the format version.
-  int32_t format_version = serialize::to_int(data, pos);
-  if (format_version > MANIFEST_DATA_FORMAT_VERSION) {
+  // De-serialize the manifest header.
+  auto format_version = serialize::to_int(data, pos);
+  if (format_version != MANIFEST_DATA_FORMAT_VERSION) {
     throw std::runtime_error("Unsupported serialization format version.");
   }
+  const auto decompress = serialize::to_bool(data, pos);
 
-  // De-serialize the manifest.
-  const auto hash = serialize::to_string(data, pos);
-  const auto files_with_hashes = serialize::to_map(data, pos);
+  // Decompress the manifest data body (if necessary).
+  std::string uncompressed_body;
+  if (decompress) {
+    uncompressed_body = comp::decompress(data.substr(pos));
+    pos = 0;
+  } else {
+    uncompressed_body = data;
+  }
+
+  // De-serialize the manifest data body.
+  const auto hash = serialize::to_string(uncompressed_body, pos);
+  const auto files_with_hashes = serialize::to_map(uncompressed_body, pos);
 
   return direct_mode_manifest_t(hash, files_with_hashes);
 }
