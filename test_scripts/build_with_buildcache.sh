@@ -1,19 +1,22 @@
 #!/bin/bash
+# These shellcheck warnings are handled implicitly by trap_handler:
+# shellcheck disable=SC2164
 
-# Check if we're running on Windows (this is mostly a trick to get the script
-# working on the Travis-CI Windows slaves that run Git bash).
+# Check if we're running on Windows.
 function is_windows() {
-    if [ "$(expr substr $(uname -s) 1 5)" == "MINGW" ]; then
+    local u
+    u=$(uname -s)
+    if [ "${u:0:5}" == "MINGW" ]; then
         return 0
     fi
     return 1
 }
 
 function cleanup() {
-    [[ ! -z "${PROJDIR}" ]] && rm -rf "${PROJDIR}"
-    [[ ! -z "${BUILDCACHE_DIR}" ]] && rm -rf "${BUILDCACHE_DIR}"
-    [[ ! -z "${LOG_DIR}" ]] && rm -rf "${LOG_DIR}"
-    [[ ! -z "${SYMLINKSDIR}" ]] && rm -rf "${SYMLINKSDIR}"
+    [[ -n "${PROJDIR}" ]] && rm -rf "${PROJDIR}"
+    [[ -n "${BUILDCACHE_DIR}" ]] && rm -rf "${BUILDCACHE_DIR}"
+    [[ -n "${LOG_DIR}" ]] && rm -rf "${LOG_DIR}"
+    [[ -n "${SYMLINKSDIR}" ]] && rm -rf "${SYMLINKSDIR}"
 }
 
 # Treat errors with exit code 1.
