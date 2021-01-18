@@ -1,7 +1,8 @@
 # BuildCache [![Build and Test](https://github.com/mbitsnbites/buildcache/workflows/Build%20and%20Test/badge.svg)](https://github.com/mbitsnbites/buildcache/actions)
 
-This is a simple compiler accelerator that caches and reuses build results to
-avoid unnecessary re-compilations, and thereby speeding up the build process.
+BuildCache is an advanced compiler accelerator that caches and reuses build
+results to avoid unnecessary re-compilations, and thereby speeding up the build
+process.
 
 It is similar in spirit to [ccache](https://ccache.samba.org/),
 [sccache](https://github.com/mozilla/sccache) and
