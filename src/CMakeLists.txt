@@ -101,3 +101,6 @@ endif()
 install(
   TARGETS buildcache
   RUNTIME DESTINATION bin)
+
+# This ensures that required MSVC runtime libraries are installed.
+include(InstallRequiredSystemLibraries)
