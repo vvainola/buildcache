@@ -58,10 +58,8 @@ public:
 
   /// @brief Check if a direct mode entry exists in the cache.
   /// @param direct_hash The hash of the direct mode cache entry.
-  /// @returns A pair of a direct mode manifest and a file lock object. If there was no cache hit,
-  /// the manifest will be empty, and the file lock object will not hold any lock.
-  std::pair<direct_mode_manifest_t, file::file_lock_t> lookup_direct(
-      const std::string& direct_hash);
+  /// @returns A a direct mode manifest. If there was no cache hit the manifest will be empty.
+  direct_mode_manifest_t lookup_direct(const std::string& direct_hash);
 
   /// @brief Add a set of files to the cache.
   /// @param hash The cache entry identifier.

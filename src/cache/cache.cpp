@@ -62,31 +62,12 @@ bool cache_t::lookup_direct(const std::string& direct_hash,
   std::string hash;
   try {
     // First lookup the manifest from the direct mode hash.
-    // Note: The lookup will give us a file lock that is locked until we go out of scope.
     PERF_START(CACHE_LOOKUP);
-    const auto result = m_local_cache.lookup_direct(direct_hash);
-    const auto& manifest = result.first;
+    const auto manifest = m_local_cache.lookup_direct(direct_hash);
     PERF_STOP(CACHE_LOOKUP);
 
     if (!manifest) {
       throw std::runtime_error("No matching direct mode entry found");
-    }
-
-    // Validate the hashes for all the implicit input files.
-    {
-      PERF_SCOPE(HASH_INCLUDE_FILES);
-      for (const auto& item : manifest.files_width_hashes()) {
-        const auto& path = item.first;
-        const auto& expected_file_hash = item.second;
-
-        // Check that the file has not changed.
-        hasher_t hasher;
-        hasher.update_from_file(path);
-        const auto file_hash = hasher.final().as_string();
-        if (file_hash != expected_file_hash) {
-          throw std::runtime_error("Implicit input files have changed");
-        }
-      }
     }
 
     // If we got this far we had a positive direct mode cache hit. The manifest contains the
