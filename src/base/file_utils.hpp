@@ -242,6 +242,14 @@ std::string read(const std::string& path);
 /// @throws runtime_error if the operation could not be completed.
 void write(const std::string& data, const std::string& path);
 
+/// @brief Write a string to a file in an atomic fashion.
+///
+/// The target file will either be written in whole, or the function will fail.
+/// @param data The data string to write.
+/// @param path The path to the file.
+/// @throws runtime_error if the operation could not be completed.
+void write_atomic(const std::string& data, const std::string& path);
+
 /// @brief Append a string to a file.
 /// @param data The data string to write.
 /// @param path The path to the file.
