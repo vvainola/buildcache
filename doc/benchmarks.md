@@ -29,7 +29,7 @@ The system used for the benchmark was:
 |---|---|
 | 19m50.9s | 1.0x |
 
-### Local cache, no compression, preprocessor mode
+### Local cache, preprocessor mode, no compression
 
 |  | Time | Speed |
 |---|---|---|
@@ -38,7 +38,7 @@ The system used for the benchmark was:
 
 Cache size: **240.8 MiB**
 
-### Local cache, no compression, direct mode
+### Local cache, direct mode, no compression
 
 |  | Time | Speed |
 |---|---|---|
@@ -47,23 +47,23 @@ Cache size: **240.8 MiB**
 
 Cache size: **326.7 MiB**
 
-### Local cache, LZ4 compression, direct mode
+### Local cache, direct mode, LZ4 compression
 
 |  | Time | Speed |
 |---|---|---|
 | Cold cache | 20m59.0s | 0.95x |
 | Warm cache | 0m31.8s | 37.4x |
 
-Cache size: **177.0 MiB**
+Cache size: **134.6 MiB**
 
-### Local cache, ZSTD compression, direct mode
+### Local cache, direct mode, ZSTD compression
 
 |  | Time | Speed |
 |---|---|---|
 | Cold cache | 20m56.7s | 0.95x |
 | Warm cache | 0m31.9s | 37.3x |
 
-Cache size: **145.4 MiB**
+Cache size: **86.9 MiB**
 
 ### Ccache
 

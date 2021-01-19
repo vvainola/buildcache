@@ -51,7 +51,7 @@ std::string s_config_file;
 // Configuration options.
 config::cache_accuracy_t s_accuracy = config::cache_accuracy_t::DEFAULT;
 bool s_cache_link_commands = false;
-bool s_compress = false;
+bool s_compress = true;
 config::compress_format_t s_compress_format = config::compress_format_t::DEFAULT;
 int32_t s_compress_level = -1;
 int32_t s_debug = -1;

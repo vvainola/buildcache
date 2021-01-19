@@ -11,7 +11,7 @@ The following options control the behavior of BuildCache:
 | --- | --- | --- | --- |
 | `BUILDCACHE_ACCURACY` | `accuracy` | Caching accuracy (see below) | DEFAULT |
 | `BUILDCACHE_CACHE_LINK_COMMANDS` | `cache_link_commands` | Enable caching of link commands | false |
-| `BUILDCACHE_COMPRESS` | `compress` | Allow the use of compression when caching (overrides hard links) | false |
+| `BUILDCACHE_COMPRESS` | `compress` | Allow the use of compression when caching (overrides hard links) | true |
 | `BUILDCACHE_COMPRESS_FORMAT` | `compress_format` | Cache compresion format (see below) | DEFAULT |
 | `BUILDCACHE_COMPRESS_LEVEL` | `compress_level` | Cache compresion level (see below) | -1 |
 | `BUILDCACHE_DEBUG` | `debug` | Debug level | None |
@@ -51,7 +51,7 @@ An example configuration file:
     "/home/myname/buildcache-lua",
     "/opt/buildcache-lua"
   ],
-  "compress": true
+  "compress_format": "ZSTD"
 }
 ```
 
@@ -142,9 +142,6 @@ is that you may not be able to use the binaries for code coverage.
 With the cache compression format setting, `BUILDCACHE_COMPRESS_FORMAT`, it is
 possible to control how the generated caches are compressed.
 
-Note: The "compress" setting must be set to true in order to utilize this
-setting.
-
 | BUILDCACHE_COMPRESS_FORMAT   | Comment                                                            |
 | ---------------------------- | ------------------------------------------------------------------ |
 | LZ4                          | Utilize LZ4 compression (faster compression, larger cache sizes)   |
@@ -152,6 +149,9 @@ setting.
 | DEFAULT                      | Utilize LZ4 compresson                                             |
 
 The default compression format is `DEFAULT`.
+
+Note: The "compress" setting must be set to true in order to utilize this
+setting.
 
 ## Cache compression level
 

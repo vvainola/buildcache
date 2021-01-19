@@ -27,9 +27,10 @@ Pre-built binaries of BuildCache can be downloaded [here](https://github.com/mbi
     [rendered images](https://en.wikipedia.org/wiki/Rendering_(computer_graphics)),
     etc).
 * A fast local file system cache.
+  * Suppports both preprocessor-based and fast preprocessorless cache lookup.
 * Can optionally use a remote, shared server as a second level cache.
-* Optional compression with [LZ4](https://github.com/lz4/lz4) or
-  [ZSTD](https://github.com/facebook/zstd) (almost negligable overhead).
+* Compression with [LZ4](https://github.com/lz4/lz4) or optionally
+  [ZSTD](https://github.com/facebook/zstd) (with negligable overhead).
 
 
 ### Supported compilers and languages
