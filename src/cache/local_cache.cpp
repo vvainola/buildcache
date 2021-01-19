@@ -49,6 +49,7 @@
 #include <base/compressor.hpp>
 #include <base/debug_utils.hpp>
 #include <base/file_utils.hpp>
+#include <base/hasher.hpp>
 #include <base/serializer_utils.hpp>
 #include <config/configuration.hpp>
 #include <sys/perf_utils.hpp>
@@ -68,6 +69,17 @@ const std::string DIRECT_CACHE_MANIFEST_FILE_NAME = ".manifest";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 const std::string FILE_LOCK_SUFFIX = ".lock";
 const std::string STATS_FILE_NAME = "stats.json";
+
+// Maximum number of manifests per direct mode cache entry (must be at least 1). Set this too low,
+// and there will be cache thrashing (e.g. when switching branches). Set this too high and cache
+// lookup times will suffer (all existing entires are tried until a hit is found).
+const int NUM_MANIFESTS_PER_ENTRY = 4;
+
+std::string direct_mode_manifesty_file_path(const std::string& cache_entry_path, int manifest_no) {
+  std::ostringstream name;
+  name << manifest_no << DIRECT_CACHE_MANIFEST_FILE_NAME;
+  return file::append_path(cache_entry_path, name.str());
+}
 
 std::string cache_entry_file_lock_path(const std::string& cache_entry_path) {
   return cache_entry_path + FILE_LOCK_SUFFIX;
@@ -289,57 +301,75 @@ void local_cache_t::zero_stats() {
 
 void local_cache_t::add_direct(const std::string& direct_hash,
                                const direct_mode_manifest_t& manifest) {
-  // Create the direct mode cache entry parent directory if necessary.
+  // Note: This logic is executed without a file lock. It should never corrupt the cache, but in
+  // rare race condition situations a direct mode cache manifest may fail to be added - which is
+  // fine.
+
+  // Create the direct mode cache entry directory (if necessary).
   const auto cache_entry_path = hash_to_cache_entry_path(direct_hash);
-  const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
-  file::create_dir_with_parents(cache_entry_parent_path);
+  file::create_dir_with_parents(cache_entry_path);
 
-  {
-    // Acquire a scoped exclusive lock for the cache entry.
-    file::file_lock_t lock(cache_entry_file_lock_path(cache_entry_path), config::remote_locks());
-    if (!lock.has_lock()) {
-      throw std::runtime_error("Unable to acquire a cache entry lock for writing.");
+  // Find an empty slot, or replace the oldest entry.
+  int manifest_no;
+  time::seconds_t oldest = -1;
+  for (int candidate_no = 1; candidate_no <= NUM_MANIFESTS_PER_ENTRY; ++candidate_no) {
+    const auto file_name = direct_mode_manifesty_file_path(cache_entry_path, candidate_no);
+    try {
+      const auto info = file::get_file_info(file_name);
+      if (oldest < 0 || info.access_time() < oldest) {
+        oldest = info.access_time();
+        manifest_no = candidate_no;
+      }
+    } catch (...) {
+      // If we could not get the file info then the file did not exist, and we can use the slot.
+      manifest_no = candidate_no;
+      break;
     }
-
-    // Create the cache entry directory.
-    file::create_dir_with_parents(cache_entry_path);
-
-    // Store the manifest in the direct mode cache entry.
-    // TODO(m): We probably want to store multiple manifests per direct_hash.
-    const auto file_name = file::append_path(cache_entry_path, DIRECT_CACHE_MANIFEST_FILE_NAME);
-    file::write(manifest.serialize(), file_name);
   }
+
+  // Store the manifest in the direct mode cache entry.
+  const auto file_name = direct_mode_manifesty_file_path(cache_entry_path, manifest_no);
+  file::write_atomic(manifest.serialize(), file_name);
 }
 
-std::pair<direct_mode_manifest_t, file::file_lock_t> local_cache_t::lookup_direct(
-    const std::string& direct_hash) {
+direct_mode_manifest_t local_cache_t::lookup_direct(const std::string& direct_hash) {
   // Get the path to the cache entry.
   const auto cache_entry_path = hash_to_cache_entry_path(direct_hash);
 
-  try {
-    // If the cache parent dir does not exist yet, we can't possibly have a cache hit.
-    // Note: This is mostly a trick to avoid irrelevant error log printouts from the file_lock_t
-    // constructor later on.
-    const auto cache_entry_parent_path = file::get_dir_part(cache_entry_path);
-    if (!file::dir_exists(cache_entry_parent_path)) {
-      throw std::runtime_error("Cache entry parent dir does not exist.");
-    }
+  // Try all possible manifest numbers until we find a hit (or not).
+  for (int manifest_no = 1; manifest_no <= NUM_MANIFESTS_PER_ENTRY; ++manifest_no) {
+    try {
+      // Read the cache manifest file (this will throw if the file does not exist).
+      const auto file_name = direct_mode_manifesty_file_path(cache_entry_path, manifest_no);
+      const auto manifest_data = file::read(file_name);
+      auto manifest = direct_mode_manifest_t::deserialize(manifest_data);
 
-    // Acquire a scoped lock for the cache entry.
-    file::file_lock_t lock(cache_entry_file_lock_path(cache_entry_path), config::remote_locks());
-    if (!lock.has_lock()) {
-      throw std::runtime_error("Unable to acquire a cache entry lock for reading.");
-    }
+      // Validate the hashes for all the implicit input files.
+      {
+        PERF_SCOPE(HASH_INCLUDE_FILES);
+        for (const auto& item : manifest.files_width_hashes()) {
+          const auto& path = item.first;
+          const auto& expected_file_hash = item.second;
 
-    // Read the cache manifest file (this will throw if the file does not exist - i.e. if we have a
-    // cache miss).
-    const auto cache_manifest_file_name =
-        file::append_path(cache_entry_path, DIRECT_CACHE_MANIFEST_FILE_NAME);
-    const auto manifest_data = file::read(cache_manifest_file_name);
-    return std::make_pair(direct_mode_manifest_t::deserialize(manifest_data), std::move(lock));
-  } catch (...) {
-    return std::make_pair(direct_mode_manifest_t(), file::file_lock_t());
+          // Check that the file has not changed.
+          hasher_t hasher;
+          hasher.update_from_file(path);
+          const auto file_hash = hasher.final().as_string();
+          if (file_hash != expected_file_hash) {
+            debug::log(debug::DEBUG) << "No direct match (" << file::get_file_part(file_name)
+                                     << "): " << path << " differs";
+            throw std::runtime_error("Implicit input files have changed");
+          }
+        }
+      }
+
+      return manifest;
+    } catch (...) {
+      // We don't care why, but this manifest_no was not a hit.
+    }
   }
+
+  return direct_mode_manifest_t();
 }
 
 void local_cache_t::add(const std::string& hash,

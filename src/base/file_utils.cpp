@@ -740,6 +740,19 @@ void write(const std::string& data, const std::string& path) {
   }
 }
 
+void write_atomic(const std::string& data, const std::string& path) {
+  // 1) Write to a temporary file.
+  const auto base_path = get_dir_part(path);
+  auto tmp_file = tmp_file_t(base_path, ".tmp");
+  write(data, tmp_file.path());
+
+  // 2) Remove the target path if it already exists.
+  remove_file(path, true);
+
+  // 3) Move the temporary file to the target file name.
+  move(tmp_file.path(), path);
+}
+
 void append(const std::string& data, const std::string& path) {
   if (path.empty()) {
     throw std::runtime_error("No file path given.");
