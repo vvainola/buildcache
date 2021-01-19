@@ -19,12 +19,15 @@ The system used for the benchmark was:
 * **Compiler**: GCC 9.3.0
 * **BuildCache**: 0.24.0
 
+### TL;DR graph
+
+![LLVM build time speedup](llvm-benchmark-graph.jpg)
+
 ### No cache
 
 | Time | Speed |
 |---|---|
 | 19m50.9s | 1.0x |
-
 
 ### Local cache, no compression, preprocessor mode
 
@@ -35,7 +38,6 @@ The system used for the benchmark was:
 
 Cache size: **240.8 MiB**
 
-
 ### Local cache, no compression, direct mode
 
 |  | Time | Speed |
@@ -45,7 +47,6 @@ Cache size: **240.8 MiB**
 
 Cache size: **326.7 MiB**
 
-
 ### Local cache, LZ4 compression, direct mode
 
 |  | Time | Speed |
@@ -54,7 +55,6 @@ Cache size: **326.7 MiB**
 | Warm cache | 0m31.8s | 37.4x |
 
 Cache size: **177.0 MiB**
-
 
 ### Local cache, ZSTD compression, direct mode
 
