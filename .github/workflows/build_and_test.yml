@@ -78,6 +78,7 @@ jobs:
         set(ENV{CC} ${{ matrix.config.cc }})
         set(ENV{CXX} ${{ matrix.config.cxx }})
 
+        # Capture environment variables (preserve the effect of MSVC vcvars.bat).
         if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
           execute_process(
             COMMAND "${{ matrix.config.environment_script }}" && set
@@ -89,6 +90,11 @@ jobs:
               set(ENV{${CMAKE_MATCH_1}} "${CMAKE_MATCH_2}")
             endif()
           endforeach()
+        endif()
+
+        # Build universal binaries on macOS.
+        if ("${{ runner.os }}" STREQUAL "macOS")
+          set(ENV{CMAKE_OSX_ARCHITECTURES} "x86_64;arm64")
         endif()
 
         execute_process(
@@ -109,6 +115,7 @@ jobs:
       run: |
         set(ENV{NINJA_STATUS} "[%f/%t %o/sec] ")
 
+        # Resture environment variables (apply the effect of MSVC vcvars.bat).
         if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
           file(STRINGS environment_script_output.txt output_lines)
           foreach(line IN LISTS output_lines)
