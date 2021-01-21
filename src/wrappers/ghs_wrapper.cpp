@@ -25,6 +25,8 @@
 
 #include <algorithm>
 #include <list>
+#include <regex>
+#include <set>
 #include <stdexcept>
 
 namespace bcache {
@@ -39,6 +41,34 @@ bool is_source_file(const std::string& arg) {
 }  // namespace
 
 ghs_wrapper_t::ghs_wrapper_t(const string_list_t& args) : gcc_wrapper_t(args) {
+}
+
+string_list_t ghs_wrapper_t::get_include_files(const std::string& std_err) const {
+  // Turn the std_err string into a list of strings.
+  // TODO(m): Is this correct on Windows for instance?
+  string_list_t lines(std_err, "\n");
+
+  // Extract all unique include paths. Include path references in std_err start with zero or more
+  // spaces followed by the full path. In the regex we also trim leading and trailing whitespaces
+  // from the path, just for good measure.
+  const std::regex incpath_re("\\s*(.*[^\\s])\\s*");
+  std::set<std::string> includes;
+  for (const auto& line : lines) {
+    std::smatch match;
+    if (std::regex_match(line, match, incpath_re)) {
+      if (match.size() == 2) {
+        const auto& include = match[1].str();
+        includes.insert(file::resolve_path(include));
+      }
+    }
+  }
+
+  // Convert the set of includes to a list of strings.
+  string_list_t result;
+  for (const auto& include : includes) {
+    result += include;
+  }
+  return result;
 }
 
 bool ghs_wrapper_t::can_handle_command() {
