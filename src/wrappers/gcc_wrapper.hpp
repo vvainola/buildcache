@@ -47,6 +47,7 @@ private:
   void resolve_args() override;
   string_list_t parse_args(const string_list_t& args);
   string_list_t parse_response_file(const std::string& filename);
+  virtual string_list_t get_include_files(const std::string& std_err) const;
 };
 }  // namespace bcache
 #endif  // BUILDCACHE_GCC_WRAPPER_HPP_

@@ -127,34 +127,6 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 
   return preprocess_args;
 }
-
-string_list_t get_include_files(const std::string& std_err) {
-  // Turn the std_err string into a list of strings.
-  // TODO(m): Is this correct on Windows for instance?
-  string_list_t lines(std_err, "\n");
-
-  // Extract all unique include paths. Include path references in std_err start with one or more
-  // dots (.) followed by a single space character, and finally the full path. In the regex we also
-  // trim leading and trailing whitespaces from the path, just for good measure.
-  const std::regex incpath_re("\\.+\\s+(.*[^\\s])\\s*");
-  std::set<std::string> includes;
-  for (const auto& line : lines) {
-    std::smatch match;
-    if (std::regex_match(line, match, incpath_re)) {
-      if (match.size() == 2) {
-        const auto& include = match[1].str();
-        includes.insert(file::resolve_path(include));
-      }
-    }
-  }
-
-  // Convert the set of includes to a list of strings.
-  string_list_t result;
-  for (const auto& include : includes) {
-    result += include;
-  }
-  return result;
-}
 }  // namespace
 
 gcc_wrapper_t::gcc_wrapper_t(const string_list_t& args) : program_wrapper_t(args) {
@@ -195,6 +167,34 @@ string_list_t gcc_wrapper_t::parse_response_file(const std::string& filename) {
   }
 
   return parsed_file_contents;
+}
+
+string_list_t gcc_wrapper_t::get_include_files(const std::string& std_err) const {
+  // Turn the std_err string into a list of strings.
+  // TODO(m): Is this correct on Windows for instance?
+  string_list_t lines(std_err, "\n");
+
+  // Extract all unique include paths. Include path references in std_err start with one or more
+  // periods (.) followed by a single space character, and finally the full path. In the regex we
+  // also trim leading and trailing whitespaces from the path, just for good measure.
+  const std::regex incpath_re("\\.+\\s+(.*[^\\s])\\s*");
+  std::set<std::string> includes;
+  for (const auto& line : lines) {
+    std::smatch match;
+    if (std::regex_match(line, match, incpath_re)) {
+      if (match.size() == 2) {
+        const auto& include = match[1].str();
+        includes.insert(file::resolve_path(include));
+      }
+    }
+  }
+
+  // Convert the set of includes to a list of strings.
+  string_list_t result;
+  for (const auto& include : includes) {
+    result += include;
+  }
+  return result;
 }
 
 bool gcc_wrapper_t::can_handle_command() {
