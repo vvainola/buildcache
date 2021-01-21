@@ -29,6 +29,8 @@
 #include <cstdlib>
 #include <fstream>
 #include <locale>
+#include <regex>
+#include <set>
 #include <stdexcept>
 
 namespace bcache {
@@ -112,7 +114,40 @@ string_list_t make_preprocessor_cmd(const string_list_t& args) {
     preprocess_args += std::string("/E");
   }
 
+  // Add argument for listing include files (used for direct mode).
+  preprocess_args += std::string("/showIncludes");
+
   return preprocess_args;
+}
+
+string_list_t get_include_files(const std::string& std_err) {
+  // Turn the std_err string into a list of strings.
+  // TODO(m): Is this correct on Windows for instance?
+  string_list_t lines(std_err, "\n");
+
+  // Extract all unique include paths. Include path references in std_err start with the prefix
+  // "Note: including file:", followed by one or more space characters, and finally the full path.
+  // In the regex wealso trim trailing whitespaces from the path, just for good measure.
+  //
+  // See: https://docs.microsoft.com/en-us/cpp/build/reference/showincludes-list-include-files
+  const std::regex incpath_re("\\s*Note: including file:\\s+(.*[^\\s])\\s*");
+  std::set<std::string> includes;
+  for (const auto& line : lines) {
+    std::smatch match;
+    if (std::regex_match(line, match, incpath_re)) {
+      if (match.size() == 2) {
+        const auto& include = match[1].str();
+        includes.insert(file::resolve_path(include));
+      }
+    }
+  }
+
+  // Convert the set of includes to a list of strings.
+  string_list_t result;
+  for (const auto& include : includes) {
+    result += include;
+  }
+  return result;
 }
 }  // namespace
 
@@ -162,8 +197,9 @@ bool msvc_wrapper_t::can_handle_command() {
 }
 
 string_list_t msvc_wrapper_t::get_capabilities() {
-  // We can use hard links with MSVC since it will never overwrite already existing files.
-  return string_list_t{"hard_links"};
+  // direct_mode - We support direct mode.
+  // hard_links  - We can use hard links since MSVC will never overwrite already existing files.
+  return string_list_t{"direct_mode", "hard_links"};
 }
 
 std::map<std::string, expected_file_t> msvc_wrapper_t::get_build_files() {
@@ -247,6 +283,16 @@ std::map<std::string, std::string> msvc_wrapper_t::get_relevant_env_vars() {
   return env_vars;
 }
 
+string_list_t msvc_wrapper_t::get_input_files() {
+  string_list_t input_files;
+  for (const auto& arg : m_resolved_args) {
+    if (is_source_file(arg)) {
+      input_files += file::resolve_path(arg);
+    }
+  }
+  return input_files;
+}
+
 std::string msvc_wrapper_t::preprocess_source() {
   // Check if this is a compilation command that we support.
   auto is_object_compilation = false;
@@ -274,8 +320,15 @@ std::string msvc_wrapper_t::preprocess_source() {
     throw std::runtime_error("Preprocessing command was unsuccessful.");
   }
 
+  // Collect all the input files. They are reported in std_err.
+  m_implicit_input_files = get_include_files(result.std_err);
+
   // Return the preprocessed file (from stdout).
   return result.std_out;
+}
+
+string_list_t msvc_wrapper_t::get_implicit_input_files() {
+  return m_implicit_input_files;
 }
 
 sys::run_result_t msvc_wrapper_t::run_for_miss() {
