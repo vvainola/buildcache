@@ -34,7 +34,9 @@ namespace bcache {
 /// corrsponding methods in a Lua script.
 class lua_wrapper_t : public program_wrapper_t {
 public:
-  lua_wrapper_t(const string_list_t& args, const std::string& lua_script_path);
+  lua_wrapper_t(const file::exe_path_t& exe_path,
+                const string_list_t& args,
+                const std::string& lua_script_path);
 
   bool can_handle_command() override;
 

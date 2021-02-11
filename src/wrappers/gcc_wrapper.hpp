@@ -26,7 +26,7 @@ namespace bcache {
 /// @brief A program wrapper for GCC and GCC-like C/C++ compilers.
 class gcc_wrapper_t : public program_wrapper_t {
 public:
-  gcc_wrapper_t(const string_list_t& args);
+  gcc_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args);
 
   bool can_handle_command() override;
 

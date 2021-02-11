@@ -129,7 +129,8 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 }
 }  // namespace
 
-gcc_wrapper_t::gcc_wrapper_t(const string_list_t& args) : program_wrapper_t(args) {
+gcc_wrapper_t::gcc_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args)
+    : program_wrapper_t(exe_path, args) {
 }
 
 void gcc_wrapper_t::resolve_args() {
@@ -201,7 +202,7 @@ bool gcc_wrapper_t::can_handle_command() {
   // Is this the right compiler?
   // Note: We keep the file extension part to support version strings in the executable file name,
   // such as "aarch64-unknown-nto-qnx7.0.0-g++".
-  const auto cmd = lower_case(file::get_file_part(m_args[0], true));
+  const auto cmd = lower_case(file::get_file_part(m_exe_path.real_path(), true));
 
   // gcc?
   if ((cmd.find("gcc") != std::string::npos) || (cmd.find("g++") != std::string::npos)) {

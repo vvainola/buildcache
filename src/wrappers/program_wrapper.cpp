@@ -75,7 +75,8 @@ capabilities_t::capabilities_t(const string_list_t& cap_strings) {
 }
 }  // namespace
 
-program_wrapper_t::program_wrapper_t(const string_list_t& args) : m_args(args) {
+program_wrapper_t::program_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args)
+    : m_exe_path(exe_path), m_args(args) {
 }
 
 program_wrapper_t::~program_wrapper_t() {
@@ -284,9 +285,8 @@ std::map<std::string, expected_file_t> program_wrapper_t::get_build_files() {
 
 std::string program_wrapper_t::get_program_id() {
   // Default: The hash of the program binary serves as the program identification.
-  const auto& program_exe = m_args[0];
   hasher_t hasher;
-  hasher.update_from_file(program_exe);
+  hasher.update_from_file(m_exe_path.real_path());
   return hasher.final().as_string();
 }
 
@@ -326,7 +326,7 @@ sys::run_result_t program_wrapper_t::run_for_miss() {
 std::string program_wrapper_t::get_program_id_cached() {
   try {
     // Get an ID of the program executable, based on its path, size and modification time.
-    const auto file_info = file::get_file_info(m_args[0]);
+    const auto file_info = file::get_file_info(m_exe_path.real_path());
     std::ostringstream ss;
     ss << file_info.path() << ":" << file_info.size() << ":" << file_info.modify_time();
     hasher_t hasher;
