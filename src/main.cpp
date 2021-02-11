@@ -321,13 +321,13 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
     // to run the original command. At the same time this is a protection against endless symlink
     // recursion. Figure something out!
     PERF_START(FIND_EXECUTABLE);
-    const auto true_exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
+    const auto exe_path = bcache::file::find_executable(args[0], BUILDCACHE_EXE_NAME);
     PERF_STOP(FIND_EXECUTABLE);
 
     // Replace the command with the true exe path. Most of the following operations rely on having
     // a correct executable path. Also, this is important to avoid recursions when we are invoked
     // from a symlink, for instance.
-    args[0] = true_exe_path;
+    args[0] = exe_path.real_path();
 
     // Is the caching mechanism disabled?
     if (bcache::config::disable()) {
@@ -347,7 +347,7 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
         if (wrapper) {
           was_wrapped = wrapper->handle_command(return_code);
         } else {
-          bcache::debug::log(bcache::debug::INFO) << "No suitable wrapper for " << true_exe_path;
+          bcache::debug::log(bcache::debug::INFO) << "No suitable wrapper for " << exe_path.real_path();
         }
       } catch (const std::exception& e) {
         bcache::debug::log(bcache::debug::ERROR) << "Unexpected error: " << e.what();

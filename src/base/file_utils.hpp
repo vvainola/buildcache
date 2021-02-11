@@ -95,6 +95,43 @@ private:
   bool m_is_dir;
 };
 
+/// @brief Path to an executable file.
+///
+/// This object contains:
+///   - The real (resolved) path to the executable file.
+///   - The virtual (unresolved) path (possibly a symbolic link).
+///   - The command that was used to invoke the executable (not necessarily a path).
+class exe_path_t {
+public:
+  exe_path_t(const std::string real_path,
+             const std::string virtual_path,
+             const std::string invoked_as)
+      : m_real_path(real_path), m_virtual_path(virtual_path), m_invoked_as(invoked_as) {
+  }
+
+  /// @returns the real (resolved) path of the executable file.
+  const std::string& real_path() const {
+    return m_real_path;
+  }
+
+  /// @returns the virtual (unresolved) path of the executable file.
+  /// @note This will be different from @c real_path if it represents a symbolic link to the real
+  /// executable file.
+  const std::string& virtual_path() const {
+    return m_virtual_path;
+  }
+
+  /// @returns the invokation command.
+  const std::string& invoked_as() const {
+    return m_invoked_as;
+  }
+
+private:
+  std::string m_real_path;
+  std::string m_virtual_path;
+  std::string m_invoked_as;
+};
+
 ///@{
 /// @brief Append two paths.
 /// @param path The base path.
@@ -147,11 +184,11 @@ std::string get_user_home_dir();
 std::string resolve_path(const std::string& path);
 
 /// @brief Find the true path to an executable file.
-/// @param path The file to find.
+/// @param program The file to find.
 /// @param exclude A file name to exclude (excluding the file extension).
-/// @returns an absolute path to the true executable file (symlinks resolved and all).
-/// @throws runtime_error if the file could not be found.
-std::string find_executable(const std::string& path, const std::string& exclude = std::string());
+/// @returns an exe_path_t object with extended path information for the executable file.
+/// @throws runtime_error if the executable file could not be found.
+exe_path_t find_executable(const std::string& program, const std::string& exclude = std::string());
 
 /// @brief Get file information about a single file or directory.
 /// @param path The path to the file (or directory).

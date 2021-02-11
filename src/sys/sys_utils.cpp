@@ -84,8 +84,8 @@ std::string make_exe_path_suitable_for_icecc(const std::string& path) {
 #if !defined(_WIN32)
 bool try_start_editor(const std::string& program, const std::string& file) {
   try {
-    const auto& real_path = file::find_executable(program);
-    execl(real_path.c_str(), program.c_str(), file.c_str(), (char*)0);
+    const auto& exe_path = file::find_executable(program);
+    execl(exe_path.real_path().c_str(), program.c_str(), file.c_str(), (char*)0);
     return true;
   } catch (...) {
   }
