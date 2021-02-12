@@ -220,7 +220,7 @@ bool gcc_wrapper_t::can_handle_command() {
 
     // We allow things like "clang", "clang++", "clang-5", "x86-clang-6.0", but not "clang-tidy"
     // and similar.
-    const std::regex clang_re(".*clang(\\+\\+|-cpp)?(-[1-9][0-9]*(\\.[0-9]+)?)?");
+    const std::regex clang_re(".*clang(\\+\\+|-cpp)?(-[1-9][0-9]*(\\.[0-9]+)*)?(\\.exe)?");
     if (std::regex_match(cmd, clang_re)) {
       return true;
     }
