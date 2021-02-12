@@ -211,8 +211,15 @@ bool gcc_wrapper_t::can_handle_command() {
 
   // clang?
   {
-    // We allow things like "clang", "clang++", "clang-5", "x86-clang-6.0", but not "clang-tidy" and
-    // similar.
+    // We can't handle clang-cl style arguments (it's handled by the MSVC wrapper). We check the
+    // virtual_path rather than the real path, since clang-cl may be invoked as a symlink to clang.
+    const auto virt_cmd = lower_case(file::get_file_part(m_exe_path.virtual_path(), false));
+    if (virt_cmd == "clang-cl") {
+      return false;
+    }
+
+    // We allow things like "clang", "clang++", "clang-5", "x86-clang-6.0", but not "clang-tidy"
+    // and similar.
     const std::regex clang_re(".*clang(\\+\\+|-cpp)?(-[1-9][0-9]*(\\.[0-9]+)?)?");
     if (std::regex_match(cmd, clang_re)) {
       return true;
