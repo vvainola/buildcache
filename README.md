@@ -42,6 +42,7 @@ Currently the following compilers and languages are supported:
 | [GCC](https://gcc.gnu.org/) | C, C++ | Built-in |
 | [Clang](https://clang.llvm.org/) | C, C++ | Built-in |
 | [Microsoft Visual C++](https://visualstudio.microsoft.com/vs/features/cplusplus/) | C, C++ | Built-in |
+| [clang-cl](https://clang.llvm.org/docs/UsersManual.html#clang-cl) | C, C++ | Built-in |
 | [Green Hills Optimizing Compilers](https://www.ghs.com/products/compiler.html) | C, C++ | Built-in |
 | [TI TMS320C6000 Optimizing Compiler](http://www.ti.com/tool/C6000-CGT) | C, C++ | Built-in |
 | [TI ARM Optimizing C/C++ Compiler](http://www.ti.com/tool/ARM-CGT) | C, C++ | Built-in |

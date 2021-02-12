@@ -40,7 +40,8 @@ bool is_source_file(const std::string& arg) {
 }
 }  // namespace
 
-ghs_wrapper_t::ghs_wrapper_t(const string_list_t& args) : gcc_wrapper_t(args) {
+ghs_wrapper_t::ghs_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args)
+    : gcc_wrapper_t(exe_path, args) {
 }
 
 string_list_t ghs_wrapper_t::get_include_files(const std::string& std_err) const {
@@ -85,7 +86,7 @@ bool ghs_wrapper_t::can_handle_command() {
                                                    "cxrh850",
                                                    "cxintrh850"};
 
-  const auto cmd = lower_case(file::get_file_part(m_args[0], false));
+  const auto cmd = lower_case(file::get_file_part(m_exe_path.real_path(), false));
 
   return std::find_if(supported.begin(), supported.end(), [&cmd](const std::string& s) {
            return cmd.find(s) != std::string::npos;

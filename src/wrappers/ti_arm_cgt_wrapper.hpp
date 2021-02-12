@@ -26,7 +26,7 @@ namespace bcache {
 /// @brief A program wrapper for the TI ARM CGT compiler.
 class ti_arm_cgt_wrapper_t : public ti_common_wrapper_t {
 public:
-  ti_arm_cgt_wrapper_t(const string_list_t& args);
+  ti_arm_cgt_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args);
   bool can_handle_command() override;
 };
 }  // namespace bcache

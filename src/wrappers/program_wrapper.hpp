@@ -50,7 +50,7 @@ public:
 
 protected:
   // This constructor is called by derived classes.
-  program_wrapper_t(const string_list_t& args);
+  program_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args);
 
   /// @brief Resolve arguments on the command line.
   ///
@@ -140,6 +140,7 @@ protected:
   /// @returns the run result for the child process.
   virtual sys::run_result_t run_for_miss();
 
+  const file::exe_path_t& m_exe_path;
   const string_list_t& m_args;
 
 private:

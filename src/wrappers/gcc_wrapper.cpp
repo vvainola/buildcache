@@ -129,7 +129,8 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 }
 }  // namespace
 
-gcc_wrapper_t::gcc_wrapper_t(const string_list_t& args) : program_wrapper_t(args) {
+gcc_wrapper_t::gcc_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args)
+    : program_wrapper_t(exe_path, args) {
 }
 
 void gcc_wrapper_t::resolve_args() {
@@ -201,7 +202,7 @@ bool gcc_wrapper_t::can_handle_command() {
   // Is this the right compiler?
   // Note: We keep the file extension part to support version strings in the executable file name,
   // such as "aarch64-unknown-nto-qnx7.0.0-g++".
-  const auto cmd = lower_case(file::get_file_part(m_args[0], true));
+  const auto cmd = lower_case(file::get_file_part(m_exe_path.real_path(), true));
 
   // gcc?
   if ((cmd.find("gcc") != std::string::npos) || (cmd.find("g++") != std::string::npos)) {
@@ -210,8 +211,15 @@ bool gcc_wrapper_t::can_handle_command() {
 
   // clang?
   {
-    // We allow things like "clang", "clang++", "clang-5", "x86-clang-6.0", but not "clang-tidy" and
-    // similar.
+    // We can't handle clang-cl style arguments (it's handled by the MSVC wrapper). We check the
+    // virtual_path rather than the real path, since clang-cl may be invoked as a symlink to clang.
+    const auto virt_cmd = lower_case(file::get_file_part(m_exe_path.virtual_path(), false));
+    if (virt_cmd == "clang-cl") {
+      return false;
+    }
+
+    // We allow things like "clang", "clang++", "clang-5", "x86-clang-6.0", but not "clang-tidy"
+    // and similar.
     const std::regex clang_re(".*clang(\\+\\+|-cpp)?(-[1-9][0-9]*(\\.[0-9]+)?)?");
     if (std::regex_match(cmd, clang_re)) {
       return true;

@@ -26,7 +26,7 @@ namespace bcache {
 /// @brief A base wrapper for the TI compilers.
 class ti_common_wrapper_t : public program_wrapper_t {
 public:
-  ti_common_wrapper_t(const string_list_t& args);
+  ti_common_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args);
 
 protected:
   void resolve_args() override;

@@ -462,15 +462,17 @@ bool lua_wrapper_t::runner_t::call(const std::string& func) {
   return true;
 }
 
-lua_wrapper_t::lua_wrapper_t(const string_list_t& args, const std::string& lua_script_path)
-    : program_wrapper_t(args), m_runner(lua_script_path, args) {
+lua_wrapper_t::lua_wrapper_t(const file::exe_path_t& exe_path,
+                             const string_list_t& args,
+                             const std::string& lua_script_path)
+    : program_wrapper_t(exe_path, args), m_runner(lua_script_path, args) {
 }
 
 bool lua_wrapper_t::can_handle_command() {
   auto result = false;
   try {
     // First check: regex match against program name.
-    if (is_program_match(m_runner.script(), m_args[0])) {
+    if (is_program_match(m_runner.script(), m_exe_path.real_path())) {
       // Second check: Call can_handle_command(), if defined.
       if (m_runner.call("can_handle_command")) {
         result = pop_bool(m_runner.state());

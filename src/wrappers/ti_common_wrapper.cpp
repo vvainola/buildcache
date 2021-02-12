@@ -114,7 +114,9 @@ void hash_link_cmd_file(const std::string& path, hasher_t& hasher) {
 }
 }  // namespace
 
-ti_common_wrapper_t::ti_common_wrapper_t(const string_list_t& args) : program_wrapper_t(args) {
+ti_common_wrapper_t::ti_common_wrapper_t(const file::exe_path_t& exe_path,
+                                         const string_list_t& args)
+    : program_wrapper_t(exe_path, args) {
 }
 
 void ti_common_wrapper_t::resolve_args() {

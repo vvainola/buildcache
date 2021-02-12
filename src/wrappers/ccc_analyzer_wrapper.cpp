@@ -27,12 +27,13 @@
 
 namespace bcache {
 
-ccc_analyzer_wrapper_t::ccc_analyzer_wrapper_t(const string_list_t& args)
-    : gcc_wrapper_t(args), m_tmp_report_dir(file::get_temp_dir(), "") {
+ccc_analyzer_wrapper_t::ccc_analyzer_wrapper_t(const file::exe_path_t& exe_path,
+                                               const string_list_t& args)
+    : gcc_wrapper_t(exe_path, args), m_tmp_report_dir(file::get_temp_dir(), "") {
 }
 
 bool ccc_analyzer_wrapper_t::can_handle_command() {
-  const auto cmd = lower_case(file::get_file_part(m_args[0], true));
+  const auto cmd = lower_case(file::get_file_part(m_exe_path.real_path(), true));
 
   // We recognize ccc-analyzer and c++-analyzer.
   const std::regex ccc_analyzer_re("c(\\+\\+|cc)-analyzer");

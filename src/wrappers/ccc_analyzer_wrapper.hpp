@@ -28,7 +28,7 @@ namespace bcache {
 /// The analyzer runs GCC/Clang under the hood, so we inherit from the GCC wrapper.
 class ccc_analyzer_wrapper_t : public gcc_wrapper_t {
 public:
-  ccc_analyzer_wrapper_t(const string_list_t& args);
+  ccc_analyzer_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args);
 
   bool can_handle_command() override;
 

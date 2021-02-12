@@ -25,12 +25,13 @@
 #include <regex>
 
 namespace bcache {
-ti_arp32_wrapper_t::ti_arp32_wrapper_t(const string_list_t& args) : ti_common_wrapper_t(args) {
+ti_arp32_wrapper_t::ti_arp32_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args)
+    : ti_common_wrapper_t(exe_path, args) {
 }
 
 bool ti_arp32_wrapper_t::can_handle_command() {
   // Is this the right compiler?
-  const auto cmd = lower_case(file::get_file_part(m_args[0], true));
+  const auto cmd = lower_case(file::get_file_part(m_exe_path.real_path(), true));
   const std::regex re("cl-arp32.*");
   return std::regex_match(cmd, re);
 }

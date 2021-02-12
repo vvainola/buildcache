@@ -151,7 +151,8 @@ string_list_t get_include_files(const std::string& std_err) {
 }
 }  // namespace
 
-msvc_wrapper_t::msvc_wrapper_t(const string_list_t& args) : program_wrapper_t(args) {
+msvc_wrapper_t::msvc_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args)
+    : program_wrapper_t(exe_path, args) {
 }
 
 void msvc_wrapper_t::resolve_args() {
@@ -192,7 +193,7 @@ void msvc_wrapper_t::resolve_args() {
 
 bool msvc_wrapper_t::can_handle_command() {
   // Is this the right compiler?
-  const auto cmd = lower_case(file::get_file_part(m_args[0], false));
+  const auto cmd = lower_case(file::get_file_part(m_exe_path.real_path(), false));
   return (cmd == "cl");
 }
 

@@ -407,7 +407,7 @@ std::string resolve_path(const std::string& path) {
 #endif
 }
 
-std::string find_executable(const std::string& path, const std::string& exclude) {
+exe_path_t find_executable(const std::string& program, const std::string& exclude) {
   const auto extensions = get_exe_extensions();
 
   std::string file_to_find;
@@ -415,9 +415,9 @@ std::string find_executable(const std::string& path, const std::string& exclude)
   // Handle absolute and relative paths. Examples:
   //  - "C:\Foo\foo.exe"
   //  - "somedir/../mysubdir/foo"
-  if (is_absolute_path(path) || is_relateive_path(path)) {
+  if (is_absolute_path(program) || is_relateive_path(program)) {
     for (const auto& ext : extensions) {
-      const auto path_with_ext = path + ext;
+      auto path_with_ext = program + ext;
 
       // Return the full path unless it points to the excluded executable.
       auto true_path = resolve_path(path_with_ext);
@@ -426,17 +426,21 @@ std::string find_executable(const std::string& path, const std::string& exclude)
         continue;
       }
       if (lower_case(get_file_part(true_path, false)) != exclude) {
-        debug::log(debug::DEBUG) << "Found exe: " << true_path << " (looked for " << path << ")";
-        return true_path;
+        // TODO(m): We should canonicalize the virtual path (without resolving symbolic links).
+        const auto& virtual_path = path_with_ext;
+        debug::log(debug::DEBUG) << "Found exe: " << true_path << " (" << program << ", "
+                                 << virtual_path << ")";
+        return exe_path_t(true_path, virtual_path, program);
       }
 
       // ...otherwise search for the named file (which should be a symlink) in the PATH.
+      // This handles invokations of programs via symbolic links to the buildcache executable.
       file_to_find = get_file_part(path_with_ext);
       break;
     }
   } else {
     // The path is just a file name without a path.
-    file_to_find = path;
+    file_to_find = program;
   }
 
   if (!file_to_find.empty()) {
@@ -458,13 +462,14 @@ std::string find_executable(const std::string& path, const std::string& exclude)
     for (const auto& base_path : search_path) {
       for (const auto& ext : extensions) {
         const auto file_name = file_to_find + ext;
-        auto true_path = resolve_path(append_path(base_path, file_name));
+        auto virtual_path = append_path(base_path, file_name);
+        auto true_path = resolve_path(virtual_path);
         if ((!true_path.empty()) && file_exists(true_path)) {
           // Check that this is not the excluded file name.
           if (lower_case(get_file_part(true_path, false)) != exclude) {
             debug::log(debug::DEBUG)
-                << "Found exe: " << true_path << " (looked for " << file_name << ")";
-            return true_path;
+                << "Found exe: " << true_path << " (" << program << ", " << virtual_path << ")";
+            return exe_path_t(true_path, virtual_path, program);
           }
         }
       }
