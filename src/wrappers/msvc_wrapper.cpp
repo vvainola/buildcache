@@ -173,7 +173,7 @@ void msvc_wrapper_t::resolve_args() {
                                   new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>));
           std::wstring wline;
           while (std::getline(wfile, wline)) {
-            m_resolved_args += string_list_t::split_args(ucs2_to_utf8(wline));
+            m_resolved_args += string_list_t::split_args(strip(ucs2_to_utf8(wline)));
           }
         } else {
           // Assume UTF-8.
@@ -181,7 +181,7 @@ void msvc_wrapper_t::resolve_args() {
           file.seekg(0);
           std::string line;
           while (std::getline(file, line)) {
-            m_resolved_args += string_list_t::split_args(line);
+            m_resolved_args += string_list_t::split_args(strip(line));
           }
         }
       }
@@ -207,7 +207,7 @@ std::map<std::string, expected_file_t> msvc_wrapper_t::get_build_files() {
   std::map<std::string, expected_file_t> files;
   auto found_object_file = false;
   for (const auto& arg : m_resolved_args) {
-    if (arg_starts_with(arg, "Fo") && (is_object_file(file::get_extension(arg)))) {
+    if (arg_starts_with(arg, "Fo") && is_object_file(file::get_extension(arg))) {
       if (found_object_file) {
         throw std::runtime_error("Only a single target object file can be specified.");
       }
