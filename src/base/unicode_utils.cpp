@@ -111,6 +111,11 @@ void ucs2_char_to_utf8_char(const wchar_t ucs2_char, char* utf8_token) {
   }
 }
 #endif  // USE_CPP11_CODECVT
+
+bool is_whitespace(const char c) {
+  // TODO(m): Add more white space characters.
+  return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+}
 }  // namespace
 
 #if defined(USE_CPP11_CODECVT)
@@ -174,5 +179,28 @@ std::string lower_case(const std::string& str) {
     result[i] = in;
   }
   return result;
+}
+
+std::string lstrip(const std::string& str) {
+  const auto original_len = str.size();
+  auto pos = std::string::size_type(0);
+  while (pos < original_len && is_whitespace(str[pos])) {
+    ++pos;
+  }
+  return pos != 0 ? str.substr(pos) : str;
+}
+
+std::string rstrip(const std::string& str) {
+  const auto original_len = str.size();
+  auto len = original_len;
+  while (len > 0 && is_whitespace(str[len - 1])) {
+    --len;
+  }
+  return len < original_len ? str.substr(0, len) : str;
+}
+
+std::string strip(const std::string& str) {
+  // TODO(m): We could optimize this to only use a single call to substr.
+  return lstrip(rstrip(str));
 }
 }  // namespace bcache

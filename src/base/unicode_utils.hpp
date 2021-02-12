@@ -38,6 +38,21 @@ std::wstring utf8_to_ucs2(const std::string& str8);
 /// @returns a lower case version of the input string.
 /// @note This function currently only works on the ASCII subset of Unicode.
 std::string lower_case(const std::string& str);
+
+/// @brief Strip leading white space characters.
+/// @param str The string to strip.
+/// @returns a string without leading white space characters.
+std::string lstrip(const std::string& str);
+
+/// @brief Strip trailing white space characters.
+/// @param str The string to strip.
+/// @returns a string without trailing white space characters.
+std::string rstrip(const std::string& str);
+
+/// @brief Strip leading and trailing white space characters.
+/// @param str The string to strip.
+/// @returns a string without leading or trailing white space characters.
+std::string strip(const std::string& str);
 }  // namespace bcache
 
 #endif  // BUILDCACHE_UNICODE_UTILS_HPP_
