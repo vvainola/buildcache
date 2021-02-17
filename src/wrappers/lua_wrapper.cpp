@@ -188,6 +188,13 @@ void push(lua_State* state, const file::file_info_t& data) {
 // Begin: The Lua side "bcache" library.
 //--------------------------------------------------------------------------------------------------
 
+int l_append_path(lua_State* state) {
+  const auto append = pop_string(state);
+  const auto path = pop_string(state);
+  push(state, file::append_path(path, append));
+  return 1;
+}
+
 int l_dir_exists(lua_State* state) {
   push(state, file::dir_exists(pop_string(state)));
   return 1;
@@ -250,6 +257,11 @@ int l_log_info(lua_State* state) {
   return 0;
 }
 
+int l_resolve_path(lua_State* state) {
+  push(state, file::resolve_path(pop_string(state)));
+  return 1;
+}
+
 int l_run(lua_State* state) {
   // Get arguments (in reverse order).
   auto quiet = true;
@@ -269,7 +281,8 @@ int l_split_args(lua_State* state) {
   return 1;
 }
 
-const luaL_Reg BCACHE_LIB_FUNCS[] = {{"dir_exists", l_dir_exists},
+const luaL_Reg BCACHE_LIB_FUNCS[] = {{"append_path", l_append_path},
+                                     {"dir_exists", l_dir_exists},
                                      {"file_exists", l_file_exists},
                                      {"get_dir_part", l_get_dir_part},
                                      {"get_extension", l_get_extension},
@@ -279,6 +292,7 @@ const luaL_Reg BCACHE_LIB_FUNCS[] = {{"dir_exists", l_dir_exists},
                                      {"log_error", l_log_error},
                                      {"log_fatal", l_log_fatal},
                                      {"log_info", l_log_info},
+                                     {"resolve_path", l_resolve_path},
                                      {"run", l_run},
                                      {"split_args", l_split_args},
                                      {NULL, NULL}};
