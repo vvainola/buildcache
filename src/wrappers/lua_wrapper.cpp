@@ -245,6 +245,30 @@ int l_get_file_info(lua_State* state) {
   return 1;
 }
 
+int l_log_debug(lua_State* state) {
+  const auto msg = pop_string(state);
+  debug::log(debug::DEBUG) << msg;
+  return 0;
+}
+
+int l_log_info(lua_State* state) {
+  const auto msg = pop_string(state);
+  debug::log(debug::INFO) << msg;
+  return 0;
+}
+
+int l_log_error(lua_State* state) {
+  const auto msg = pop_string(state);
+  debug::log(debug::ERROR) << msg;
+  return 0;
+}
+
+int l_log_fatal(lua_State* state) {
+  const auto msg = pop_string(state);
+  debug::log(debug::FATAL) << msg;
+  return 0;
+}
+
 const luaL_Reg BCACHE_LIB_FUNCS[] = {{"split_args", l_split_args},
                                      {"run", l_run},
                                      {"dir_exists", l_dir_exists},
@@ -253,6 +277,10 @@ const luaL_Reg BCACHE_LIB_FUNCS[] = {{"split_args", l_split_args},
                                      {"get_file_part", l_get_file_part},
                                      {"get_dir_part", l_get_dir_part},
                                      {"get_file_info", l_get_file_info},
+                                     {"log_debug", l_log_debug},
+                                     {"log_info", l_log_info},
+                                     {"log_error", l_log_error},
+                                     {"log_fatal", l_log_fatal},
                                      {NULL, NULL}};
 
 int luaopen_bcache(lua_State* state) {
