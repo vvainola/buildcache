@@ -196,6 +196,7 @@ bool program_wrapper_t::handle_command(int& return_code) {
         m_cache.add_direct(direct_hash, hash, get_implicit_input_files());
       }
 
+      debug::log(debug::INFO) << "Cache hit (" << hash << ")";
       return true;
     }
 
