@@ -212,17 +212,6 @@ bool is_relateive_path(const std::string& path) {
   return get_last_path_separator_pos(path) != std::string::npos;
 }
 
-#if defined(_WIN32)
-std::string get_cwd() {
-  WCHAR buf[MAX_PATH + 1] = {0};
-  DWORD path_len = GetCurrentDirectoryW(MAX_PATH + 1, buf);
-  if (path_len > 0) {
-    return ucs2_to_utf8(std::wstring(buf, path_len));
-  }
-  return std::string();
-}
-#endif
-
 }  // namespace
 
 tmp_file_t::tmp_file_t(const std::string& dir, const std::string& extension) {
@@ -245,16 +234,17 @@ tmp_file_t::~tmp_file_t() {
   }
 }
 
-file_info_t::file_info_t(const std::string& path,
-                         const time::seconds_t modify_time,
-                         const time::seconds_t access_time,
-                         const int64_t size,
-                         const bool is_dir)
-    : m_path(path),
-      m_modify_time(modify_time),
-      m_access_time(access_time),
-      m_size(size),
-      m_is_dir(is_dir) {
+scoped_work_dir_t::scoped_work_dir_t(const std::string& new_work_dir) {
+  if (!new_work_dir.empty()) {
+    m_old_work_dir = get_cwd();
+    set_cwd(new_work_dir);
+  }
+}
+
+scoped_work_dir_t::~scoped_work_dir_t() {
+  if (!m_old_work_dir.empty()) {
+    set_cwd(m_old_work_dir);
+  }
 }
 
 std::string append_path(const std::string& path, const std::string& append) {
@@ -372,6 +362,37 @@ std::string get_user_home_dir() {
 #else
   return get_env("HOME");
 #endif
+}
+
+std::string get_cwd() {
+#if defined(_WIN32)
+  WCHAR buf[MAX_PATH + 1] = {0};
+  DWORD path_len = GetCurrentDirectoryW(MAX_PATH + 1, buf);
+  if (path_len > 0) {
+    return ucs2_to_utf8(std::wstring(buf, path_len));
+  }
+#else
+  size_t size = 512;
+  for (; size <= 65536U; size *= 2) {
+    std::vector<char> buf(size);
+    auto* ptr = ::getcwd(buf.data(), size);
+    if (ptr != nullptr) {
+      return std::string(ptr);
+    }
+  }
+#endif
+  throw std::runtime_error("Unable to determine the current working directory.");
+}
+
+void set_cwd(const std::string& path) {
+#if defined(_WIN32)
+  const auto success = (SetCurrentDirectoryW(utf8_to_ucs2(path).c_str()) != 0);
+#else
+  const auto success = (chdir(path.c_str()) == 0);
+#endif
+  if (!success) {
+    throw std::runtime_error("Could not change the current working directory to " + path);
+  }
 }
 
 std::string resolve_path(const std::string& path) {
