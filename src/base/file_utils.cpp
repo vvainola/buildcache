@@ -41,6 +41,7 @@
 #endif
 #include <direct.h>
 #include <shlobj.h>
+#include <shlwapi.h>
 #include <userenv.h>
 #include <windows.h>
 #undef ERROR
@@ -258,6 +259,66 @@ std::string append_path(const std::string& path, const char* append) {
   return append_path(path, std::string(append));
 }
 
+std::string canonicalize_path(const std::string& path) {
+#ifdef _WIN32
+  std::string result = path;
+
+  // Start by converting forward slashes to back slashes (GetFullPathNameW does not do that).
+  for (size_t i = 0; i < result.size(); ++i) {
+    const auto c = result[i];
+    result[i] = (c == '/') ? '\\' : c;
+  }
+
+  // Use a Win32 API function to resolve as much as possible. Unfortunately there does not seem to
+  // be a single Win32 API function that can give sane results (hence the pre/post processing).
+  {
+    wchar_t buf[MAX_PATH];
+    const DWORD l = GetFullPathNameW(utf8_to_ucs2(result).c_str(), MAX_PATH, &buf[0], NULL);
+    if (l == 0 || l >= MAX_PATH) {
+      throw std::runtime_error("Unable to canonicalize the path " + result);
+    }
+    result = ucs2_to_utf8(std::wstring(buf));
+  }
+
+  // Drop trailing back slash.
+  {
+    const auto last = static_cast<int>(result.length()) - 1;
+    if (last >= 2 && result[last] == '\\' && result[last - 1] != ':') {
+      result = result.substr(0, last);
+    }
+  }
+
+  // Convert drive letters to uppercase.
+  if (result.length() >= 2U && result[1] == ':') {
+    const auto drive_char = result.substr(0, 1);
+    result[0] = upper_case(drive_char)[0];
+  }
+#else
+  std::string result = path;
+
+  // Resolve relative paths.
+  if (!is_absolute_path(result)) {
+    result = append_path(get_cwd(), result);
+  }
+
+  // Simplify "//" and "/./" etc into "/", and resolve "..".
+  string_list_t parts(result, PATH_SEPARATOR);
+  string_list_t filtered_parts;
+  for (const auto& part : parts) {
+    if (part == "..") {
+      if (filtered_parts.size() < 1U) {
+        throw std::runtime_error("Unable to canonicalize the path " + path);
+      }
+      filtered_parts.pop_back();
+    } else if (!part.empty() && part != ".") {
+      filtered_parts += part;
+    }
+  }
+  result = PATH_SEPARATOR + filtered_parts.join(PATH_SEPARATOR);
+#endif
+  return result;
+}
+
 std::string get_extension(const std::string& path) {
   const auto pos = path.rfind('.');
 
@@ -301,7 +362,7 @@ std::string get_temp_dir() {
   WCHAR buf[MAX_PATH + 1] = {0};
   DWORD path_len = GetTempPathW(MAX_PATH + 1, buf);
   if (path_len > 0) {
-    return ucs2_to_utf8(std::wstring(buf, path_len));
+    return canonicalize_path(ucs2_to_utf8(std::wstring(buf, path_len)));
   }
   return std::string();
 #else
@@ -309,14 +370,14 @@ std::string get_temp_dir() {
   //    https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
   env_var_t xdg_runtime_dir("XDG_RUNTIME_DIR");
   if (xdg_runtime_dir && dir_exists(xdg_runtime_dir.as_string())) {
-    return xdg_runtime_dir.as_string();
+    return canonicalize_path(xdg_runtime_dir.as_string());
   }
 
   // 2. Try $TMPDIR. See:
   //    https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_03
   env_var_t tmpdir("TMPDIR");
   if (tmpdir && dir_exists(tmpdir.as_string())) {
-    return tmpdir.as_string();
+    return canonicalize_path(tmpdir.as_string());
   }
 
   // 3. Fall back to /tmp. See:
@@ -447,8 +508,7 @@ exe_path_t find_executable(const std::string& program, const std::string& exclud
         continue;
       }
       if (lower_case(get_file_part(true_path, false)) != exclude) {
-        // TODO(m): We should canonicalize the virtual path (without resolving symbolic links).
-        const auto& virtual_path = path_with_ext;
+        const auto& virtual_path = canonicalize_path(path_with_ext);
         debug::log(debug::DEBUG) << "Found exe: " << true_path << " (" << program << ", "
                                  << virtual_path << ")";
         return exe_path_t(true_path, virtual_path, program);

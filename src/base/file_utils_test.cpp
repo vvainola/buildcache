@@ -203,6 +203,50 @@ TEST_CASE("get_unique_id produces expected results") {
   }
 }
 
+TEST_CASE("Canonicalizing paths work as expected") {
+#if defined(_WIN32)
+  SUBCASE("Absolute path 1") {
+    const auto path = file::canonicalize_path("C:\\foo\\.\\.\\bar\\.");
+    CHECK_EQ(path, "C:\\foo\\bar");
+  }
+
+  SUBCASE("Absolute path 2") {
+    const auto path = file::canonicalize_path("C:\\foo\\.\\..\\bar\\.");
+    CHECK_EQ(path, "C:\\bar");
+  }
+
+  SUBCASE("Absolute path 3") {
+    const auto path = file::canonicalize_path("C:\\foo\\.\\\\\\..\\bar\\..");
+    CHECK_EQ(path, "C:\\");
+  }
+
+  SUBCASE("Absolute path 4") {
+    const auto path = file::canonicalize_path("c:\\foo/bar\\");
+    CHECK_EQ(path, "C:\\foo\\bar");
+  }
+#else
+  SUBCASE("Absolute path 1") {
+    const auto path = file::canonicalize_path("/foo/././bar/.");
+    CHECK_EQ(path, "/foo/bar");
+  }
+
+  SUBCASE("Absolute path 2") {
+    const auto path = file::canonicalize_path("/foo/./../bar/.");
+    CHECK_EQ(path, "/bar");
+  }
+
+  SUBCASE("Absolute path 3") {
+    const auto path = file::canonicalize_path("/foo/.///../bar/..");
+    CHECK_EQ(path, "/");
+  }
+
+  SUBCASE("Absolute path 4") {
+    const auto path = file::canonicalize_path("/foo/bar/");
+    CHECK_EQ(path, "/foo/bar");
+  }
+#endif
+}
+
 TEST_CASE("Set and get current working directory") {
   // Remember the current working directory.
   const auto old_cwd = file::get_cwd();
