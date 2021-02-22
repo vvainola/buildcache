@@ -181,6 +181,18 @@ std::string lower_case(const std::string& str) {
   return result;
 }
 
+std::string upper_case(const std::string& str) {
+  std::string result(str.size(), ' ');
+  for (std::string::size_type i = 0; i < str.size(); ++i) {
+    auto in = str[i];
+    if (('a' <= in) && (in <= 'z')) {
+      in -= ('a' - 'A');
+    }
+    result[i] = in;
+  }
+  return result;
+}
+
 std::string lstrip(const std::string& str) {
   const auto original_len = str.size();
   auto pos = std::string::size_type(0);
