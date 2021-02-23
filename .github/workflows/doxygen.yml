@@ -11,6 +11,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Setup Doxygen
+      run: |
+        sudo apt update
+        sudo apt install -y doxygen
+
     - name: CMake
       run: cmake -S src -B build
 
