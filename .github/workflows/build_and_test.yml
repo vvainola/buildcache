@@ -39,7 +39,7 @@ jobs:
           }
         - {
             name: "Windows Latest MSVC",
-            artifact: "buildcache-win-msvc.zip",
+            artifact: "buildcache-windows.zip",
             artifact_format: "zip",
             os: windows-latest,
             cc: "cl",
@@ -48,8 +48,6 @@ jobs:
           }
         - {
             name: "Linux/MinGW (cross-compile for Windows)",
-            artifact: "buildcache-win-mingw.zip",
-            artifact_format: "zip",
             os: ubuntu-20.04,
             cc: "x86_64-w64-mingw32-gcc",
             cxx: "x86_64-w64-mingw32-g++",
@@ -171,12 +169,15 @@ jobs:
       run: test_scripts/run_linters.py -p build
 
     - name: Install Strip
+      if: ${{ matrix.config.artifact }}
       run: cmake --install build --prefix buildcache --strip
 
     - name: Pack
+      if: ${{ matrix.config.artifact }}
       run: cmake -E tar cv${{ matrix.config.artifact_tar_flags }}f ${{ matrix.config.artifact }} --format=${{ matrix.config.artifact_format }} buildcache
 
     - name: Upload
+      if: ${{ matrix.config.artifact }}
       uses: actions/upload-artifact@v1
       with:
         path: ./${{ matrix.config.artifact }}
@@ -217,19 +218,7 @@ jobs:
       matrix:
         config:
         - {
-            name: "Windows Latest MSVC",
-            artifact: "buildcache-win-msvc.zip",
-            artifact_content_type: "application/zip",
-            os: ubuntu-latest
-          }
-        - {
-            name: "Windows Latest MinGW",
-            artifact: "buildcache-win-mingw.zip",
-            artifact_content_type: "application/zip",
-            os: ubuntu-latest
-          }
-        - {
-            name: "Ubuntu Latest GCC",
+            name: "Ubuntu 20.04 GCC",
             artifact: "buildcache-linux.tar.gz",
             artifact_content_type: "application/gzip",
             os: ubuntu-latest
@@ -237,6 +226,12 @@ jobs:
         - {
             name: "macOS Latest Clang",
             artifact: "buildcache-macos.zip",
+            artifact_content_type: "application/zip",
+            os: ubuntu-latest
+          }
+        - {
+            name: "Windows Latest MSVC",
+            artifact: "buildcache-windows.zip",
             artifact_content_type: "application/zip",
             os: ubuntu-latest
           }
