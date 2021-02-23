@@ -738,10 +738,10 @@ void touch(const std::string& path) {
                          OPEN_EXISTING,
                          FILE_FLAG_BACKUP_SEMANTICS,
                          0);
-  if (h) {
+  if (h != nullptr) {
     FILETIME mtime;
     GetSystemTimeAsFileTime(&mtime);
-    success = SetFileTime(h, 0, 0, &mtime);
+    success = (SetFileTime(h, 0, 0, &mtime) != FALSE);
     CloseHandle(h);
   }
 #else
