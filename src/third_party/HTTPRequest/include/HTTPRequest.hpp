@@ -9,6 +9,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <algorithm>
+#include <array>
+#include <chrono>
 #include <functional>
 #include <map>
 #include <memory>
@@ -29,27 +31,21 @@
 #  endif
 #  include <winsock2.h>
 #  if _WIN32_WINNT < _WIN32_WINNT_WINXP
-char* strdup(const char* src)
-{
-    std::size_t length = 0;
-    while (src[length]) ++length;
-    char* result = static_cast<char*>(malloc(length + 1));
-    char* p = result;
-    while (*src) *p++ = *src++;
-    *p = '\0';
-    return result;
-}
+extern "C" char *_strdup(const char *strSource);
+#    define strdup _strdup
 #    include <wspiapi.h>
 #  endif
 #  include <ws2tcpip.h>
 #  pragma pop_macro("WIN32_LEAN_AND_MEAN")
 #  pragma pop_macro("NOMINMAX")
 #else
-#  include <sys/socket.h>
+#  include <errno.h>
+#  include <fcntl.h>
 #  include <netinet/in.h>
 #  include <netdb.h>
+#  include <sys/select.h>
+#  include <sys/socket.h>
 #  include <unistd.h>
-#  include <errno.h>
 #endif
 
 namespace http
@@ -137,18 +133,6 @@ namespace http
                 throw RequestError("Unsupported protocol");
         }
 
-#ifdef _WIN32
-        constexpr auto closeSocket = closesocket;
-#else
-        constexpr auto closeSocket = close;
-#endif
-
-#if defined(__APPLE__) || defined(_WIN32)
-        constexpr int noSignal = 0;
-#else
-        constexpr int noSignal = MSG_NOSIGNAL;
-#endif
-
         class Socket final
         {
         public:
@@ -166,16 +150,41 @@ namespace http
                 if (endpoint == invalid)
                     throw std::system_error(getLastError(), std::system_category(), "Failed to create socket");
 
+#ifdef _WIN32
+                unsigned long mode = 1;
+                if (ioctlsocket(endpoint, FIONBIO, &mode) != 0)
+                {
+                    close();
+                    throw std::system_error(WSAGetLastError(), std::system_category(), "Failed to get socket flags");
+                }
+#else
+                const auto flags = fcntl(endpoint, F_GETFL);
+                if (flags == -1)
+                {
+                    close();
+                    throw std::system_error(errno, std::system_category(), "Failed to get socket flags");
+                }
+
+                if (fcntl(endpoint, F_SETFL, flags | O_NONBLOCK) == -1)
+                {
+                    close();
+                    throw std::system_error(errno, std::system_category(), "Failed to set socket flags");
+                }
+#endif
+
 #if defined(__APPLE__)
                 const int value = 1;
                 if (setsockopt(endpoint, SOL_SOCKET, SO_NOSIGPIPE, &value, sizeof(value)) == -1)
-                    throw std::system_error(getLastError(), std::system_category(), "Failed to set socket option");
+                {
+                    close();
+                    throw std::system_error(errno, std::system_category(), "Failed to set socket option");
+                }
 #endif
             }
 
             ~Socket()
             {
-                if (endpoint != invalid) closeSocket(endpoint);
+                if (endpoint != invalid) close();
             }
 
             Socket(Socket&& other) noexcept:
@@ -187,85 +196,200 @@ namespace http
             Socket& operator=(Socket&& other) noexcept
             {
                 if (&other == this) return *this;
-                if (endpoint != invalid) closeSocket(endpoint);
+                if (endpoint != invalid) close();
                 endpoint = other.endpoint;
                 other.endpoint = invalid;
                 return *this;
             }
 
-            void connect(const struct sockaddr* address, socklen_t addressSize)
+            void connect(const struct sockaddr* address, const socklen_t addressSize, const std::int64_t timeout)
             {
+#ifdef _WIN32
                 auto result = ::connect(endpoint, address, addressSize);
-
-#ifdef _WIN32
                 while (result == -1 && WSAGetLastError() == WSAEINTR)
                     result = ::connect(endpoint, address, addressSize);
-#else
-                while (result == -1 && errno == EINTR)
-                    result = ::connect(endpoint, address, addressSize);
-#endif
 
                 if (result == -1)
-                    throw std::system_error(getLastError(), std::system_category(), "Failed to connect");
+                {
+                    const auto e = WSAGetLastError();
+
+                    if (WSAGetLastError() == WSAEWOULDBLOCK)
+                    {
+                        select(SelectType::write, timeout);
+
+                        char socketErrorPointer[sizeof(int)];
+                        socklen_t optionLength = sizeof(socketErrorPointer);
+                        if (getsockopt(endpoint, SOL_SOCKET, SO_ERROR, socketErrorPointer, &optionLength) == -1)
+                            throw std::system_error(WSAGetLastError(), std::system_category(), "Failed to get socket option");
+
+                        int socketError;
+                        std::memcpy(&socketError, socketErrorPointer, sizeof(socketErrorPointer));
+
+                        if (socketError != 0)
+                            throw std::system_error(socketError, std::system_category(), "Failed to connect");
+                    }
+                    else
+                        throw std::system_error(WSAGetLastError(), std::system_category(), "Failed to connect");
+                }
+#else
+                auto result = ::connect(endpoint, address, addressSize);
+                while (result == -1 && errno == EINTR)
+                    result = ::connect(endpoint, address, addressSize);
+
+                if (result == -1)
+                {
+                    if (errno == EINPROGRESS)
+                    {
+                        select(SelectType::write, timeout);
+
+                        int socketError;
+                        socklen_t optionLength = sizeof(socketError);
+                        if (getsockopt(endpoint, SOL_SOCKET, SO_ERROR, &socketError, &optionLength) == -1)
+                            throw std::system_error(errno, std::system_category(), "Failed to get socket option");
+
+                        if (socketError != 0)
+                            throw std::system_error(socketError, std::system_category(), "Failed to connect");
+                    }
+                    else
+                        throw std::system_error(errno, std::system_category(), "Failed to connect");
+                }
+#endif
             }
 
-            size_t send(const void* buffer, size_t length, int flags)
+            std::size_t send(const void* buffer, const std::size_t length, const std::int64_t timeout)
             {
+                select(SelectType::write, timeout);
 #ifdef _WIN32
                 auto result = ::send(endpoint, reinterpret_cast<const char*>(buffer),
-                                     static_cast<int>(length), flags);
+                                     static_cast<int>(length), 0);
 
                 while (result == -1 && WSAGetLastError() == WSAEINTR)
                     result = ::send(endpoint, reinterpret_cast<const char*>(buffer),
-                                    static_cast<int>(length), flags);
+                                    static_cast<int>(length), 0);
 
+                if (result == -1)
+                    throw std::system_error(WSAGetLastError(), std::system_category(), "Failed to send data");
 #else
                 auto result = ::send(endpoint, reinterpret_cast<const char*>(buffer),
-                                     length, flags);
+                                     length, noSignal);
 
                 while (result == -1 && errno == EINTR)
                     result = ::send(endpoint, reinterpret_cast<const char*>(buffer),
-                                    length, flags);
-#endif
-                if (result == -1)
-                    throw std::system_error(getLastError(), std::system_category(), "Failed to send data");
+                                    length, noSignal);
 
-                return static_cast<size_t>(result);
+                if (result == -1)
+                    throw std::system_error(errno, std::system_category(), "Failed to send data");
+#endif
+                return static_cast<std::size_t>(result);
             }
 
-            size_t recv(void* buffer, size_t length, int flags)
+            std::size_t recv(void* buffer, const std::size_t length, const std::int64_t timeout)
             {
+                select(SelectType::read, timeout);
 #ifdef _WIN32
                 auto result = ::recv(endpoint, reinterpret_cast<char*>(buffer),
-                                     static_cast<int>(length), flags);
+                                     static_cast<int>(length), 0);
 
                 while (result == -1 && WSAGetLastError() == WSAEINTR)
                     result = ::recv(endpoint, reinterpret_cast<char*>(buffer),
-                                    static_cast<int>(length), flags);
+                                    static_cast<int>(length), 0);
+
+                if (result == -1)
+                    throw std::system_error(WSAGetLastError(), std::system_category(), "Failed to read data");
 #else
                 auto result = ::recv(endpoint, reinterpret_cast<char*>(buffer),
-                                     length, flags);
+                                     length, noSignal);
 
                 while (result == -1 && errno == EINTR)
                     result = ::recv(endpoint, reinterpret_cast<char*>(buffer),
-                                    length, flags);
-#endif
-                if (result == -1)
-                    throw std::system_error(getLastError(), std::system_category(), "Failed to read data");
+                                    length, noSignal);
 
-                return static_cast<size_t>(result);
+                if (result == -1)
+                    throw std::system_error(errno, std::system_category(), "Failed to read data");
+#endif
+                return static_cast<std::size_t>(result);
             }
 
             operator Type() const noexcept { return endpoint; }
 
         private:
+            enum class SelectType
+            {
+                read,
+                write
+            };
+
+            void select(const SelectType type, const std::int64_t timeout)
+            {
+                fd_set descriptorSet;
+                FD_ZERO(&descriptorSet);
+                FD_SET(endpoint, &descriptorSet);
+
+                timeval selectTimeout{
+                    static_cast<decltype(timeval::tv_sec)>(timeout / 1000),
+                    static_cast<decltype(timeval::tv_usec)>((timeout % 1000) * 1000)
+                };
+#ifdef _WIN32
+                auto count = ::select(0,
+                                      (type == SelectType::read) ? &descriptorSet : nullptr,
+                                      (type == SelectType::write) ? &descriptorSet : nullptr,
+                                      nullptr,
+                                      (timeout >= 0) ? &selectTimeout : nullptr);
+
+                while (count == -1 && WSAGetLastError() == WSAEINTR)
+                    count = ::select(0,
+                                     (type == SelectType::read) ? &descriptorSet : nullptr,
+                                     (type == SelectType::write) ? &descriptorSet : nullptr,
+                                     nullptr,
+                                     (timeout >= 0) ? &selectTimeout : nullptr);
+
+                if (count == -1)
+                    throw std::system_error(WSAGetLastError(), std::system_category(), "Failed to select socket");
+                else if (count == 0)
+                    throw ResponseError("Request timed out");
+#else
+                auto count = ::select(endpoint + 1,
+                                      (type == SelectType::read) ? &descriptorSet : nullptr,
+                                      (type == SelectType::write) ? &descriptorSet : nullptr,
+                                      nullptr,
+                                      (timeout >= 0) ? &selectTimeout : nullptr);
+
+                while (count == -1 && errno == EINTR)
+                    count = ::select(endpoint + 1,
+                                     (type == SelectType::read) ? &descriptorSet : nullptr,
+                                     (type == SelectType::write) ? &descriptorSet : nullptr,
+                                     nullptr,
+                                     (timeout >= 0) ? &selectTimeout : nullptr);
+
+                if (count == -1)
+                    throw std::system_error(errno, std::system_category(), "Failed to select socket");
+                else if (count == 0)
+                    throw ResponseError("Request timed out");
+#endif
+            }
+
+            void close() noexcept
+            {
+#ifdef _WIN32
+                closesocket(endpoint);
+#else
+                ::close(endpoint);
+#endif
+            }
+
+#if defined(__unix__) && !defined(__APPLE__)
+            static constexpr int noSignal = MSG_NOSIGNAL;
+#else
+            static constexpr int noSignal = 0;
+#endif
+
             Type endpoint = invalid;
         };
     }
 
     inline std::string urlEncode(const std::string& str)
     {
-        constexpr char hexChars[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+        constexpr std::array<char, 16> hexChars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
         std::string result;
 
@@ -356,7 +480,6 @@ namespace http
             UnsupportedMediaType = 415,
             RangeNotSatisfiable = 416,
             ExpectationFailed = 417,
-            ImaTeapot = 418,
             MisdirectedRequest = 421,
             UnprocessableEntity = 422,
             Locked = 423,
@@ -390,7 +513,7 @@ namespace http
     {
     public:
         explicit Request(const std::string& url,
-                         InternetProtocol protocol = InternetProtocol::V4):
+                         const InternetProtocol protocol = InternetProtocol::V4):
             internetProtocol(protocol)
         {
             const auto schemeEndPosition = url.find("://");
@@ -438,7 +561,8 @@ namespace http
 
         Response send(const std::string& method,
                       const std::map<std::string, std::string>& parameters,
-                      const std::vector<std::string>& headers = {})
+                      const std::vector<std::string>& headers = {},
+                      const std::chrono::milliseconds timeout = std::chrono::milliseconds{-1})
         {
             std::string body;
             bool first = true;
@@ -451,22 +575,27 @@ namespace http
                 body += urlEncode(parameter.first) + "=" + urlEncode(parameter.second);
             }
 
-            return send(method, body, headers);
+            return send(method, body, headers, timeout);
         }
 
         Response send(const std::string& method = "GET",
                       const std::string& body = "",
-                      const std::vector<std::string>& headers = {})
+                      const std::vector<std::string>& headers = {},
+                      const std::chrono::milliseconds timeout = std::chrono::milliseconds{-1})
         {
             return send(method,
                         std::vector<uint8_t>(body.begin(), body.end()),
-                        headers);
+                        headers,
+                        timeout);
         }
 
         Response send(const std::string& method,
                       const std::vector<uint8_t>& body,
-                      const std::vector<std::string>& headers)
+                      const std::vector<std::string>& headers,
+                      const std::chrono::milliseconds timeout = std::chrono::milliseconds{-1})
         {
+            const auto stopTime = std::chrono::steady_clock::now() + timeout;
+
             if (scheme != "http")
                 throw RequestError("Only HTTP scheme is supported");
 
@@ -480,11 +609,13 @@ namespace http
 
             std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> addressInfo(info, freeaddrinfo);
 
+            // RFC 7230, 3.1.1. Request Line
             std::string headerData = method + " " + path + " HTTP/1.1\r\n";
 
-            for (const std::string& header : headers)
+            for (const auto& header : headers)
                 headerData += header + "\r\n";
 
+            // RFC 7230, 3.2.  Header Fields
             headerData += "Host: " + domain + "\r\n"
                 "Content-Length: " + std::to_string(body.size()) + "\r\n"
                 "\r\n";
@@ -495,7 +626,8 @@ namespace http
             Socket socket(internetProtocol);
 
             // take the first address from the list
-            socket.connect(addressInfo->ai_addr, static_cast<socklen_t>(addressInfo->ai_addrlen));
+            socket.connect(addressInfo->ai_addr, static_cast<socklen_t>(addressInfo->ai_addrlen),
+                           (timeout.count() >= 0) ? getRemainingMilliseconds(stopTime) : -1);
 
             auto remaining = requestData.size();
             auto sendData = requestData.data();
@@ -503,19 +635,24 @@ namespace http
             // send the request
             while (remaining > 0)
             {
-                const auto size = socket.send(sendData, remaining, noSignal);
+                const auto size = socket.send(sendData, remaining,
+                                              (timeout.count() >= 0) ? getRemainingMilliseconds(stopTime) : -1);
                 remaining -= size;
                 sendData += size;
             }
 
-            std::uint8_t tempBuffer[4096];
-            constexpr std::uint8_t crlf[] = {'\r', '\n'};
+            std::array<std::uint8_t, 4096> tempBuffer;
+            constexpr std::array<std::uint8_t, 2> crlf = {'\r', '\n'};
             Response response;
             std::vector<std::uint8_t> responseData;
-            bool firstLine = true;
-            bool parsedHeaders = false;
+            enum class State
+            {
+                statusLine,
+                headers,
+                body
+            } state = State::statusLine;
             bool contentLengthReceived = false;
-            unsigned long contentLength = 0;
+            std::size_t contentLength = 0;
             bool chunkedResponse = false;
             std::size_t expectedChunkSize = 0;
             bool removeCrlfAfterChunk = false;
@@ -523,17 +660,18 @@ namespace http
             // read the response
             for (;;)
             {
-                const auto size = socket.recv(tempBuffer, sizeof(tempBuffer), noSignal);
+                const auto size = socket.recv(tempBuffer.data(), tempBuffer.size(),
+                                              (timeout.count() >= 0) ? getRemainingMilliseconds(stopTime) : -1);
+                if (size == 0) // disconnected
+                    return response;
 
-                if (size == 0)
-                    break; // disconnected
+                responseData.insert(responseData.end(), tempBuffer.begin(), tempBuffer.begin() + size);
 
-                responseData.insert(responseData.end(), tempBuffer, tempBuffer + size);
-
-                if (!parsedHeaders)
+                if (state != State::body)
                     for (;;)
                     {
-                        const auto i = std::search(responseData.begin(), responseData.end(), std::begin(crlf), std::end(crlf));
+                        // RFC 7230, 3. Message Format
+                        const auto i = std::search(responseData.begin(), responseData.end(), crlf.begin(), crlf.end());
 
                         // didn't find a newline
                         if (i == responseData.end()) break;
@@ -544,84 +682,77 @@ namespace http
                         // empty line indicates the end of the header section
                         if (line.empty())
                         {
-                            parsedHeaders = true;
+                            state = State::body;
                             break;
                         }
-                        else if (firstLine) // first line
+                        else if (state == State::statusLine) // RFC 7230, 3.1.2. Status Line
                         {
-                            firstLine = false;
+                            state = State::headers;
+                            std::size_t partNum = 0;
 
-                            std::string::size_type lastPos = 0;
-                            const auto length = line.length();
-                            std::vector<std::string> parts;
-
-                            // tokenize first line
-                            while (lastPos < length + 1)
+                            // tokenize the status line
+                            for (auto beginIterator = line.begin(); beginIterator != line.end();)
                             {
-                                auto pos = line.find(' ', lastPos);
-                                if (pos == std::string::npos) pos = length;
+                                const auto endIterator = std::find(beginIterator, line.end(), ' ');
+                                const std::string part{beginIterator, endIterator};
 
-                                if (pos != lastPos)
-                                    parts.emplace_back(line.data() + lastPos,
-                                                       static_cast<std::vector<std::string>::size_type>(pos) - lastPos);
+                                if (++partNum == 2) response.status = std::stoi(part);
 
-                                lastPos = pos + 1;
+                                if (endIterator == line.end()) break;
+                                beginIterator = endIterator + 1;
                             }
-
-                            if (parts.size() >= 2)
-                                response.status = std::stoi(parts[1]);
                         }
-                        else // headers
+                        else if (state == State::headers) // RFC 7230, 3.2.  Header Fields
                         {
                             response.headers.push_back(line);
 
-                            const auto pos = line.find(':');
+                            const auto loumnPosition = line.find(':');
 
-                            if (pos != std::string::npos)
+                            if (loumnPosition == std::string::npos)
+                                throw ResponseError("Invalid header: " + line);
+
+                            const auto headerName = line.substr(0, loumnPosition);
+                            auto headerValue = line.substr(loumnPosition + 1);
+
+                            // RFC 7230, Appendix B. Collected ABNF
+                            auto isNotWhiteSpace = [](char c){
+                                return c != ' ' && c != '\t';
+                            };
+
+                            // ltrim
+                            headerValue.erase(headerValue.begin(), std::find_if(headerValue.begin(), headerValue.end(), isNotWhiteSpace));
+
+                            // rtrim
+                            headerValue.erase(std::find_if(headerValue.rbegin(), headerValue.rend(), isNotWhiteSpace).base(), headerValue.end());
+
+                            if (headerName == "Content-Length")
                             {
-                                std::string headerName = line.substr(0, pos);
-                                std::string headerValue = line.substr(pos + 1);
-
-                                // ltrim
-                                headerValue.erase(headerValue.begin(),
-                                                  std::find_if(headerValue.begin(), headerValue.end(),
-                                                               [](int c) {return !std::isspace(c);}));
-
-                                // rtrim
-                                headerValue.erase(std::find_if(headerValue.rbegin(), headerValue.rend(),
-                                                               [](int c) {return !std::isspace(c);}).base(),
-                                                  headerValue.end());
-
-                                if (headerName == "Content-Length")
-                                {
-                                    contentLength = std::stoul(headerValue);
-                                    contentLengthReceived = true;
-                                    response.body.reserve(contentLength);
-                                }
-                                else if (headerName == "Transfer-Encoding")
-                                {
-                                    if (headerValue == "chunked")
-                                        chunkedResponse = true;
-                                    else
-                                        throw ResponseError("Unsupported transfer encoding: " + headerValue);
-                                }
+                                contentLength = std::stoul(headerValue);
+                                contentLengthReceived = true;
+                                response.body.reserve(contentLength);
+                            }
+                            else if (headerName == "Transfer-Encoding")
+                            {
+                                if (headerValue == "chunked")
+                                    chunkedResponse = true;
+                                else
+                                    throw ResponseError("Unsupported transfer encoding: " + headerValue);
                             }
                         }
                     }
 
-                if (parsedHeaders)
+                if (state == State::body)
                 {
                     // Content-Length must be ignored if Transfer-Encoding is received
                     if (chunkedResponse)
                     {
-                        bool dataReceived = false;
                         for (;;)
                         {
                             if (expectedChunkSize > 0)
                             {
-                                const auto toWrite = std::min(expectedChunkSize, responseData.size());
-                                response.body.insert(response.body.end(), responseData.begin(), responseData.begin() + static_cast<ptrdiff_t>(toWrite));
-                                responseData.erase(responseData.begin(), responseData.begin() + static_cast<ptrdiff_t>(toWrite));
+                                const auto toWrite = (std::min)(expectedChunkSize, responseData.size());
+                                response.body.insert(response.body.end(), responseData.begin(), responseData.begin() + static_cast<std::ptrdiff_t>(toWrite));
+                                responseData.erase(responseData.begin(), responseData.begin() + static_cast<std::ptrdiff_t>(toWrite));
                                 expectedChunkSize -= toWrite;
 
                                 if (expectedChunkSize == 0) removeCrlfAfterChunk = true;
@@ -633,13 +764,16 @@ namespace http
                                 {
                                     if (responseData.size() >= 2)
                                     {
+                                        if (!std::equal(crlf.begin(), crlf.end(), responseData.begin()))
+                                            throw ResponseError("Invalid chunk");
+
                                         removeCrlfAfterChunk = false;
                                         responseData.erase(responseData.begin(), responseData.begin() + 2);
                                     }
                                     else break;
                                 }
 
-                                const auto i = std::search(responseData.begin(), responseData.end(), std::begin(crlf), std::end(crlf));
+                                const auto i = std::search(responseData.begin(), responseData.end(), crlf.begin(), crlf.end());
 
                                 if (i == responseData.end()) break;
 
@@ -647,17 +781,10 @@ namespace http
                                 responseData.erase(responseData.begin(), i + 2);
 
                                 expectedChunkSize = std::stoul(line, nullptr, 16);
-
                                 if (expectedChunkSize == 0)
-                                {
-                                    dataReceived = true;
-                                    break;
-                                }
+                                    return response;
                             }
                         }
-
-                        if (dataReceived)
-                            break;
                     }
                     else
                     {
@@ -666,7 +793,7 @@ namespace http
 
                         // got the whole content
                         if (contentLengthReceived && response.body.size() >= contentLength)
-                            break;
+                            return response;
                     }
                 }
             }
@@ -675,6 +802,13 @@ namespace http
         }
 
     private:
+        static std::int64_t getRemainingMilliseconds(const std::chrono::steady_clock::time_point time)
+        {
+            const auto now = std::chrono::steady_clock::now();
+            const auto remainingTime = std::chrono::duration_cast<std::chrono::milliseconds>(time - now);
+            return (remainingTime.count() > 0) ? remainingTime.count() : 0;
+        }
+
 #ifdef _WIN32
         WinSock winSock;
 #endif
