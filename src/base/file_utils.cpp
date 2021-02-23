@@ -41,7 +41,6 @@
 #endif
 #include <direct.h>
 #include <shlobj.h>
-#include <shlwapi.h>
 #include <userenv.h>
 #include <windows.h>
 #undef ERROR
