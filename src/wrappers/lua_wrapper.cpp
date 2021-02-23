@@ -188,22 +188,10 @@ void push(lua_State* state, const file::file_info_t& data) {
 // Begin: The Lua side "bcache" library.
 //--------------------------------------------------------------------------------------------------
 
-int l_split_args(lua_State* state) {
-  push(state, string_list_t::split_args(pop_string(state)));
-  return 1;
-}
-
-int l_run(lua_State* state) {
-  // Get arguments (in reverse order).
-  auto quiet = true;
-  if (lua_isboolean(state, -1) != 0) {
-    quiet = (lua_toboolean(state, -1) != 0);
-    lua_pop(state, 1);
-  }
-  const auto cmd = pop_string_list(state);
-
-  // Call the C++ function and push the result.
-  push(state, sys::run(cmd, quiet));
+int l_append_path(lua_State* state) {
+  const auto append = pop_string(state);
+  const auto path = pop_string(state);
+  push(state, file::append_path(path, append));
   return 1;
 }
 
@@ -217,8 +205,18 @@ int l_file_exists(lua_State* state) {
   return 1;
 }
 
+int l_get_dir_part(lua_State* state) {
+  push(state, file::get_dir_part(pop_string(state)));
+  return 1;
+}
+
 int l_get_extension(lua_State* state) {
   push(state, file::get_extension(pop_string(state)));
+  return 1;
+}
+
+int l_get_file_info(lua_State* state) {
+  push(state, file::get_file_info(pop_string(state)));
   return 1;
 }
 
@@ -235,25 +233,9 @@ int l_get_file_part(lua_State* state) {
   return 1;
 }
 
-int l_get_dir_part(lua_State* state) {
-  push(state, file::get_dir_part(pop_string(state)));
-  return 1;
-}
-
-int l_get_file_info(lua_State* state) {
-  push(state, file::get_file_info(pop_string(state)));
-  return 1;
-}
-
 int l_log_debug(lua_State* state) {
   const auto msg = pop_string(state);
   debug::log(debug::DEBUG) << msg;
-  return 0;
-}
-
-int l_log_info(lua_State* state) {
-  const auto msg = pop_string(state);
-  debug::log(debug::INFO) << msg;
   return 0;
 }
 
@@ -269,18 +251,54 @@ int l_log_fatal(lua_State* state) {
   return 0;
 }
 
-const luaL_Reg BCACHE_LIB_FUNCS[] = {{"split_args", l_split_args},
-                                     {"run", l_run},
+int l_log_info(lua_State* state) {
+  const auto msg = pop_string(state);
+  debug::log(debug::INFO) << msg;
+  return 0;
+}
+
+int l_resolve_path(lua_State* state) {
+  push(state, file::resolve_path(pop_string(state)));
+  return 1;
+}
+
+int l_run(lua_State* state) {
+  // Get arguments (in reverse order).
+  std::string work_dir;
+  auto quiet = true;
+  if (lua_gettop(state) > 2) {
+    work_dir = pop_string(state);
+  }
+  if (lua_gettop(state) > 1) {
+    quiet = (lua_toboolean(state, -1) != 0);
+    lua_pop(state, 1);
+  }
+  const auto cmd = pop_string_list(state);
+
+  // Call the C++ function and push the result.
+  push(state, sys::run(cmd, quiet, work_dir));
+  return 1;
+}
+
+int l_split_args(lua_State* state) {
+  push(state, string_list_t::split_args(pop_string(state)));
+  return 1;
+}
+
+const luaL_Reg BCACHE_LIB_FUNCS[] = {{"append_path", l_append_path},
                                      {"dir_exists", l_dir_exists},
                                      {"file_exists", l_file_exists},
-                                     {"get_extension", l_get_extension},
-                                     {"get_file_part", l_get_file_part},
                                      {"get_dir_part", l_get_dir_part},
+                                     {"get_extension", l_get_extension},
                                      {"get_file_info", l_get_file_info},
+                                     {"get_file_part", l_get_file_part},
                                      {"log_debug", l_log_debug},
-                                     {"log_info", l_log_info},
                                      {"log_error", l_log_error},
                                      {"log_fatal", l_log_fatal},
+                                     {"log_info", l_log_info},
+                                     {"resolve_path", l_resolve_path},
+                                     {"run", l_run},
+                                     {"split_args", l_split_args},
                                      {NULL, NULL}};
 
 int luaopen_bcache(lua_State* state) {

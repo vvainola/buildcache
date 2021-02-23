@@ -64,22 +64,26 @@ To use Lua standard libraries (`coroutine`, `debug`, `io`, `math`, `os`,
 libraries with `require_std("*")`, but beware that it is slower than to load
 only the libraries that are actually used.
 
-There is also a `bcache` library that exposes some of the internal BuildCache
-functions that may be useful. The following functions are available (for more
-detailed information, look up the corresponding C++ function documentation):
+## The bcache library
+
+There is a `bcache` library that exposes some of the internal BuildCache
+functions that may be useful. To use the library, call `require_std("bcache")`.
+
+The following functions are available (for more detailed information, look up
+the corresponding C++ function documentation):
 
 | Function | Description |
 | --- | --- |
-| split_args(str) | Construct a list of arguments from a string with a shell-like format |
-| run(args) | Run the given command (passed as a list of arguments) |
 | dir_exists(path) | Check if a directory exists |
 | file_exists(path) | Check if a file exists |
-| get_extension(path) | Get the file extension of a path |
-| get_file_part(path, include_ext) | Get the file name part of a path |
 | get_dir_part(path) | Get the directory part of a path |
+| get_extension(path) | Get the file extension of a path |
 | get_file_info(path) | Get file information about a single file or directory |
+| get_file_part(path, include_ext) | Get the file name part of a path |
 | log_debug(str) | Print a log message with log level "DEBUG" |
-| log_info(str) | Print a log message with log level "INFO" |
 | log_error(str) | Print a log message with log level "ERROR" |
 | log_fatal(str) | Print a log message with log level "FATAL" |
+| log_info(str) | Print a log message with log level "INFO" |
+| run(args) | Run the given command (passed as a list of arguments) |
+| split_args(str) | Construct a list of arguments from a string with a shell-like format |
 

@@ -161,7 +161,10 @@ bool read_from_pipe(const int pipe_fd,
 #endif  // _WIN32
 }  // namespace
 
-run_result_t run(const string_list_t& args, const bool quiet) {
+run_result_t run(const string_list_t& args, const bool quiet, const std::string& work_dir) {
+  // Temporarily change the directory to work_dir if requested.
+  file::scoped_work_dir_t scoped_work_dir(work_dir);
+
   // Initialize the run result.
   run_result_t result;
 
@@ -448,7 +451,9 @@ run_result_t run(const string_list_t& args, const bool quiet) {
   return result;
 }
 
-run_result_t run_with_prefix(const string_list_t& args, const bool quiet) {
+run_result_t run_with_prefix(const string_list_t& args,
+                             const bool quiet,
+                             const std::string& work_dir) {
   // Prepend the argument list with a prefix, if any.
   bool is_icecc_prefix = false;
   string_list_t prefixed_args;
@@ -466,7 +471,7 @@ run_result_t run_with_prefix(const string_list_t& args, const bool quiet) {
   }
 
   // Run the command.
-  return run(prefixed_args, quiet);
+  return run(prefixed_args, quiet, work_dir);
 }
 
 void open_in_default_editor(const std::string& path) {

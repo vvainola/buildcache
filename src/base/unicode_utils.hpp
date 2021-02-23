@@ -39,6 +39,12 @@ std::wstring utf8_to_ucs2(const std::string& str8);
 /// @note This function currently only works on the ASCII subset of Unicode.
 std::string lower_case(const std::string& str);
 
+/// @brief Convert the string to upper case.
+/// @param str The string to convert.
+/// @returns an upper case version of the input string.
+/// @note This function currently only works on the ASCII subset of Unicode.
+std::string upper_case(const std::string& str);
+
 /// @brief Strip leading white space characters.
 /// @param str The string to strip.
 /// @returns a string without leading white space characters.

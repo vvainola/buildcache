@@ -202,3 +202,83 @@ TEST_CASE("get_unique_id produces expected results") {
     }
   }
 }
+
+TEST_CASE("Canonicalizing paths work as expected") {
+#if defined(_WIN32)
+  SUBCASE("Absolute path 1") {
+    const auto path = file::canonicalize_path("C:\\foo\\.\\.\\bar\\.");
+    CHECK_EQ(path, "C:\\foo\\bar");
+  }
+
+  SUBCASE("Absolute path 2") {
+    const auto path = file::canonicalize_path("C:\\foo\\.\\..\\bar\\.");
+    CHECK_EQ(path, "C:\\bar");
+  }
+
+  SUBCASE("Absolute path 3") {
+    const auto path = file::canonicalize_path("C:\\foo\\.\\\\\\..\\bar\\..");
+    CHECK_EQ(path, "C:\\");
+  }
+
+  SUBCASE("Absolute path 4") {
+    const auto path = file::canonicalize_path("c:\\foo/bar\\");
+    CHECK_EQ(path, "C:\\foo\\bar");
+  }
+#else
+  SUBCASE("Absolute path 1") {
+    const auto path = file::canonicalize_path("/foo/././bar/.");
+    CHECK_EQ(path, "/foo/bar");
+  }
+
+  SUBCASE("Absolute path 2") {
+    const auto path = file::canonicalize_path("/foo/./../bar/.");
+    CHECK_EQ(path, "/bar");
+  }
+
+  SUBCASE("Absolute path 3") {
+    const auto path = file::canonicalize_path("/foo/.///../bar/..");
+    CHECK_EQ(path, "/");
+  }
+
+  SUBCASE("Absolute path 4") {
+    const auto path = file::canonicalize_path("/foo/bar/");
+    CHECK_EQ(path, "/foo/bar");
+  }
+#endif
+}
+
+TEST_CASE("Set and get current working directory") {
+  // Remember the current working directory.
+  const auto old_cwd = file::get_cwd();
+  try {
+    // Change to a new working directory.
+    file::set_cwd(file::get_temp_dir());
+
+    // Check that we have changed the working directory.
+    CHECK_NE(old_cwd, file::get_cwd());
+
+    // Change back - we should now be in the old CWD.
+    file::set_cwd(old_cwd);
+    CHECK_EQ(old_cwd, file::get_cwd());
+  } catch (...) {
+    // ...just in case things go wrong.
+    file::set_cwd(old_cwd);
+    FAIL("Something went wrong");
+  }
+}
+
+TEST_CASE("Scoped working directory") {
+  // Remember the current working directory.
+  const auto old_cwd = file::get_cwd();
+
+  {
+    // Change to a new working dir using scoped_work_dir_t.
+    file::scoped_work_dir_t scoped_work_dir(file::get_temp_dir());
+
+    // Check that we have changed the working directory.
+    CHECK_NE(old_cwd, file::get_cwd());
+  }
+
+  // We should now be in the old CWD.
+  CHECK_EQ(old_cwd, file::get_cwd());
+}

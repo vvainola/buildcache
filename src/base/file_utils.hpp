@@ -50,6 +50,23 @@ private:
   std::string m_path;
 };
 
+/// @brief A helper class for temporarily changing the current working dir (CWD).
+///
+/// When the scoped_work_dir_t object is created, the current working directory is changed to the
+/// given path. When the object goes out of scope, the current working directory is changed back to
+/// what it was before the object was created.
+///
+/// If no working directory is specified (if @c new_work_dir is an empty string), the working
+/// directory is not changed.
+class scoped_work_dir_t {
+public:
+  scoped_work_dir_t(const std::string& new_work_dir);
+  ~scoped_work_dir_t();
+
+private:
+  std::string m_old_work_dir;
+};
+
 /// @brief Information about a file.
 class file_info_t {
 public:
@@ -57,7 +74,13 @@ public:
               const time::seconds_t modify_time,
               const time::seconds_t access_time,
               const int64_t size,
-              const bool is_dir);
+              const bool is_dir)
+      : m_path(path),
+        m_modify_time(modify_time),
+        m_access_time(access_time),
+        m_size(size),
+        m_is_dir(is_dir) {
+  }
 
   /// @returns the full path to the file.
   const std::string& path() const {
@@ -142,6 +165,13 @@ std::string append_path(const std::string& path, const std::string& append);
 std::string append_path(const std::string& path, const char* append);
 ///@}
 
+/// @brief Get the canonical form of a path.
+///
+/// The returned path is absolute, and free of relative operators ("." and "..").
+/// @param path The path to canonicalize.
+/// @returns the canonical form of the given path.
+std::string canonicalize_path(const std::string& path);
+
 /// @brief Get the file extension of a path.
 /// @param path The path to a file.
 /// @returns The file extension of the file (including the leading period), or an empty string if
@@ -174,6 +204,16 @@ std::string get_temp_dir();
 /// @brief Get the user home directory.
 /// @returns the full path to the user home directory.
 std::string get_user_home_dir();
+
+/// @brief Get the current working directory.
+/// @returns the full path to the current working directory.
+/// @throws runtime_error if the current working directory could not be determined.
+std::string get_cwd();
+
+/// @brief Set the current working directory.
+/// @param path the path to the new working directory.
+/// @throws runtime_error if the current working directory could not be changed.
+void set_cwd(const std::string& path);
 
 /// @brief Resolve a path.
 ///

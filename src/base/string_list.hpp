@@ -82,6 +82,11 @@ public:
     m_strings.clear();
   }
 
+  /// @brief Remove the last element.
+  void pop_back() {
+    m_strings.pop_back();
+  }
+
   std::string& operator[](const size_t idx) {
     return m_strings[idx];
   }
