@@ -75,3 +75,8 @@ compatible within a major version (e.g. 1.x).
 * [Contributing to BuildCache](doc/contributing.md)
 * [Benchmarks](doc/benchmarks.md)
 
+The BuildCache internals are documented using Doxygen, and the latest
+generated documentation can be found here:
+
+* [https://mbitsnbites.github.io/buildcache/](https://mbitsnbites.github.io/buildcache/)
+
