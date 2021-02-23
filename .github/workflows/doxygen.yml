@@ -12,10 +12,10 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: CMake
-      shell: cmake -S src -B build
+      run: cmake -S src -B build
 
     - name: Doxygen
-      shell: cmake --build build --target doc
+      run: cmake --build build --target doc
 
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
