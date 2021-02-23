@@ -98,9 +98,9 @@ if(DOXYGEN_FOUND AND NOT (${CMAKE_VERSION} VERSION_LESS "3.9.0"))
 endif()
 
 # Installation.
-install(
-  TARGETS buildcache
-  RUNTIME DESTINATION bin)
+install(TARGETS buildcache)
+install(DIRECTORY ../lua-examples
+        TYPE DATA)
 
 # This ensures that required MSVC runtime libraries are installed.
 include(InstallRequiredSystemLibraries)
