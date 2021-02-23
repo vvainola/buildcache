@@ -21,23 +21,6 @@ jobs:
       matrix:
         config:
         - {
-            name: "Windows Latest MSVC",
-            artifact: "buildcache-win-msvc.zip",
-            artifact_format: "zip",
-            os: windows-latest,
-            cc: "cl",
-            cxx: "cl",
-            environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
-          }
-        - {
-            name: "Windows Latest MinGW",
-            artifact: "buildcache-win-mingw.zip",
-            artifact_format: "zip",
-            os: windows-latest,
-            cc: "gcc",
-            cxx: "g++"
-          }
-        - {
             name: "Ubuntu 20.04 GCC",
             artifact: "buildcache-linux.tar.gz",
             artifact_format: "gnutar",
@@ -53,6 +36,25 @@ jobs:
             os: macos-latest,
             cc: "clang",
             cxx: "clang++"
+          }
+        - {
+            name: "Windows Latest MSVC",
+            artifact: "buildcache-win-msvc.zip",
+            artifact_format: "zip",
+            os: windows-latest,
+            cc: "cl",
+            cxx: "cl",
+            environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
+          }
+        - {
+            name: "Linux/MinGW (cross-compile for Windows)",
+            artifact: "buildcache-win-mingw.zip",
+            artifact_format: "zip",
+            os: ubuntu-20.04,
+            cc: "x86_64-w64-mingw32-gcc",
+            cxx: "x86_64-w64-mingw32-g++",
+            extra_cmake_flags: "-DCMAKE_BUILD_WITH_INSTALL_RPATH=on",
+            cross_compile: true
           }
 
     steps:
@@ -71,6 +73,12 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y clang-tidy clang-format
+
+    - name: Setup MinGW
+      if: ${{ runner.os == 'Linux' && contains(matrix.config.cxx, 'mingw') }}
+      run: |
+        sudo apt update
+        sudo apt install -y mingw-w64
 
     - name: Configure
       shell: cmake -P {0}
@@ -101,14 +109,14 @@ jobs:
           COMMAND cmake
             -S src
             -B build
-            -D CMAKE_BUILD_TYPE=$ENV{BUILD_TYPE}
+            -DCMAKE_BUILD_TYPE=$ENV{BUILD_TYPE}
             -G Ninja
+            ${{ matrix.config.extra_cmake_flags }}
           RESULT_VARIABLE result
         )
         if (NOT result EQUAL 0)
           message(FATAL_ERROR "Bad exit status")
         endif()
-
 
     - name: Build
       shell: cmake -P {0}
@@ -133,8 +141,8 @@ jobs:
           message(FATAL_ERROR "Bad exit status")
         endif()
 
-
     - name: Run unit tests
+      if: ${{ !matrix.config.cross_compile }}
       shell: cmake -P {0}
       run: |
         include(ProcessorCount)
@@ -151,27 +159,22 @@ jobs:
           message(FATAL_ERROR "Running tests failed!")
         endif()
 
-
     - name: Run system tests
-      if: ${{ runner.os != 'Windows' }}
+      if: ${{ runner.os != 'Windows' && !matrix.config.cross_compile }}
       working-directory: build
       run: |
         ../test_scripts/run_file_lock_stresstest.sh
         ../test_scripts/build_with_buildcache.sh
 
-
     - name: Run static checks
       if: ${{ runner.os == 'Linux' }}
       run: test_scripts/run_linters.py -p build
 
-
     - name: Install Strip
       run: cmake --install build --prefix buildcache --strip
 
-
     - name: Pack
       run: cmake -E tar cv${{ matrix.config.artifact_tar_flags }}f ${{ matrix.config.artifact }} --format=${{ matrix.config.artifact_format }} buildcache
-
 
     - name: Upload
       uses: actions/upload-artifact@v1
