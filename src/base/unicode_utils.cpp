@@ -28,6 +28,8 @@
 #ifdef USE_CPP11_CODECVT
 #include <codecvt>
 #include <locale>
+#else
+#include <cstdint>
 #endif  // USE_CPP11_CODECVT
 
 namespace bcache {
@@ -128,6 +130,18 @@ std::string ucs2_to_utf8(const std::wstring& str16) {
   }
 }
 
+std::string ucs2_to_utf8(const wchar_t* begin, const wchar_t* end) {
+  std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
+  try {
+    if (begin >= end) {
+      return std::string();
+    }
+    return conv.to_bytes(begin, end);
+  } catch (...) {
+    return std::string();
+  }
+}
+
 std::wstring utf8_to_ucs2(const std::string& str8) {
   std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
   try {
@@ -138,9 +152,14 @@ std::wstring utf8_to_ucs2(const std::string& str8) {
 }
 #else
 std::string ucs2_to_utf8(const std::wstring& str16) {
+  return ucs2_to_utf8(str16.c_str(), str16.c_str() + str16.length());
+}
+
+std::string ucs2_to_utf8(const wchar_t* begin, const wchar_t* end) {
   std::string result;
-  const auto* cursor = str16.c_str();
-  const auto* const end = str16.c_str() + str16.length();
+  result.reserve(
+      static_cast<std::string::size_type>(std::max(static_cast<int64_t>(end - begin), INT64_C(0))));
+  const auto* cursor = begin;
   while (end > cursor) {
     char utf8_sequence[] = {0, 0, 0, 0, 0};
     ucs2_char_to_utf8_char(*cursor, utf8_sequence);
