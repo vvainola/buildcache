@@ -20,6 +20,17 @@ if(buildcache_program)
 endif()
 ```
 
+With CMake 3.4+ it is also possible to specify BuildCache as a
+[compiler launcher](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER_LAUNCHER.html),
+which can be done when invoking CMake as follows:
+
+```bash
+cmake -DCMAKE_C_COMPILER_LAUNCHER=buildcache    \
+      -DCMAKE_CXX_COMPILER_LAUNCHER=buildcache  \
+      ...                                       \
+      path/to/source/directory
+```
+
 ## Symbolic links
 
 Another alternative is to create symbolic links that redirect invokations of
