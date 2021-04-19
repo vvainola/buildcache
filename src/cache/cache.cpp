@@ -196,11 +196,16 @@ bool cache_t::lookup_in_local_cache(const std::string& hash,
   }
 
   // Copy all files from the cache to their respective target paths.
-  // Note: If there is a mismatch in the expected (target) files and the actual (cached)
-  // files, this will throw an exception (i.e. fall back to full program execution).
   PERF_START(RETRIEVE_CACHED_FILES);
   for (const auto& file_id : cached_entry.file_ids()) {
-    const auto& target_path = expected_files.at(file_id).path();
+    // If there is a mismatch in the expected (target) files and the actual (cached) files, throw an
+    // exception (i.e. fall back to full program execution).
+    const auto expected_file = expected_files.find(file_id);
+    if (expected_file == expected_files.cend()) {
+      throw std::runtime_error("Found unexpected cached file: " + file_id);
+    }
+
+    const auto& target_path = expected_file->second.path();
     debug::log(debug::INFO) << "Cache hit (" << hash << "): " << file_id << " => " << target_path;
 
     if (create_target_dirs) {
@@ -240,11 +245,16 @@ bool cache_t::lookup_in_remote_cache(const std::string& hash,
   }
 
   // Copy all files from the cache to their respective target paths.
-  // Note: If there is a mismatch in the expected (target) files and the actual (cached)
-  // files, this will throw an exception (i.e. fall back to full program execution).
   PERF_START(RETRIEVE_CACHED_FILES);
   for (const auto& file_id : cached_entry.file_ids()) {
-    const auto& target_path = expected_files.at(file_id).path();
+    // If there is a mismatch in the expected (target) files and the actual (cached) files, throw an
+    // exception (i.e. fall back to full program execution).
+    const auto expected_file = expected_files.find(file_id);
+    if (expected_file == expected_files.cend()) {
+      throw std::runtime_error("Found unexpected cached file: " + file_id);
+    }
+
+    const auto& target_path = expected_file->second.path();
     debug::log(debug::INFO) << "Remote cache hit (" << hash << "): " << file_id << " => "
                             << target_path;
 
