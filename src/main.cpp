@@ -31,6 +31,7 @@
 #include <wrappers/lua_wrapper.hpp>
 #include <wrappers/msvc_wrapper.hpp>
 #include <wrappers/program_wrapper.hpp>
+#include <wrappers/qcc_wrapper.hpp>
 #include <wrappers/ti_arm_cgt_wrapper.hpp>
 #include <wrappers/ti_arp32_wrapper.hpp>
 #include <wrappers/ti_c6x_wrapper.hpp>
@@ -99,19 +100,22 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
     if (!wrapper->can_handle_command()) {
       wrapper.reset(new bcache::gcc_wrapper_t(exe_path, args));
       if (!wrapper->can_handle_command()) {
-        wrapper.reset(new bcache::ghs_wrapper_t(exe_path, args));
+        wrapper.reset(new bcache::qcc_wrapper_t(exe_path, args));
         if (!wrapper->can_handle_command()) {
-          wrapper.reset(new bcache::msvc_wrapper_t(exe_path, args));
+          wrapper.reset(new bcache::ghs_wrapper_t(exe_path, args));
           if (!wrapper->can_handle_command()) {
-            wrapper.reset(new bcache::ti_c6x_wrapper_t(exe_path, args));
+            wrapper.reset(new bcache::msvc_wrapper_t(exe_path, args));
             if (!wrapper->can_handle_command()) {
-              wrapper.reset(new bcache::ti_arm_cgt_wrapper_t(exe_path, args));
+              wrapper.reset(new bcache::ti_c6x_wrapper_t(exe_path, args));
               if (!wrapper->can_handle_command()) {
-                wrapper.reset(new bcache::ti_arp32_wrapper_t(exe_path, args));
+                wrapper.reset(new bcache::ti_arm_cgt_wrapper_t(exe_path, args));
                 if (!wrapper->can_handle_command()) {
-                  wrapper.reset(new bcache::ccc_analyzer_wrapper_t(exe_path, args));
+                  wrapper.reset(new bcache::ti_arp32_wrapper_t(exe_path, args));
                   if (!wrapper->can_handle_command()) {
-                    wrapper = nullptr;
+                    wrapper.reset(new bcache::ccc_analyzer_wrapper_t(exe_path, args));
+                    if (!wrapper->can_handle_command()) {
+                      wrapper = nullptr;
+                    }
                   }
                 }
               }

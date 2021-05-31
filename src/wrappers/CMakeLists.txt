@@ -32,6 +32,8 @@ add_library(wrappers
   msvc_wrapper.hpp
   program_wrapper.cpp
   program_wrapper.hpp
+  qcc_wrapper.cpp
+  qcc_wrapper.hpp
   ti_arm_cgt_wrapper.cpp
   ti_arm_cgt_wrapper.hpp
   ti_arp32_wrapper.cpp
