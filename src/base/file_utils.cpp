@@ -272,7 +272,7 @@ std::string canonicalize_path(const std::string& path) {
   // be a single Win32 API function that can give sane results (hence the pre/post processing).
   {
     wchar_t buf[MAX_PATH];
-    const DWORD l = GetFullPathNameW(utf8_to_ucs2(result).c_str(), MAX_PATH, &buf[0], NULL);
+    const DWORD l = GetFullPathNameW(utf8_to_ucs2(result).c_str(), MAX_PATH, &buf[0], nullptr);
     if (l == 0 || l >= MAX_PATH) {
       throw std::runtime_error("Unable to canonicalize the path " + result);
     }
@@ -393,7 +393,7 @@ std::string get_user_home_dir() {
   std::string local_app_data;
   PWSTR path = nullptr;
   try {
-    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, NULL, &path))) {
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, nullptr, &path))) {
       local_app_data = ucs2_to_utf8(std::wstring(path));
     }
   } finally {
@@ -733,14 +733,14 @@ void touch(const std::string& path) {
   HANDLE h = CreateFileW(utf8_to_ucs2(path).c_str(),
                          FILE_WRITE_ATTRIBUTES,
                          FILE_SHARE_WRITE,
-                         0,
+                         nullptr,
                          OPEN_EXISTING,
                          FILE_FLAG_BACKUP_SEMANTICS,
-                         0);
+                         nullptr);
   if (h != nullptr) {
     FILETIME mtime;
     GetSystemTimeAsFileTime(&mtime);
-    success = (SetFileTime(h, 0, 0, &mtime) != FALSE);
+    success = (SetFileTime(h, nullptr, nullptr, &mtime) != FALSE);
     CloseHandle(h);
   }
 #else
@@ -1062,7 +1062,7 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
 std::string get_unique_id() {
   // Gather entropy.
   const auto pid = static_cast<uint64_t>(get_process_id());
-  const auto date_t = static_cast<uint64_t>(std::time(0));
+  const auto date_t = static_cast<uint64_t>(std::time(nullptr));
   const auto hires_t = get_hires_time();
   const auto number = static_cast<uint64_t>(++s_tmp_name_number);
 

@@ -116,7 +116,7 @@ std::string sha1_hmac(const std::string& key, const std::string& data) {
     }
 
     DWORD hash_len = 0;
-    if (CryptGetHashParam(crypt_hash, HP_HASHVAL, 0, &hash_len, 0) == 0) {
+    if (CryptGetHashParam(crypt_hash, HP_HASHVAL, nullptr, &hash_len, 0) == 0) {
       throw std::runtime_error("Unable to retrieve the hashed data");
     }
     digest.resize(hash_len);

@@ -41,7 +41,7 @@ std::string get_date_rfc2616_gmt() {
   ::setlocale(LC_ALL, "C");
 
   // Get the current date & time.
-  time_t now = ::time(0);
+  time_t now = ::time(nullptr);
   struct tm tm = *::gmtime(&now);
 
   // Format the date & time according to RFC2616.

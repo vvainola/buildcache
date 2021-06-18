@@ -299,7 +299,7 @@ const luaL_Reg BCACHE_LIB_FUNCS[] = {{"append_path", l_append_path},
                                      {"resolve_path", l_resolve_path},
                                      {"run", l_run},
                                      {"split_args", l_split_args},
-                                     {NULL, NULL}};
+                                     {nullptr, nullptr}};
 
 int luaopen_bcache(lua_State* state) {
   luaL_newlib(state, BCACHE_LIB_FUNCS);
