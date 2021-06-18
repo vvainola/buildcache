@@ -78,7 +78,7 @@ std::string sha1_hmac(const std::string& key, const std::string& data) {
       };
 
       std::vector<BYTE> key_blob(sizeof(plain_text_key_blob_t) + key.size());
-      plain_text_key_blob_t* kb = reinterpret_cast<plain_text_key_blob_t*>(key_blob.data());
+      auto* kb = reinterpret_cast<plain_text_key_blob_t*>(key_blob.data());
       std::memset(kb, 0, sizeof(plain_text_key_blob_t));
       kb->hdr.aiKeyAlg = CALG_RC2;
       kb->hdr.bType = PLAINTEXTKEYBLOB;

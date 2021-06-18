@@ -864,7 +864,7 @@ void append(const std::string& data, const std::string& path) {
   }
 
   // Write the data.
-  const DWORD bytes_to_write = static_cast<DWORD>(data.size());
+  const auto bytes_to_write = static_cast<DWORD>(data.size());
   DWORD bytes_written;
   const auto success =
       (WriteFile(handle, data.c_str(), bytes_to_write, &bytes_written, nullptr) != FALSE);
@@ -951,7 +951,7 @@ std::string human_readable_size(const int64_t byte_size) {
   static const char* SUFFIX[6] = {"bytes", "KiB", "MiB", "GiB", "TiB", "PiB"};
   static const int MAX_SUFFIX_IDX = (sizeof(SUFFIX) / sizeof(SUFFIX[0])) - 1;
 
-  double scaled_size = static_cast<double>(byte_size);
+  auto scaled_size = static_cast<double>(byte_size);
   int suffix_idx = 0;
   for (; scaled_size >= 1024.0 && suffix_idx < MAX_SUFFIX_IDX; ++suffix_idx) {
     scaled_size /= 1024.0;

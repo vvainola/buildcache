@@ -2,6 +2,7 @@
 Checks: "\
 clang-diagnostic-*,\
 clang-analyzer-*,\
+modernize-use-auto,\
 performance-*,\
 readability-*,\
 -readability-convert-member-functions-to-static,\
