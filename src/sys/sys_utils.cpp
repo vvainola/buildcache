@@ -85,7 +85,7 @@ std::string make_exe_path_suitable_for_icecc(const std::string& path) {
 bool try_start_editor(const std::string& program, const std::string& file) {
   try {
     const auto& exe_path = file::find_executable(program);
-    execl(exe_path.real_path().c_str(), program.c_str(), file.c_str(), (char*)0);
+    execl(exe_path.real_path().c_str(), program.c_str(), file.c_str(), nullptr);
     return true;
   } catch (...) {
   }
@@ -358,7 +358,7 @@ run_result_t run(const string_list_t& args, const bool quiet, const std::string&
       close(pipe_stderr[0]);
       close(pipe_stderr[1]);
 
-      // Build a NULL-terminated argv array from args.
+      // Build a nullptr-terminated argv array from args.
       std::vector<char*> argv;
       for (const auto& arg : args) {
         argv.push_back(const_cast<char*>(arg.c_str()));
@@ -551,7 +551,7 @@ void open_in_default_editor(const std::string& path) {
 void print_raw_stdout(const std::string& str) {
 #if defined(_WIN32)
   auto* handle = GetStdHandle(STD_OUTPUT_HANDLE);
-  if (handle == INVALID_HANDLE_VALUE || handle == NULL) {
+  if (handle == INVALID_HANDLE_VALUE || handle == nullptr) {
     throw std::runtime_error("Unable to get the stdout handle.");
   }
   if (!print_raw(str.data(), static_cast<DWORD>(str.size()), handle)) {
@@ -565,7 +565,7 @@ void print_raw_stdout(const std::string& str) {
 void print_raw_stderr(const std::string& str) {
 #if defined(_WIN32)
   auto* handle = GetStdHandle(STD_ERROR_HANDLE);
-  if (handle == INVALID_HANDLE_VALUE || handle == NULL) {
+  if (handle == INVALID_HANDLE_VALUE || handle == nullptr) {
     throw std::runtime_error("Unable to get the stderr handle.");
   }
   if (!print_raw(str.data(), static_cast<DWORD>(str.size()), handle)) {

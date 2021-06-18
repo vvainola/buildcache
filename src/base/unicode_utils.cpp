@@ -38,7 +38,7 @@ namespace {
 
 bool utf8_char_to_ucs2_char(const char* utf8_token, wchar_t& ucs2_char, uint32_t& utf8_token_len) {
   // We do math that relies on unsigned data types.
-  const unsigned char* utf8_token_u = reinterpret_cast<const unsigned char*>(utf8_token);
+  const auto* utf8_token_u = reinterpret_cast<const unsigned char*>(utf8_token);
 
   // Initialize return values for 'return false' cases.
   ucs2_char = L'?';
@@ -86,8 +86,8 @@ bool utf8_char_to_ucs2_char(const char* utf8_token, wchar_t& ucs2_char, uint32_t
 void ucs2_char_to_utf8_char(const wchar_t ucs2_char, char* utf8_token) {
   // We do math that relies on unsigned data types.
   // The standard doesn't specify the signed/unsignedness of wchar_t
-  uint32_t ucs2_char_value = static_cast<uint32_t>(ucs2_char);
-  unsigned char* utf8_token_u = reinterpret_cast<unsigned char*>(utf8_token);
+  auto ucs2_char_value = static_cast<uint32_t>(ucs2_char);
+  auto* utf8_token_u = reinterpret_cast<unsigned char*>(utf8_token);
 
   // Decode.
   if (0x80 > ucs2_char_value) {
