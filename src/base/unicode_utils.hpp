@@ -39,6 +39,18 @@ std::string ucs2_to_utf8(const wchar_t* begin, const wchar_t* end);
 /// @returns a UCS-2 encoded wide charater string.
 std::wstring utf8_to_ucs2(const std::string& str8);
 
+/// @brief Convert the character to lower case.
+/// @param code The character to convert.
+/// @returns a lower case version of the input character.
+/// @note This function currently only works on the ASCII subset of Unicode.
+int lower_case(const int code);
+
+/// @brief Convert the character to upper case.
+/// @param code The character to convert.
+/// @returns an upper case version of the input character.
+/// @note This function currently only works on the ASCII subset of Unicode.
+int upper_case(const int code);
+
 /// @brief Convert the string to lower case.
 /// @param str The string to convert.
 /// @returns a lower case version of the input string.

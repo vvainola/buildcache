@@ -188,14 +188,27 @@ std::wstring utf8_to_ucs2(const std::string& str8) {
 }
 #endif  // USE_CPP11_CODECVT
 
+int lower_case(const int code) {
+  auto in = code;
+  if (('A' <= in) && (in <= 'Z')) {
+    in += ('a' - 'A');
+  }
+  return in;
+}
+
+int upper_case(const int code) {
+  auto in = code;
+  if (('a' <= in) && (in <= 'z')) {
+    in -= ('a' - 'A');
+  }
+  return in;
+}
+
 std::string lower_case(const std::string& str) {
   std::string result(str.size(), ' ');
   for (std::string::size_type i = 0; i < str.size(); ++i) {
-    auto in = str[i];
-    if (('A' <= in) && (in <= 'Z')) {
-      in += ('a' - 'A');
-    }
-    result[i] = in;
+    // TODO(m): Handle multi-byte UTF-8 sequences.
+    result[i] = static_cast<char>(lower_case(static_cast<int>(str[i])));
   }
   return result;
 }
@@ -203,11 +216,8 @@ std::string lower_case(const std::string& str) {
 std::string upper_case(const std::string& str) {
   std::string result(str.size(), ' ');
   for (std::string::size_type i = 0; i < str.size(); ++i) {
-    auto in = str[i];
-    if (('a' <= in) && (in <= 'z')) {
-      in -= ('a' - 'A');
-    }
-    result[i] = in;
+    // TODO(m): Handle multi-byte UTF-8 sequences.
+    result[i] = static_cast<char>(upper_case(static_cast<int>(str[i])));
   }
   return result;
 }
@@ -234,4 +244,5 @@ std::string strip(const std::string& str) {
   // TODO(m): We could optimize this to only use a single call to substr.
   return lstrip(rstrip(str));
 }
+
 }  // namespace bcache
