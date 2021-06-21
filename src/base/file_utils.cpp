@@ -260,38 +260,39 @@ std::string append_path(const std::string& path, const char* append) {
 
 std::string canonicalize_path(const std::string& path) {
 #ifdef _WIN32
-  std::string result = path;
-
-  // Start by converting forward slashes to back slashes (GetFullPathNameW does not do that).
-  for (size_t i = 0; i < result.size(); ++i) {
-    const auto c = result[i];
-    result[i] = (c == '/') ? '\\' : c;
-  }
+  std::string result;
 
   // Use a Win32 API function to resolve as much as possible. Unfortunately there does not seem to
   // be a single Win32 API function that can give sane results (hence the pre/post processing).
   {
-    wchar_t buf[MAX_PATH];
-    const DWORD l = GetFullPathNameW(utf8_to_ucs2(result).c_str(), MAX_PATH, &buf[0], nullptr);
-    if (l == 0 || l >= MAX_PATH) {
+    const auto ucs2 = utf8_to_ucs2(path);
+    wchar_t buf[MAX_PATH + 1];
+    const auto buf_size = static_cast<DWORD>(std::extent<decltype(buf)>::value);
+    const auto full_path_size = GetFullPathNameW(ucs2.c_str(), buf_size, &buf[0], nullptr);
+    if (full_path_size > 0 && full_path_size < buf_size) {
+      result = ucs2_to_utf8(buf, buf + full_path_size);
+    } else if (full_path_size >= buf_size) {
+      // Buffer is too small, dynamically allocate bigger buffer.
+      std::wstring final_path(full_path_size - 1, 0);  // terminating null ch is added automatically
+      GetFullPathNameW(ucs2.c_str(), full_path_size, &final_path[0], nullptr);
+      result = ucs2_to_utf8(final_path);
+    } else {
       throw std::runtime_error("Unable to canonicalize the path " + result);
     }
-    result = ucs2_to_utf8(std::wstring(buf));
   }
 
-  // Drop trailing back slash.
-  {
-    const auto last = static_cast<int>(result.length()) - 1;
-    if (last >= 2 && result[last] == '\\' && result[last - 1] != ':') {
-      result = result.substr(0, last);
+  if (!result.empty()) {
+    // Drop trailing back slash.
+    const auto last = result.size() - 1;
+    if (last >= 2U && result[last] == '\\' && result[last - 1] != ':') {
+      result.pop_back();
+    }
+    // Convert drive letters to uppercase.
+    if (result.size() >= 2U && result[1] == ':') {
+      result[0] = static_cast<char>(upper_case(static_cast<int>(result[0])));
     }
   }
 
-  // Convert drive letters to uppercase.
-  if (result.length() >= 2U && result[1] == ':') {
-    const auto drive_char = result.substr(0, 1);
-    result[0] = upper_case(drive_char)[0];
-  }
 #else
   std::string result = path;
 
@@ -358,10 +359,17 @@ std::string get_dir_part(const std::string& path) {
 
 std::string get_temp_dir() {
 #if defined(_WIN32)
-  WCHAR buf[MAX_PATH + 1] = {0};
-  DWORD path_len = GetTempPathW(MAX_PATH + 1, buf);
+  WCHAR buf_arr[MAX_PATH + 1];
+  const DWORD buf_arr_size = std::extent<decltype(buf_arr)>::value;
+  const DWORD path_len = GetTempPathW(buf_arr_size, buf_arr);
   if (path_len > 0) {
-    return canonicalize_path(ucs2_to_utf8(std::wstring(buf, path_len)));
+    if (path_len < buf_arr_size) {
+      return canonicalize_path(ucs2_to_utf8(buf_arr, buf_arr + path_len));
+    }
+    // Else buffer isn't enough to fit the path, dynamically allocate bigger buffer.
+    std::wstring buf_str(path_len - 1, 0);  // terminating null character is added automatically
+    GetTempPathW(path_len, &buf_str[0]);
+    return canonicalize_path(ucs2_to_utf8(buf_str));
   }
   return std::string();
 #else
@@ -406,15 +414,19 @@ std::string get_user_home_dir() {
   std::string user_home;
   HANDLE token = nullptr;
   if (SUCCEEDED(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token))) {
-    // Query the necessary buffer size and allocate memory for it.
-    DWORD buf_size = 0;
-    GetUserProfileDirectoryW(token, nullptr, &buf_size);
-    std::vector<WCHAR> buf(buf_size);
-
-    // Get the actual path.
-    if (SUCCEEDED(GetUserProfileDirectoryW(token, buf.data(), &buf_size))) {
-      user_home = ucs2_to_utf8(std::wstring(buf.data(), buf.size() - 1));
+    // For the most cases MAX_PATH + 1 is enough.
+    WCHAR buf_array[MAX_PATH + 1];
+    DWORD buf_size = std::extent<decltype(buf_array)>::value;
+    if (SUCCEEDED(GetUserProfileDirectoryW(token, buf_array, &buf_size))) {
+      user_home = ucs2_to_utf8(buf_array, buf_array + buf_size - 1);  // minus terminating null char
+    } else {
+      // Array is too small, allocate bigger buffer
+      std::wstring buf_str(buf_size - 1, 0);  // terminating null character is added automatically
+      if (SUCCEEDED(GetUserProfileDirectoryW(token, &buf_str[0], &buf_size))) {
+        user_home = ucs2_to_utf8(buf_str);
+      }
     }
+
     CloseHandle(token);
   }
   return user_home;
@@ -466,13 +478,22 @@ std::string resolve_path(const std::string& path) {
                              nullptr);
   if (INVALID_HANDLE_VALUE != handle) {
     std::wstring resolved_path;
-    auto resolved_size = GetFinalPathNameByHandleW(handle, nullptr, 0, FILE_NAME_NORMALIZED);
-    resolved_path.resize(resolved_size - 1);  // terminating null character is added automatically
-
-    GetFinalPathNameByHandleW(handle, &resolved_path[0], resolved_size, FILE_NAME_NORMALIZED);
+    WCHAR buf_arr[MAX_PATH + 1];
+    const DWORD buf_size = std::extent<decltype(buf_arr)>::value;
+    auto resolved_size = GetFinalPathNameByHandleW(handle, buf_arr, buf_size, FILE_NAME_NORMALIZED);
+    if (resolved_size < buf_size) {
+      // In this case the resolved_size doesn't include terminating null character.
+      resolved_path.assign(buf_arr, resolved_size);
+    } else {
+      // Array is too small to fit the path, allocate buffer dynamically to fit the path.
+      resolved_path.resize(resolved_size - 1);  // terminating null character is added automatically
+      GetFinalPathNameByHandleW(handle, &resolved_path[0], resolved_size, FILE_NAME_NORMALIZED);
+    }
     CloseHandle(handle);
-    if (resolved_path.substr(0, 4) == LR"(\\?\)") {
-      resolved_path = resolved_path.substr(4);
+    const std::wstring prefix(LR"(\\?\)");
+    const bool may_has_prefix = resolved_path.size() >= prefix.size();
+    if (may_has_prefix && resolved_path.compare(0, prefix.size(), prefix) == 0) {
+      resolved_path = resolved_path.substr(prefix.size());
     }
     return ucs2_to_utf8(resolved_path);
   }

@@ -28,6 +28,8 @@
 #ifdef USE_CPP11_CODECVT
 #include <codecvt>
 #include <locale>
+#else
+#include <cstdint>
 #endif  // USE_CPP11_CODECVT
 
 namespace bcache {
@@ -128,6 +130,18 @@ std::string ucs2_to_utf8(const std::wstring& str16) {
   }
 }
 
+std::string ucs2_to_utf8(const wchar_t* begin, const wchar_t* end) {
+  std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
+  try {
+    if (begin >= end) {
+      return std::string();
+    }
+    return conv.to_bytes(begin, end);
+  } catch (...) {
+    return std::string();
+  }
+}
+
 std::wstring utf8_to_ucs2(const std::string& str8) {
   std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
   try {
@@ -138,9 +152,14 @@ std::wstring utf8_to_ucs2(const std::string& str8) {
 }
 #else
 std::string ucs2_to_utf8(const std::wstring& str16) {
+  return ucs2_to_utf8(str16.c_str(), str16.c_str() + str16.length());
+}
+
+std::string ucs2_to_utf8(const wchar_t* begin, const wchar_t* end) {
   std::string result;
-  const auto* cursor = str16.c_str();
-  const auto* const end = str16.c_str() + str16.length();
+  result.reserve(
+      static_cast<std::string::size_type>(std::max(static_cast<int64_t>(end - begin), INT64_C(0))));
+  const auto* cursor = begin;
   while (end > cursor) {
     char utf8_sequence[] = {0, 0, 0, 0, 0};
     ucs2_char_to_utf8_char(*cursor, utf8_sequence);
@@ -169,14 +188,27 @@ std::wstring utf8_to_ucs2(const std::string& str8) {
 }
 #endif  // USE_CPP11_CODECVT
 
+int lower_case(const int code) {
+  auto in = code;
+  if (('A' <= in) && (in <= 'Z')) {
+    in += ('a' - 'A');
+  }
+  return in;
+}
+
+int upper_case(const int code) {
+  auto in = code;
+  if (('a' <= in) && (in <= 'z')) {
+    in -= ('a' - 'A');
+  }
+  return in;
+}
+
 std::string lower_case(const std::string& str) {
   std::string result(str.size(), ' ');
   for (std::string::size_type i = 0; i < str.size(); ++i) {
-    auto in = str[i];
-    if (('A' <= in) && (in <= 'Z')) {
-      in += ('a' - 'A');
-    }
-    result[i] = in;
+    // TODO(m): Handle multi-byte UTF-8 sequences.
+    result[i] = static_cast<char>(lower_case(static_cast<int>(str[i])));
   }
   return result;
 }
@@ -184,11 +216,8 @@ std::string lower_case(const std::string& str) {
 std::string upper_case(const std::string& str) {
   std::string result(str.size(), ' ');
   for (std::string::size_type i = 0; i < str.size(); ++i) {
-    auto in = str[i];
-    if (('a' <= in) && (in <= 'z')) {
-      in -= ('a' - 'A');
-    }
-    result[i] = in;
+    // TODO(m): Handle multi-byte UTF-8 sequences.
+    result[i] = static_cast<char>(upper_case(static_cast<int>(str[i])));
   }
   return result;
 }
@@ -215,4 +244,5 @@ std::string strip(const std::string& str) {
   // TODO(m): We could optimize this to only use a single call to substr.
   return lstrip(rstrip(str));
 }
+
 }  // namespace bcache

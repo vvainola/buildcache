@@ -28,10 +28,28 @@ namespace bcache {
 /// @returns a UTF-8 encoded string.
 std::string ucs2_to_utf8(const std::wstring& str16);
 
+/// @brief Convert a UCS-2 string to a UTF-8 string.
+/// @param begin The begin of the UCS-2 encoded wide character string.
+/// @param end The end of the UCS-2 encoded wide character string.
+/// @returns a UTF-8 encoded string.
+std::string ucs2_to_utf8(const wchar_t* begin, const wchar_t* end);
+
 /// @brief Convert a UTF-8 string to a UCS-2 string.
 /// @param str8 The UTF-8 encoded string.
 /// @returns a UCS-2 encoded wide charater string.
 std::wstring utf8_to_ucs2(const std::string& str8);
+
+/// @brief Convert the character to lower case.
+/// @param code The character to convert.
+/// @returns a lower case version of the input character.
+/// @note This function currently only works on the ASCII subset of Unicode.
+int lower_case(const int code);
+
+/// @brief Convert the character to upper case.
+/// @param code The character to convert.
+/// @returns an upper case version of the input character.
+/// @note This function currently only works on the ASCII subset of Unicode.
+int upper_case(const int code);
 
 /// @brief Convert the string to lower case.
 /// @param str The string to convert.
