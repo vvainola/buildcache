@@ -66,10 +66,6 @@ elseif(OPENSSL_FOUND)
   target_compile_definitions(base PRIVATE HAS_OPENSSL)
 endif()
 
-buildcache_add_test(NAME file_utils_test
-                    SOURCES file_utils_test.cpp
-                    LIBRARIES base)
-
 buildcache_add_test(NAME env_utils_test
                     SOURCES env_utils_test.cpp
                     LIBRARIES base)
@@ -78,8 +74,8 @@ buildcache_add_test(NAME file_lock_test
                     SOURCES file_lock_test.cpp
                     LIBRARIES base)
 
-buildcache_add_test(NAME string_list_test
-                    SOURCES string_list_test.cpp
+buildcache_add_test(NAME file_utils_test
+                    SOURCES file_utils_test.cpp
                     LIBRARIES base)
 
 buildcache_add_test(NAME hasher_test
@@ -91,6 +87,14 @@ if(HAS_HMAC)
                       SOURCES hmac_test.cpp
                       LIBRARIES base)
 endif()
+
+buildcache_add_test(NAME string_list_test
+                    SOURCES string_list_test.cpp
+                    LIBRARIES base)
+
+buildcache_add_test(NAME unicode_utils_test
+                    SOURCES unicode_utils_test.cpp
+                    LIBRARIES base)
 
 # This is a special test executable. It is meant to be run as multiple concurrent instances.
 add_executable(file_lock_stresstest
