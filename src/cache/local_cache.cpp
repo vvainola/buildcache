@@ -218,10 +218,16 @@ void local_cache_t::clear() {
   for (const auto& dir : dirs) {
     try {
       // We acquire an exclusive lock for the cache entry before deleting it.
-      file::file_lock_t lock(cache_entry_file_lock_path(dir.path()), config::remote_locks());
-      if (lock.has_lock()) {
-        file::remove_dir(dir.path());
+      const auto file_lock_path = cache_entry_file_lock_path(dir.path());
+      {
+        file::file_lock_t lock(file_lock_path, config::remote_locks());
+        if (lock.has_lock()) {
+          file::remove_dir(dir.path());
+        }
       }
+
+      // ...and remove the lock file too, if any.
+      file::remove_file(file_lock_path, true);
     } catch (const std::exception& e) {
       debug::log(debug::DEBUG) << "Failed: " << e.what();
     }
@@ -528,12 +534,18 @@ void local_cache_t::perform_housekeeping() {
                                  << dir.access_time() << ", " << dir.size() << " bytes)";
 
         // We acquire a scoped lock for the cache entry before deleting it.
-        file::file_lock_t lock(cache_entry_file_lock_path(dir.path()), config::remote_locks());
-        if (lock.has_lock()) {
-          file::remove_dir(dir.path());
-          total_size -= dir.size();
-          num_entries--;
+        const auto file_lock_path = cache_entry_file_lock_path(dir.path());
+        {
+          file::file_lock_t lock(file_lock_path, config::remote_locks());
+          if (lock.has_lock()) {
+            file::remove_dir(dir.path());
+            total_size -= dir.size();
+            num_entries--;
+          }
         }
+
+        // ...and remove the lock file too, if any.
+        file::remove_file(file_lock_path, true);
       } catch (const std::exception& e) {
         debug::log(debug::DEBUG) << "Failed: " << e.what();
       }
