@@ -32,8 +32,11 @@ namespace file {
 /// during operations such as file renames or writes.
 ///
 /// When the lock is created, a global named system object is created (if necessary) and acquired.
-/// Once the lock goes out of scope, the system object is released. If this is the last process that
-/// releases the lock, the system object is deleted.
+/// Once the lock goes out of scope, the system object is released.
+///
+/// After a lock is no longer used by any process, the named system object may or may not be left
+/// on the system (depending on the underlying implementation). It is thus up to the user of the
+/// lock to guarantee that the necessary cleanup is performed.
 ///
 /// Two system object types are supported:
 ///
@@ -76,8 +79,7 @@ public:
 
   /// @brief Release the lock.
   ///
-  /// This releases the lock that was held. The sycnhronization object (if any) is deleted if this
-  /// is the last process that holds a lock.
+  /// This releases the lock that was held.
   ~file_lock_t();
 
   /// @returns true if the lock was acquired successfully.

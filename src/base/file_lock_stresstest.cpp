@@ -84,6 +84,9 @@ int main(int argc, const char** argv) {
   const auto file_lockname = filename + ".lock";
   const bool local_locks = (std::string(argv[2]) == "true");
 
+  // Enable error logging.
+  debug::set_log_level(debug::ERROR);
+
   long last_count = -1;
   for (int i = 0; i < NUM_LOOPS; ++i) {
     {

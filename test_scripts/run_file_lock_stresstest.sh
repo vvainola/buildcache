@@ -34,6 +34,9 @@ function run_test {
   DATA=$(cat "$TESTFILE")
   rm -f "$TESTFILE"
 
+  # Delete the lock file (if any).
+  rm -f "${TESTFILE}.lock"
+
   # Did we have an error exit status from any of the processes?
   if $got_error ; then
     echo "*** FAIL: At least one of the processes failed."

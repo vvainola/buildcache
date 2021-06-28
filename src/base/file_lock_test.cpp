@@ -33,7 +33,7 @@ TEST_CASE("file_lock_t constructors are behaving as expected") {
 }
 
 TEST_CASE("Remote locks") {
-  SUBCASE("Acquiring a lock creates and removes a file") {
+  SUBCASE("Acquiring a lock creates a file") {
     // Get a temporary file name.
     file::tmp_file_t tmp_file(file::get_temp_dir(), ".lock");
     REQUIRE_GT(tmp_file.path().size(), 0);
@@ -49,9 +49,6 @@ TEST_CASE("Remote locks") {
       CHECK_EQ(lock.has_lock(), true);
       CHECK_EQ(file::file_exists(tmp_file.path()), true);
     }
-
-    // The lock file should no longer exist after the lock has gone out of scope.
-    CHECK_EQ(file::file_exists(tmp_file.path()), false);
   }
 
   SUBCASE("Transfering lock ownership works as expected") {
@@ -76,7 +73,7 @@ TEST_CASE("Remote locks") {
         // Move the lock object to the parent scope.
         lock = std::move(child_lock);
 
-        // TThe ownership of the lock should now have moved, and the file should still exist.
+        // The ownership of the lock should now have moved, and the file should still exist.
         CHECK_EQ(child_lock.has_lock(), false);
         CHECK_EQ(lock.has_lock(), true);
         CHECK_EQ(file::file_exists(tmp_file.path()), true);
@@ -86,14 +83,11 @@ TEST_CASE("Remote locks") {
       CHECK_EQ(lock.has_lock(), true);
       CHECK_EQ(file::file_exists(tmp_file.path()), true);
     }
-
-    // The lock file should no longer exist after the lock has gone out of scope.
-    CHECK_EQ(file::file_exists(tmp_file.path()), false);
   }
 }
 
 TEST_CASE("Local locks") {
-  SUBCASE("Acquiring a lock creates and removes a file") {
+  SUBCASE("Acquiring a lock works as expected") {
     // Get a temporary file name.
     file::tmp_file_t tmp_file(file::get_temp_dir(), ".lock");
     REQUIRE_GT(tmp_file.path().size(), 0);
