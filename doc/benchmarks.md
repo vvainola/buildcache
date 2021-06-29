@@ -6,7 +6,7 @@ For this benchmark, LLVM *(2021-01-17, Git commit: cfec6cd50c36f3db2fcd4084a8ef4
 
 ```sh
 mkdir build && cd build
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
+cmake -DCMAKE_C_COMPILER_LAUNCHER=buildcache -DCMAKE_CXX_COMPILER_LAUNCHER=buildcache -G Ninja -DCMAKE_BUILD_TYPE=Release ../llvm
 time ninja
 ```
 
