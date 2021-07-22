@@ -81,3 +81,7 @@ generated documentation can be found here:
 
 * [https://mbitsnbites.github.io/buildcache/](https://mbitsnbites.github.io/buildcache/)
 
+Feel free to ask questions and discuss ideas at:
+
+* [BuildCache Discussions](https://github.com/mbitsnbites/buildcache/discussions)
+
