@@ -149,6 +149,9 @@ Additionally, several default project settings have to be changed:
 * Change object file names from `$(IntDir)` to `$(IntDir)%(Filename).obj` to get one compiler invocation per source file.
   * Can be set by opening a project's properties, then *Configuration Properties*, *C/C++*, *Output Files* page, *Object File Name* setting,
   * Alternatively define the `<ObjectFileName>` property inside the `<ClCompile>` ItemDefinitionGroup in your `vcxproj` file.
+* Change Debug information format to `C7 Compatible` / `OldStyle` to get all debugging information in generated obj file.
+  * Can be set by opening a project's properties, then *Configuration Properties*, *C/C++*, *General* page, *Debug Information Format* setting, to `C7 Compatible (/Z7)`
+  * Alternatively define the `<DebugInformationFormat>` property inside the `<ClCompile>` ItemDefinitionGroup in your `vcxproj` file to `OldStyle`.
 * Since the previous step turns off compiler level parallelism, restore performance using [`MultiToolTask`](https://devblogs.microsoft.com/cppblog/improved-parallelism-in-msbuild/).
   * Can be turned on using the `<UseMultiToolTask>` property inside the `"Globals"` PropertyGroup in your `vcxproj`.
 * Set `<CLToolExe>` property to the symlink created previously.
