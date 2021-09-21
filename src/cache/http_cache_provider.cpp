@@ -171,7 +171,8 @@ std::string http_cache_provider_t::get_data(const std::string& key) {
     if (response.status == http::Response::NotFound) {
       ss << "File not found on HTTP remote: " << key;
     } else {
-      ss << "HTTP remote responded (" << response.status << "): " << response.body.data()
+      ss << "HTTP remote responded (" << response.status << "): "
+         << (response.body.empty() ? reinterpret_cast<const uint8_t*>("") : response.body.data())
          << " (URL: " << url << ")";
     }
     throw std::runtime_error(ss.str());
@@ -198,10 +199,13 @@ void http_cache_provider_t::set_data(const std::string& key, const std::string& 
   http::Request request(url);
   http::Response response = request.send(method, data, http_header);
 
-  // A successful response must have the code 200 or 201.
-  if (response.status != http::Response::Ok && response.status != http::Response::Created) {
+  // A successful response must have the code 200 or 201. Or 204, in that case do not try to read
+  // the response body.
+  if (response.status != http::Response::Ok && response.status != http::Response::Created &&
+      response.status != http::Response::NoContent) {
     std::ostringstream ss;
-    ss << "HTTP remote responded (" << response.status << "): " << response.body.data()
+    ss << "HTTP remote responded (" << response.status << "): "
+       << (response.body.empty() ? reinterpret_cast<const uint8_t*>("") : response.body.data())
        << " (URL: " << url << ")";
     throw std::runtime_error(ss.str());
   }
