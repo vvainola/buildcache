@@ -49,6 +49,30 @@ public:
   virtual bool can_handle_command() = 0;
 
 protected:
+  /// @brief A helper class for managing wrapper capabilities.
+  class capabilities_t {
+  public:
+    capabilities_t();
+    capabilities_t(const string_list_t& cap_strings);
+
+    bool create_target_dirs() const {
+      return m_create_target_dirs;
+    }
+
+    bool direct_mode() const {
+      return m_direct_mode;
+    }
+
+    bool hard_links() const {
+      return m_hard_links;
+    }
+
+  private:
+    bool m_create_target_dirs = false;
+    bool m_direct_mode = false;
+    bool m_hard_links = false;
+  };
+
   // This constructor is called by derived classes.
   program_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args);
 
@@ -142,6 +166,12 @@ protected:
 
   const file::exe_path_t& m_exe_path;
   const string_list_t& m_args;
+
+  /// @brief Active capabilities
+  ///
+  /// The capabilities in this object are only active (true) when they are both supported by the
+  /// wrapper and are active in the user configuration.
+  capabilities_t m_active_capabilities;
 
 private:
   std::string get_program_id_cached();
