@@ -41,13 +41,14 @@ protected:
   string_list_t get_implicit_input_files() override;
 
   string_list_t m_resolved_args;
-  string_list_t m_implicit_input_files;
 
 private:
   void resolve_args() override;
   string_list_t parse_args(const string_list_t& args);
   string_list_t parse_response_file(const std::string& filename);
   virtual string_list_t get_include_files(const std::string& std_err) const;
+
+  string_list_t m_implicit_input_files;
 };
 }  // namespace bcache
 #endif  // BUILDCACHE_GCC_WRAPPER_HPP_

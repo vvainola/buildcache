@@ -87,7 +87,8 @@ bool has_coverage_output(const string_list_t& args) {
 }
 
 string_list_t make_preprocessor_cmd(const string_list_t& args,
-                                    const std::string& preprocessed_file) {
+                                    const std::string& preprocessed_file,
+                                    bool use_direct_mode) {
   string_list_t preprocess_args;
 
   // Drop arguments that we do not want/need.
@@ -122,8 +123,10 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
   preprocess_args += std::string("-o");
   preprocess_args += preprocessed_file;
 
-  // Add argument for listing include files (used for direct mode).
-  preprocess_args += std::string("-H");  // Supported by gcc, clang and ghc
+  if (use_direct_mode) {
+    // Add argument for listing include files (used for direct mode).
+    preprocess_args += std::string("-H");  // Supported by gcc, clang and ghc
+  }
 
   return preprocess_args;
 }
@@ -351,14 +354,17 @@ std::string gcc_wrapper_t::preprocess_source() {
 
   // Run the preprocessor step.
   file::tmp_file_t preprocessed_file(sys::get_local_temp_folder(), ".i");
-  const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args, preprocessed_file.path());
+  const auto preprocessor_args = make_preprocessor_cmd(
+      m_resolved_args, preprocessed_file.path(), m_active_capabilities.direct_mode());
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
     throw std::runtime_error("Preprocessing command was unsuccessful.");
   }
 
-  // Collect all the input files. They are reported in std_err.
-  m_implicit_input_files = get_include_files(result.std_err);
+  if (m_active_capabilities.direct_mode()) {
+    // Collect all the input files. They are reported in std_err.
+    m_implicit_input_files = get_include_files(result.std_err);
+  }
 
   // Read and return the preprocessed file.
   return file::read(preprocessed_file.path());
