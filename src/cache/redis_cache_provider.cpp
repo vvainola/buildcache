@@ -107,6 +107,37 @@ bool redis_cache_provider_t::connect(const std::string& host_description) {
     return false;
   }
 
+  // Get the access keys.
+  if (!config::redis_password().empty()) {
+    std::string auth_string;
+    if (config::redis_username().empty()) {
+      auth_string = config::redis_password();
+    } else {
+      auth_string = config::redis_username() + " " + config::redis_password();
+    }
+    auto* reply_ptr = redisCommand(m_ctx, "AUTH %s", auth_string.c_str());
+    if (reply_ptr != nullptr) {
+      // Interpret the result.
+      auto* reply = reinterpret_cast<redisReply*>(reply_ptr);
+      if (reply->type == REDIS_REPLY_ERROR) {
+        debug::log(debug::ERROR) << "Remote cache auth error: "
+                                 << std::string(reply->str, reply->len);
+        freeReplyObject(reply);
+        disconnect();
+        return false;
+      }
+      freeReplyObject(reply);
+    } else {
+      debug::log(debug::ERROR) << "Remote cache auth error: " << m_ctx->errstr;
+      disconnect();
+      return false;
+    }
+  } else if (!config::redis_username().empty()) {
+    debug::log(debug::ERROR) << "Missing Redis password (define BUILDCACHE_REDIS_PASSWORD)";
+    disconnect();
+    return false;
+  }
+
   return true;
 }
 

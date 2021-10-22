@@ -70,6 +70,8 @@ bool s_perf = false;
 std::string s_prefix;
 bool s_read_only = false;
 bool s_read_only_remote = false;
+std::string s_redis_username;
+std::string s_redis_password;
 bool s_remote_locks = false;
 std::string s_remote;
 std::string s_s3_access;
@@ -293,6 +295,20 @@ void load_from_file(const std::string& file_name) {
     const auto* node = cJSON_GetObjectItemCaseSensitive(root, "read_only_remote");
     if (cJSON_IsBool(node) != 0) {
       s_read_only_remote = (cJSON_IsTrue(node) != 0);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "redis_username");
+    if ((cJSON_IsString(node) != 0) && node->valuestring != nullptr) {
+      s_redis_username = std::string(node->valuestring);
+    }
+  }
+
+  {
+    const auto* node = cJSON_GetObjectItemCaseSensitive(root, "redis_password");
+    if ((cJSON_IsString(node) != 0) && node->valuestring != nullptr) {
+      s_redis_password = std::string(node->valuestring);
     }
   }
 
@@ -541,6 +557,20 @@ void init() {
     }
 
     {
+      const env_var_t env("BUILDCACHE_REDIS_USERNAME");
+      if (env) {
+        s_redis_username = env.as_string();
+      }
+    }
+
+    {
+      const env_var_t env("BUILDCACHE_REDIS_PASSWORD");
+      if (env) {
+        s_redis_password = env.as_string();
+      }
+    }
+
+    {
       const env_var_t env("BUILDCACHE_REMOTE");
       if (env) {
         s_remote = env.as_string();
@@ -667,6 +697,14 @@ const std::string& prefix() {
 
 bool read_only() {
   return s_read_only;
+}
+
+const std::string& redis_username() {
+  return s_redis_username;
+}
+
+const std::string& redis_password() {
+  return s_redis_password;
 }
 
 bool read_only_remote() {
