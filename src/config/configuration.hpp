@@ -123,6 +123,12 @@ bool read_only();
 /// @returns true if the remote cache is read only.
 bool read_only_remote();
 
+/// @returns the Redis ACL User Name for the remote cache.
+const std::string& redis_username();
+
+/// @returns the Redis Token/Password for the remote cache.
+const std::string& redis_password();
+
 /// @returns the remote cache service address.
 const std::string& remote();
 

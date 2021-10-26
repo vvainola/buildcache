@@ -212,6 +212,10 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
               << (bcache::config::read_only() ? "true" : "false") << "\n";
     std::cout << "  BUILDCACHE_READ_ONLY_REMOTE:       "
               << (bcache::config::read_only_remote() ? "true" : "false") << "\n";
+    std::cout << "  BUILDCACHE_REDIS_USERNAME:         " << bcache::config::redis_username()
+              << "\n";
+    std::cout << "  BUILDCACHE_REDIS_PASSWORD:         "
+              << (bcache::config::redis_password().empty() ? "" : "*******") << "\n";
     std::cout << "  BUILDCACHE_REMOTE:                 " << bcache::config::remote() << "\n";
     std::cout << "  BUILDCACHE_REMOTE_LOCKS:           "
               << (bcache::config::remote_locks() ? "true" : "false") << "\n";

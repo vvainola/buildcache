@@ -99,6 +99,9 @@ To do so, set `BUILDCACHE_REMOTE` to a valid remote server address (see below).
 eviction policies. It is suitable for build systems that produce many small
 object files, such as is typical for C/C++ compilation.
 
+[Authentication](https://redis.io/commands/auth) is supported using 
+`BUILDCACHE_REDIS_PASSWORD` with or without `BUILDCACHE_REDIS_USERNAME`.
+
 Example:
 ```bash
 $ BUILDCACHE_REMOTE=redis://my-redis-server:6379 buildcache g++ -c -O2 hello.cpp -o hello.o
