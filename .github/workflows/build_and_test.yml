@@ -80,10 +80,10 @@ jobs:
 
     - name: Configure
       shell: cmake -P {0}
+      env:
+        CC: "${{ matrix.config.cc }}"
+        CXX: "${{ matrix.config.cxx }}"
       run: |
-        set(ENV{CC} ${{ matrix.config.cc }})
-        set(ENV{CXX} ${{ matrix.config.cxx }})
-
         # Capture environment variables (preserve the effect of MSVC vcvars.bat).
         if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
           execute_process(
@@ -118,9 +118,9 @@ jobs:
 
     - name: Build
       shell: cmake -P {0}
+      env:
+        NINJA_STATUS: "[%f/%t %o s] "
       run: |
-        set(ENV{NINJA_STATUS} "[%f/%t %o/sec] ")
-
         # Resture environment variables (apply the effect of MSVC vcvars.bat).
         if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
           file(STRINGS environment_script_output.txt output_lines)
@@ -160,6 +160,9 @@ jobs:
     - name: Run system tests
       if: ${{ runner.os != 'Windows' && !matrix.config.cross_compile }}
       working-directory: build
+      env:
+        CC: "${{ matrix.config.cc }}"
+        CXX: "${{ matrix.config.cxx }}"
       run: |
         ../test_scripts/run_file_lock_stresstest.sh
         ../test_scripts/build_with_buildcache.sh
