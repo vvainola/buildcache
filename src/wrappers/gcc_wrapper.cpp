@@ -20,7 +20,9 @@
 #include <wrappers/gcc_wrapper.hpp>
 
 #include <base/debug_utils.hpp>
+#include <base/hasher.hpp>
 #include <base/unicode_utils.hpp>
+#include <cache/data_store.hpp>
 #include <config/configuration.hpp>
 #include <sys/sys_utils.hpp>
 
@@ -130,6 +132,56 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 
   return preprocess_args;
 }
+
+// Check a few different known alternative names of a file, in the same directory as the invoked
+// program, and see if any of them is an identical copy of the invoked program.
+template <int COUNT>
+bool is_file_identical_to(const std::string& path, const std::string (&alternative_names)[COUNT]) {
+  // Get the file info of the invoked program.
+  const auto reference_info = file::get_file_info(path);
+
+  // We compute the hash of the reference file on demand (we may not need it).
+  bool reference_hash_computed = false;
+  hasher_t::hash_t reference_hash;
+
+  // Try the different alternative names.
+  const auto dir = file::get_dir_part(path);
+  for (const auto& alternative_name : alternative_names) {
+    const auto alt_path = file::append_path(dir, alternative_name);
+
+    try {
+      const auto alt_info = file::get_file_info(alt_path);
+
+      if (alt_info.size() == reference_info.size()) {
+        // The files have equal size, so they are potentially identical.
+        if (reference_info.inode() != 0U && alt_info.inode() == reference_info.inode()) {
+          // The files have equal inode numbers, so they are hard links to the same data.
+          return true;
+        }
+
+        // Compute the reference hash if needed.
+        if (!reference_hash_computed) {
+          hasher_t hasher;
+          hasher.update_from_file(reference_info.path());
+          reference_hash = hasher.final();
+          reference_hash_computed = true;
+        }
+
+        // Check if the files have the same contents.
+        hasher_t hasher;
+        hasher.update_from_file(alt_info.path());
+        if (hasher.final() == reference_hash) {
+          return true;
+        }
+      }
+    } catch (const std::runtime_error&) {
+      // The file does not exist: Ignore.
+    }
+  }
+
+  return false;
+}
+
 }  // namespace
 
 gcc_wrapper_t::gcc_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args)
@@ -225,6 +277,41 @@ bool gcc_wrapper_t::can_handle_command() {
     // and similar.
     const std::regex clang_re(".*clang(\\+\\+|-cpp)?(-[1-9][0-9]*(\\.[0-9]+)*)?(\\.exe)?");
     if (std::regex_match(cmd, clang_re)) {
+      return true;
+    }
+  }
+
+  // On some systems (e.g. macos / XCode) the generic cc & c++ commands are copies of or hard links
+  // to the actual compiler front end. Find out if the front-end is in fact clang or gcc.
+  //
+  // * This is a relatively crude check, aiming to be fast rather than catching all possible
+  //   cases.
+  // * It is specifically designed to work with macos installations of XCode, but should work
+  //   on other Un*x style systems with similar conditions.
+  // * It currently does not work well on Windows (because this routine does not take .exe file
+  //   extensions into account).
+  if (cmd == "cc" || cmd == "c++") {
+    bool is_gcc_compatible = false;
+
+    // Check if we have previous knowledge about this executable.
+    data_store_t store("gcc_wrapper");
+    const auto store_key = "is_gcc_compatible_" + m_exe_path.real_path();
+    const auto store_item = store.get_item(store_key);
+    if (store_item.is_valid()) {
+      is_gcc_compatible = (store_item.value() == "true");
+    } else {
+      // ...otherwise we have to perform the check (which may be costly in terms of time).
+      is_gcc_compatible =
+          is_file_identical_to(m_exe_path.real_path(), {"clang", "gcc", "clang++", "g++"});
+
+      // Store the result for future invocations.
+      const time::seconds_t VALUE_TIMEOUT = 30;
+      store.store_item(store_key, is_gcc_compatible ? "true" : "false", VALUE_TIMEOUT);
+    }
+
+    if (is_gcc_compatible) {
+      debug::log(debug::DEBUG) << "Recognized " << m_exe_path.real_path()
+                               << " as a copy of a GCC compatible compiler";
       return true;
     }
   }

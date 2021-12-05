@@ -23,6 +23,7 @@
 #include <base/string_list.hpp>
 
 #include <cstdint>
+#include <cstring>
 
 #include <map>
 #include <string>
@@ -41,6 +42,10 @@ public:
 
     const uint8_t* data() const {
       return &m_data[0];
+    }
+
+    bool operator==(const hash_t& other) const {
+      return std::memcmp(m_data, other.m_data, SIZE) == 0;
     }
 
     /// @brief Convert a hash to a hexadecimal string.

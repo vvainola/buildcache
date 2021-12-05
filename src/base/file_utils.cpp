@@ -940,7 +940,9 @@ file_info_t get_file_info(const std::string& path) {
       access_time = time::win32_filetime_to_unix_epoch(find_data.ftLastAccessTime.dwLowDateTime,
                                                        find_data.ftLastAccessTime.dwHighDateTime);
     }
-    return file_info_t(file_path, modify_time, access_time, size, is_dir);
+    // Note: We pass inode = 0, since inode numbers are not supported on Windows (AFAIK).
+    const uint64_t inode = 0U;
+    return file_info_t(file_path, modify_time, access_time, size, inode, is_dir);
   }
 #else
   struct stat file_stat;
@@ -961,7 +963,9 @@ file_info_t get_file_info(const std::string& path) {
       access_time = static_cast<time::seconds_t>(file_stat.st_atim.tv_sec);
 #endif
     }
-    return file_info_t(path, modify_time, access_time, size, is_dir);
+    static_assert(sizeof(file_stat.st_ino) <= sizeof(uint64_t), "Unsupported st_ino size");
+    const auto inode = static_cast<uint64_t>(file_stat.st_ino);
+    return file_info_t(path, modify_time, access_time, size, inode, is_dir);
   }
 #endif
 
@@ -1021,7 +1025,9 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
         access_time = time::win32_filetime_to_unix_epoch(find_data.ftLastAccessTime.dwLowDateTime,
                                                          find_data.ftLastAccessTime.dwHighDateTime);
       }
-      files.emplace_back(file_info_t(file_path, modify_time, access_time, size, is_dir));
+      // Note: We pass inode = 0, since inode numbers are not supported on Windows (AFAIK).
+      const uint64_t inode = 0U;
+      files.emplace_back(file_info_t(file_path, modify_time, access_time, size, inode, is_dir));
     }
   } while (FindNextFileW(find_handle, &find_data) != 0);
 
@@ -1068,7 +1074,9 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
           access_time = static_cast<time::seconds_t>(file_stat.st_atim.tv_sec);
 #endif
         }
-        files.emplace_back(file_info_t(file_path, modify_time, access_time, size, is_dir));
+        static_assert(sizeof(file_stat.st_ino) <= sizeof(uint64_t), "Unsupported st_ino size");
+        const auto inode = static_cast<uint64_t>(file_stat.st_ino);
+        files.emplace_back(file_info_t(file_path, modify_time, access_time, size, inode, is_dir));
       }
     }
     entity = readdir(dir);

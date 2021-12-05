@@ -139,7 +139,17 @@ void data_store_t::clear() {
 }
 
 std::string data_store_t::make_file_path(const std::string& key) {
-  return file::append_path(m_root_dir, key);
+  // Sanitize the key to be used as a file name.
+  std::string key_sanitized;
+  for (const auto& c : key) {
+    // Convert byte value to hex - it never fails.
+    static const char HEX_LUT[16] = {
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+    key_sanitized += HEX_LUT[(c >> 4) & 15];
+    key_sanitized += HEX_LUT[c & 15];
+  }
+
+  return file::append_path(m_root_dir, key_sanitized);
 }
 
 void data_store_t::perform_housekeeping() {

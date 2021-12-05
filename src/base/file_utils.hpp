@@ -74,11 +74,13 @@ public:
               const time::seconds_t modify_time,
               const time::seconds_t access_time,
               const int64_t size,
+              const uint64_t inode,
               const bool is_dir)
       : m_path(path),
         m_modify_time(modify_time),
         m_access_time(access_time),
         m_size(size),
+        m_inode(inode),
         m_is_dir(is_dir) {
   }
 
@@ -105,6 +107,13 @@ public:
     return m_size;
   }
 
+  /// @returns the inode number of the file, or zero if no such identification is known.
+  /// @note On file systems that do not support information node numbers (e.g. NTFS and FAT), this
+  /// value is zero.
+  uint64_t inode() const {
+    return m_inode;
+  }
+
   /// @returns true if file is a directory.
   bool is_dir() const {
     return m_is_dir;
@@ -115,6 +124,7 @@ private:
   time::seconds_t m_modify_time;
   time::seconds_t m_access_time;
   int64_t m_size;
+  uint64_t m_inode;
   bool m_is_dir;
 };
 
