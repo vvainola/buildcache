@@ -139,14 +139,22 @@ void data_store_t::clear() {
 }
 
 std::string data_store_t::make_file_path(const std::string& key) {
+  static const char HEX_LUT[16] = {
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+
   // Sanitize the key to be used as a file name.
   std::string key_sanitized;
   for (const auto& c : key) {
-    // Convert byte value to hex - it never fails.
-    static const char HEX_LUT[16] = {
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-    key_sanitized += HEX_LUT[(c >> 4) & 15];
-    key_sanitized += HEX_LUT[c & 15];
+    if (((c >= '0') && (c <= '9')) || ((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) ||
+        (c == '_') || (c == '-')) {
+      // Legal character: Pass through as is.
+      key_sanitized += c;
+    } else {
+      // Illegal character: Convert to hex - it never fails.
+      key_sanitized += '.';
+      key_sanitized += HEX_LUT[(c >> 4) & 15];
+      key_sanitized += HEX_LUT[c & 15];
+    }
   }
 
   return file::append_path(m_root_dir, key_sanitized);
