@@ -158,7 +158,7 @@ void cache_t::add(const std::string& hash,
   if (size < max_local_size || max_local_size <= 0) {
     m_local_cache.add(hash, entry, expected_files, allow_hard_links);
   } else {
-    debug::log(debug::INFO) << "Cache entry too large for the local cache: " << size << " bytes";
+    debug::log(debug::WARNING) << "Cache entry too large for the local cache: " << size << " bytes";
   }
 
   // Add the entry to the remote cache.
@@ -176,12 +176,13 @@ void cache_t::add(const std::string& hash,
       try {
         m_remote_cache.add(hash, remote_entry, expected_files);
       } catch (const std::exception& e) {
-        debug::log(debug::INFO) << "Remote cache error: " << e.what();
+        debug::log(debug::WARNING) << "Remote cache error: " << e.what();
       } catch (...) {
-        debug::log(debug::INFO) << "Remote cache error";
+        debug::log(debug::WARNING) << "Remote cache error";
       }
     } else {
-      debug::log(debug::INFO) << "Cache entry too large for the remote cache: " << size << " bytes";
+      debug::log(debug::WARNING) << "Cache entry too large for the remote cache: " << size
+                                 << " bytes";
     }
   }
 
@@ -297,7 +298,8 @@ bool cache_t::lookup_in_remote_cache(const std::string& hash,
       m_local_cache.add(hash, entry, expected_files, allow_hard_links);
       m_local_cache.update_stats(hash, cache_stats_t::remote_hit());
     } else {
-      debug::log(debug::INFO) << "Cache entry too large for the local cache: " << size << " bytes";
+      debug::log(debug::WARNING) << "Cache entry too large for the local cache: " << size
+                                 << " bytes";
     }
   } catch (std::exception& e) {
     debug::log(debug::ERROR) << "Unable to add remote entry to the local cache: " << e.what();

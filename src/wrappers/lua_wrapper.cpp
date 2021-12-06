@@ -257,6 +257,12 @@ int l_log_info(lua_State* state) {
   return 0;
 }
 
+int l_log_warning(lua_State* state) {
+  const auto msg = pop_string(state);
+  debug::log(debug::WARNING) << msg;
+  return 0;
+}
+
 int l_resolve_path(lua_State* state) {
   push(state, file::resolve_path(pop_string(state)));
   return 1;
@@ -296,6 +302,7 @@ const luaL_Reg BCACHE_LIB_FUNCS[] = {{"append_path", l_append_path},
                                      {"log_error", l_log_error},
                                      {"log_fatal", l_log_fatal},
                                      {"log_info", l_log_info},
+                                     {"log_warning", l_log_warning},
                                      {"resolve_path", l_resolve_path},
                                      {"run", l_run},
                                      {"split_args", l_split_args},

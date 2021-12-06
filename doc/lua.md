@@ -84,6 +84,7 @@ the corresponding C++ function documentation):
 | log_error(str) | Print a log message with log level "ERROR" |
 | log_fatal(str) | Print a log message with log level "FATAL" |
 | log_info(str) | Print a log message with log level "INFO" |
+| log_warning(str) | Print a log message with log level "WARNING" |
 | run(args) | Run the given command (passed as a list of arguments) |
 | split_args(str) | Construct a list of arguments from a string with a shell-like format |
 
