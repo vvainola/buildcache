@@ -74,7 +74,7 @@ std::string drop_leading_colon(const std::string& s) {
   return s;
 }
 
-string_list_t make_preprocessor_cmd(const string_list_t& args) {
+string_list_t make_preprocessor_cmd(const string_list_t& args, bool use_direct_mode) {
   string_list_t preprocess_args;
 
   // Drop arguments that we do not want/need, and check if the build will produce debug/coverage
@@ -114,8 +114,10 @@ string_list_t make_preprocessor_cmd(const string_list_t& args) {
     preprocess_args += std::string("/E");
   }
 
-  // Add argument for listing include files (used for direct mode).
-  preprocess_args += std::string("/showIncludes");
+  if (use_direct_mode) {
+    // Add argument for listing include files (used for direct mode).
+    preprocess_args += std::string("/showIncludes");
+  }
 
   return preprocess_args;
 }
@@ -315,14 +317,17 @@ std::string msvc_wrapper_t::preprocess_source() {
   scoped_unset_env_t scoped_off(ENV_VS_OUTPUT_REDIRECTION);
 
   // Run the preprocessor step.
-  const auto preprocessor_args = make_preprocessor_cmd(m_resolved_args);
+  const auto preprocessor_args =
+      make_preprocessor_cmd(m_resolved_args, m_active_capabilities.direct_mode());
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
     throw std::runtime_error("Preprocessing command was unsuccessful.");
   }
 
-  // Collect all the input files. They are reported in std_err.
-  m_implicit_input_files = get_include_files(result.std_err);
+  if (m_active_capabilities.direct_mode()) {
+    // Collect all the input files. They are reported in std_err.
+    m_implicit_input_files = get_include_files(result.std_err);
+  }
 
   // Return the preprocessed file (from stdout).
   return result.std_out;
