@@ -69,13 +69,14 @@ To get debug output from a BuildCache run, set the environment variable
 `BUILDCACHE_DEBUG` to the desired debug level (debug output is disabled by
 default):
 
-| BUILDCACHE_DEBUG | Level | Comment              |
-| ---------------- | ----- | -------------------- |
-| 1                | DEBUG | Maximum printouts    |
-| 2                | INFO  |                      |
-| 3                | ERROR |                      |
-| 4                | FATAL |                      |
-| -1               | -     | Disable debug output |
+| BUILDCACHE_DEBUG | Level   | Comment              |
+| ---------------- | ------- | -------------------- |
+| 1                | DEBUG   | Maximum printouts    |
+| 2                | INFO    |                      |
+| 3                | WARNING |                      |
+| 4                | ERROR   |                      |
+| 5                | FATAL   |                      |
+| -1               | -       | Disable debug output |
 
 For instance:
 

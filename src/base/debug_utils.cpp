@@ -58,6 +58,8 @@ std::string get_level_string(const log_level_t level) {
       return "DEBUG";
     case INFO:
       return "INFO";
+    case WARNING:
+      return "WARNING";
     case ERROR:
       return "ERROR";
     case FATAL:

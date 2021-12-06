@@ -26,7 +26,7 @@
 namespace bcache {
 namespace debug {
 /// @brief Recognized debug log levels.
-enum log_level_t { DEBUG = 1, INFO = 2, ERROR = 3, FATAL = 4, NONE = 5 };
+enum log_level_t { DEBUG = 1, INFO = 2, WARNING = 3, ERROR = 4, FATAL = 5, NONE = 6 };
 
 /// @brief Set the global log level.
 /// @param level An integer that corresponds to a log_level_t enum value.
