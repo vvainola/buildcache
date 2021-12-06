@@ -30,6 +30,11 @@
 namespace bcache {
 
 namespace {
+struct decode_exception_t : public std::runtime_error {
+  decode_exception_t(const std::string& what) : std::runtime_error(what) {
+  }
+};
+
 bool is_time_for_housekeeping() {
   // Get the time since the epoch, in microseconds.
   const auto t =
@@ -68,6 +73,76 @@ time::seconds_t decode_file_time(const std::string& str) {
          (static_cast<time::seconds_t>(static_cast<uint8_t>(str[5])) << 40) |
          (static_cast<time::seconds_t>(static_cast<uint8_t>(str[6])) << 48) |
          (static_cast<time::seconds_t>(static_cast<uint8_t>(str[7])) << 56);
+}
+
+char to_hex_4bit(uint8_t c) {
+  static const char HEX_LUT[16] = {
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  return HEX_LUT[c & 15];
+}
+
+uint8_t from_hex_4bit(char c) {
+  if ((c >= '0') && (c <= '9')) {
+    return static_cast<uint8_t>(c - '0');
+  }
+  if ((c >= 'a') && (c <= 'f')) {
+    return static_cast<uint8_t>(c - 'a' + 10);
+  }
+
+  throw decode_exception_t("Invalid hex character: " + std::string({c}));
+}
+
+bool is_literal_key_char(char c) {
+  // We allow lower case ASCII alpha-numeric characters plus '_' and '-', as those are valid on all
+  // (resonable) file systems without being subject to case insensitivity issues. The period
+  // character ('.') is reserved as a prefix for hex encoding.
+  return ((c >= '0') && (c <= '9')) || ((c >= 'a') && (c <= 'z')) || (c == '_') || (c == '-');
+}
+
+std::string decode_key(const std::string& key_encoded) {
+  // Sanitize the key to be used as a file name.
+  std::string key;
+  for (auto it = key_encoded.cbegin(); it != key_encoded.cend();) {
+    const auto c = *it++;
+    if (is_literal_key_char(c)) {
+      // Literal character: Pass through as is.
+      key += c;
+    } else if (c == '.') {
+      // Decode the hex encoded character.
+      if (it == key_encoded.cend()) {
+        throw decode_exception_t("Premature end of encoded key");
+      }
+      const auto c1 = *it++;
+      if (it == key_encoded.cend()) {
+        throw decode_exception_t("Premature end of encoded key");
+      }
+      const auto c2 = *it++;
+      const auto h1 = from_hex_4bit(c1);
+      const auto h2 = from_hex_4bit(c2);
+      key += static_cast<char>((h1 << 4) | h2);
+    } else {
+      throw decode_exception_t("Illegal data store key: " + key_encoded);
+    }
+  }
+
+  return key;
+}
+
+std::string encode_key(const std::string& key) {
+  std::string key_encoded;
+  for (const auto& c : key) {
+    if (is_literal_key_char(c)) {
+      // Literal character: Pass through as is.
+      key_encoded += c;
+    } else {
+      // Non-literal character: Convert to hex - it never fails.
+      key_encoded += '.';
+      key_encoded += to_hex_4bit(static_cast<uint8_t>(c) >> 4);
+      key_encoded += to_hex_4bit(static_cast<uint8_t>(c));
+    }
+  }
+
+  return key_encoded;
 }
 
 }  // namespace
@@ -109,10 +184,13 @@ data_store_t::item_t data_store_t::get_item(const std::string& key) {
     // Read and decode the data item.
     const auto raw_data = file::read(make_file_path(key));
     if (raw_data.size() < 8) {
+      debug::log(debug::WARNING) << "Removing broken data store item \"" << key << "\"";
+      remove_item(key);
       return item_t();
     }
     const auto expires = decode_file_time(raw_data);
     if (expires < time::seconds_since_epoch()) {
+      debug::log(debug::DEBUG) << "Removing expired data store item \"" << key << "\"";
       remove_item(key);
       return item_t();
     }
@@ -139,25 +217,7 @@ void data_store_t::clear() {
 }
 
 std::string data_store_t::make_file_path(const std::string& key) {
-  static const char HEX_LUT[16] = {
-      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
-
-  // Sanitize the key to be used as a file name.
-  std::string key_sanitized;
-  for (const auto& c : key) {
-    if (((c >= '0') && (c <= '9')) || ((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) ||
-        (c == '_') || (c == '-')) {
-      // Legal character: Pass through as is.
-      key_sanitized += c;
-    } else {
-      // Illegal character: Convert to hex - it never fails.
-      key_sanitized += '.';
-      key_sanitized += HEX_LUT[(c >> 4) & 15];
-      key_sanitized += HEX_LUT[c & 15];
-    }
-  }
-
-  return file::append_path(m_root_dir, key_sanitized);
+  return file::append_path(m_root_dir, encode_key(key));
 }
 
 void data_store_t::perform_housekeeping() {
@@ -170,8 +230,17 @@ void data_store_t::perform_housekeeping() {
     const auto files = file::walk_directory(m_root_dir);
     for (const auto& file : files) {
       if (!file.is_dir()) {
-        const auto key = file::get_file_part(file.path());
-        (void)get_item(key);
+        const auto encoded_key = file::get_file_part(file.path());
+        try {
+          const auto key = decode_key(encoded_key);
+          (void)get_item(key);
+        } catch (const decode_exception_t& e) {
+          // If we could not decode the key, it is bogus and should be removed
+          // from the file system.
+          debug::log(debug::WARNING)
+              << "Removing bogus data store item \"" << encoded_key << "\" (" << e.what() << ")";
+          file::remove_file(file.path(), true);
+        }
       }
     }
   }
