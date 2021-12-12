@@ -129,18 +129,16 @@ string_list_t get_include_files(const std::string& std_err) {
 
   // Extract all unique include paths. Include path references in std_err start with the prefix
   // "Note: including file:", followed by one or more space characters, and finally the full path.
-  // In the regex wealso trim trailing whitespaces from the path, just for good measure.
   //
   // See: https://docs.microsoft.com/en-us/cpp/build/reference/showincludes-list-include-files
-  const std::regex incpath_re("\\s*Note: including file:\\s+(.*[^\\s])\\s*");
   std::set<std::string> includes;
+  constexpr char INCPATH_LINE[] = "Note: including file:";
+  constexpr size_t INCPATH_LINE_SIZE = sizeof(INCPATH_LINE);
   for (const auto& line : lines) {
-    std::smatch match;
-    if (std::regex_match(line, match, incpath_re)) {
-      if (match.size() == 2) {
-        const auto& include = match[1].str();
-        includes.insert(file::resolve_path(include));
-      }
+    size_t it = line.find(INCPATH_LINE);
+    if (it != std::string::npos) {
+      std::string include = strip(line.substr(it + INCPATH_LINE_SIZE));
+      includes.insert(file::resolve_path(include));
     }
   }
 
