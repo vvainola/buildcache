@@ -48,10 +48,6 @@ public:
   /// @returns true if this wrapper can handle the command.
   virtual bool can_handle_command() = 0;
 
-  virtual const string_list_t& get_resolved_args() {
-    return m_args;
-  };
-
 protected:
   /// @brief A helper class for managing wrapper capabilities.
   class capabilities_t {
@@ -169,7 +165,8 @@ protected:
   virtual sys::run_result_t run_for_miss();
 
   const file::exe_path_t& m_exe_path;
-  const string_list_t& m_args;
+  const string_list_t& m_unresolved_args;
+  string_list_t m_args;
 
   /// @brief Active capabilities
   ///

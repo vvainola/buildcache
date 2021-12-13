@@ -30,10 +30,6 @@ public:
 
   bool can_handle_command() override;
 
-  const string_list_t& get_resolved_args() override {
-    return m_resolved_args;
-  }
-
 protected:
   string_list_t get_capabilities() override;
   std::map<std::string, expected_file_t> get_build_files() override;
@@ -43,8 +39,6 @@ protected:
   string_list_t get_input_files() override;
   std::string preprocess_source() override;
   string_list_t get_implicit_input_files() override;
-
-  string_list_t m_resolved_args;
 
 private:
   void resolve_args() override;
