@@ -38,9 +38,6 @@ std::string PROGRAM_ID_CACHE_NAME = "prgid";
 time::seconds_t PROGRAM_ID_CACHE_LIFE_TIME = 300;  // Five minutes.
 }  // namespace
 
-program_wrapper_t::capabilities_t::capabilities_t() {
-}
-
 program_wrapper_t::capabilities_t::capabilities_t(const string_list_t& cap_strings) {
   // Capability options are opt-in (false by default). Furthermore, if a capability is disabled in
   // the user provided configuration, the capability will be disabled.
@@ -59,9 +56,6 @@ program_wrapper_t::capabilities_t::capabilities_t(const string_list_t& cap_strin
 
 program_wrapper_t::program_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args)
     : m_exe_path(exe_path), m_args(args) {
-}
-
-program_wrapper_t::~program_wrapper_t() {
 }
 
 bool program_wrapper_t::handle_command(int& return_code) {

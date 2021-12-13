@@ -37,7 +37,7 @@ namespace bcache {
 /// This class also implements the entire program wrapping mechanism, with cache lookups etc.
 class program_wrapper_t {
 public:
-  virtual ~program_wrapper_t();
+  virtual ~program_wrapper_t() = default;
 
   /// @brief Try to wrap a program command.
   /// @param[out] return_code The command return code (if handled).
@@ -56,7 +56,7 @@ protected:
   /// @brief A helper class for managing wrapper capabilities.
   class capabilities_t {
   public:
-    capabilities_t();
+    capabilities_t() = default;
     capabilities_t(const string_list_t& cap_strings);
 
     bool create_target_dirs() const {

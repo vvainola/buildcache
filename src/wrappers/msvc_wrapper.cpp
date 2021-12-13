@@ -81,8 +81,7 @@ string_list_t make_preprocessor_cmd(const string_list_t& args, bool use_direct_m
   // info.
   bool has_debug_symbols = false;
   bool has_coverage_output = false;
-  for (auto it = args.begin(); it != args.end(); ++it) {
-    auto arg = *it;
+  for (const auto& arg : args) {
     bool drop_this_arg = false;
     if (arg_equals(arg, "c") || arg_starts_with(arg, "Fo") || arg_equals(arg, "C") ||
         arg_equals(arg, "E") || arg_equals(arg, "EP")) {

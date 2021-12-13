@@ -31,9 +31,6 @@ namespace {
 const int32_t MANIFEST_DATA_FORMAT_VERSION = 2;
 }  // namespace
 
-direct_mode_manifest_t::direct_mode_manifest_t() {
-}
-
 direct_mode_manifest_t::direct_mode_manifest_t(
     const std::string& hash,
     const std::map<std::string, std::string>& files_with_hashes)

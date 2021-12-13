@@ -29,7 +29,7 @@ namespace bcache {
 
 class redis_cache_provider_t : public remote_cache_provider_t {
 public:
-  redis_cache_provider_t();
+  redis_cache_provider_t() = default;
   ~redis_cache_provider_t() override;
 
   // Implementation of the remote_cache_provider_t interface.

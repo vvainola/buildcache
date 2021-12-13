@@ -31,7 +31,7 @@ namespace bcache {
 class remote_cache_provider_t {
 public:
   /// @brief De-initialzie the remote cache object.
-  virtual ~remote_cache_provider_t();
+  virtual ~remote_cache_provider_t() = default;
 
   /// @brief Connect to the remote cache.
   /// @param host_description A string describing the host to connect to (excluding protocol).
@@ -68,7 +68,7 @@ public:
 
 protected:
   // Constructor called by child classes.
-  remote_cache_provider_t();
+  remote_cache_provider_t() = default;
 
   /// @brief Parse a host description string.
   /// @param host_description The host description string.

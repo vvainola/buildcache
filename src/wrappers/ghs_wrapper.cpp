@@ -52,7 +52,7 @@ string_list_t ghs_wrapper_t::get_include_files(const std::string& std_err) const
   // Extract all unique include paths. Include path references in std_err start with zero or more
   // spaces followed by the full path. In the regex we also trim leading and trailing whitespaces
   // from the path, just for good measure.
-  const std::regex incpath_re("\\s*(.*[^\\s])\\s*");
+  const std::regex incpath_re(R"(\s*(.*[^\s])\s*)");
   std::set<std::string> includes;
   for (const auto& line : lines) {
     std::smatch match;

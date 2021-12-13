@@ -196,9 +196,6 @@ local_cache_t::local_cache_t() {
   file::create_dir_with_parents(config::dir());
 }
 
-local_cache_t::~local_cache_t() {
-}
-
 std::string local_cache_t::get_cache_files_folder() const {
   auto cache_files_path = file::append_path(config::dir(), CACHE_FILES_FOLDER_NAME);
   file::create_dir_with_parents(cache_files_path);

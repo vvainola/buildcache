@@ -48,7 +48,7 @@
 #undef ERROR
 #undef log
 #else
-#include <errno.h>
+#include <cerrno>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>

@@ -24,12 +24,6 @@
 
 namespace bcache {
 
-remote_cache_provider_t::remote_cache_provider_t() {
-}
-
-remote_cache_provider_t::~remote_cache_provider_t() {
-}
-
 bool remote_cache_provider_t::parse_host_description(const std::string& host_description,
                                                      std::string& host,
                                                      int& port,

@@ -95,8 +95,7 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 
   // Drop arguments that we do not want/need.
   bool drop_next_arg = false;
-  for (auto it = args.begin(); it != args.end(); ++it) {
-    auto arg = *it;
+  for (const auto& arg : args) {
     auto drop_this_arg = drop_next_arg;
     drop_next_arg = false;
     if (arg == "-c") {
@@ -233,7 +232,7 @@ string_list_t gcc_wrapper_t::get_include_files(const std::string& std_err) const
   // Extract all unique include paths. Include path references in std_err start with one or more
   // periods (.) followed by a single space character, and finally the full path. In the regex we
   // also trim leading and trailing whitespaces from the path, just for good measure.
-  const std::regex incpath_re("\\.+\\s+(.*[^\\s])\\s*");
+  const std::regex incpath_re(R"(\.+\s+(.*[^\s])\s*)");
   std::set<std::string> includes;
   for (const auto& line : lines) {
     std::smatch match;
@@ -275,7 +274,7 @@ bool gcc_wrapper_t::can_handle_command() {
 
     // We allow things like "clang", "clang++", "clang-5", "x86-clang-6.0", but not "clang-tidy"
     // and similar.
-    const std::regex clang_re(".*clang(\\+\\+|-cpp)?(-[1-9][0-9]*(\\.[0-9]+)*)?(\\.exe)?");
+    const std::regex clang_re(R"(.*clang(\+\+|-cpp)?(-[1-9][0-9]*(\.[0-9]+)*)?(\.exe)?)");
     if (std::regex_match(cmd, clang_re)) {
       return true;
     }

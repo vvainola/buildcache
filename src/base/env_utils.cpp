@@ -20,7 +20,7 @@
 #include <base/env_utils.hpp>
 #include <base/unicode_utils.hpp>
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <algorithm>
 
 #if defined(_WIN32)
