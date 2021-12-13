@@ -40,7 +40,7 @@ public:
   local_cache_t();
 
   /// @brief De-initialzie the cache object.
-  ~local_cache_t();
+  ~local_cache_t() = default;
 
   /// @brief Clear all entries in the cache.
   void clear();

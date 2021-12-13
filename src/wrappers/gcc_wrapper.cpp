@@ -95,8 +95,7 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 
   // Drop arguments that we do not want/need.
   bool drop_next_arg = false;
-  for (auto it = args.begin(); it != args.end(); ++it) {
-    auto arg = *it;
+  for (const auto& arg : args) {
     auto drop_this_arg = drop_next_arg;
     drop_next_arg = false;
     if (arg == "-c") {
@@ -190,8 +189,7 @@ gcc_wrapper_t::gcc_wrapper_t(const file::exe_path_t& exe_path, const string_list
 
 void gcc_wrapper_t::resolve_args() {
   // Iterate over all args and load any response files that we encounter.
-  m_resolved_args.clear();
-  m_resolved_args += parse_args(m_args);
+  m_args = parse_args(m_unresolved_args);
 }
 
 string_list_t gcc_wrapper_t::parse_args(const string_list_t& args) {
@@ -233,7 +231,7 @@ string_list_t gcc_wrapper_t::get_include_files(const std::string& std_err) const
   // Extract all unique include paths. Include path references in std_err start with one or more
   // periods (.) followed by a single space character, and finally the full path. In the regex we
   // also trim leading and trailing whitespaces from the path, just for good measure.
-  const std::regex incpath_re("\\.+\\s+(.*[^\\s])\\s*");
+  const std::regex incpath_re(R"(\.+\s+(.*[^\s])\s*)");
   std::set<std::string> includes;
   for (const auto& line : lines) {
     std::smatch match;
@@ -275,7 +273,7 @@ bool gcc_wrapper_t::can_handle_command() {
 
     // We allow things like "clang", "clang++", "clang-5", "x86-clang-6.0", but not "clang-tidy"
     // and similar.
-    const std::regex clang_re(".*clang(\\+\\+|-cpp)?(-[1-9][0-9]*(\\.[0-9]+)*)?(\\.exe)?");
+    const std::regex clang_re(R"(.*clang(\+\+|-cpp)?(-[1-9][0-9]*(\.[0-9]+)*)?(\.exe)?)");
     if (std::regex_match(cmd, clang_re)) {
       return true;
     }
@@ -328,20 +326,20 @@ string_list_t gcc_wrapper_t::get_capabilities() {
 std::map<std::string, expected_file_t> gcc_wrapper_t::get_build_files() {
   std::map<std::string, expected_file_t> files;
   auto found_object_file = false;
-  for (size_t i = 0U; i < m_resolved_args.size(); ++i) {
+  for (size_t i = 0U; i < m_args.size(); ++i) {
     const auto next_idx = i + 1U;
-    if ((m_resolved_args[i] == "-o") && (next_idx < m_resolved_args.size())) {
+    if ((m_args[i] == "-o") && (next_idx < m_args.size())) {
       if (found_object_file) {
         throw std::runtime_error("Only a single target object file can be specified.");
       }
-      files["object"] = {m_resolved_args[next_idx], true};
+      files["object"] = {m_args[next_idx], true};
       found_object_file = true;
     }
   }
   if (!found_object_file) {
     throw std::runtime_error("Unable to get the target object file.");
   }
-  if (has_coverage_output(m_resolved_args)) {
+  if (has_coverage_output(m_args)) {
     files["coverage"] = {file::change_extension(files["object"].path(), ".gcno"), true};
   }
   return files;
@@ -373,7 +371,7 @@ string_list_t gcc_wrapper_t::get_relevant_arguments() {
 
   // Note: We always skip the first arg since we have handled it already.
   bool skip_next_arg = true;
-  for (const auto& arg : m_resolved_args) {
+  for (const auto& arg : m_args) {
     if (!skip_next_arg) {
       // Generally unwanted argument (things that will not change how we go from preprocessed code
       // to binary object files)?
@@ -410,7 +408,7 @@ string_list_t gcc_wrapper_t::get_input_files() {
   // Iterate over the command line arguments to find input files.
   // Note: We always skip the first arg (it's the program executable).
   bool skip_next_arg = true;
-  for (const auto& arg : m_resolved_args) {
+  for (const auto& arg : m_args) {
     if (!skip_next_arg) {
       if (is_arg_pair(arg)) {
         skip_next_arg = true;
@@ -428,7 +426,7 @@ std::string gcc_wrapper_t::preprocess_source() {
   // Check if this is a compilation command that we support.
   auto is_object_compilation = false;
   auto has_object_output = false;
-  for (const auto& arg : m_resolved_args) {
+  for (const auto& arg : m_args) {
     if (arg == "-c") {
       is_object_compilation = true;
     } else if (arg == "-o") {
@@ -441,8 +439,8 @@ std::string gcc_wrapper_t::preprocess_source() {
 
   // Run the preprocessor step.
   file::tmp_file_t preprocessed_file(sys::get_local_temp_folder(), ".i");
-  const auto preprocessor_args = make_preprocessor_cmd(
-      m_resolved_args, preprocessed_file.path(), m_active_capabilities.direct_mode());
+  const auto preprocessor_args =
+      make_preprocessor_cmd(m_args, preprocessed_file.path(), m_active_capabilities.direct_mode());
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
     throw std::runtime_error("Preprocessing command was unsuccessful.");

@@ -206,23 +206,23 @@ TEST_CASE("get_unique_id produces expected results") {
 TEST_CASE("Canonicalizing paths work as expected") {
 #if defined(_WIN32)
   SUBCASE("Absolute path 1") {
-    const auto path = file::canonicalize_path("C:\\foo\\.\\.\\bar\\.");
-    CHECK_EQ(path, "C:\\foo\\bar");
+    const auto path = file::canonicalize_path(R"(C:\foo\.\.\bar\.)");
+    CHECK_EQ(path, R"(C:\foo\bar)");
   }
 
   SUBCASE("Absolute path 2") {
-    const auto path = file::canonicalize_path("C:\\foo\\.\\..\\bar\\.");
-    CHECK_EQ(path, "C:\\bar");
+    const auto path = file::canonicalize_path(R"(C:\foo\.\..\bar\.)");
+    CHECK_EQ(path, R"(C:\bar)");
   }
 
   SUBCASE("Absolute path 3") {
-    const auto path = file::canonicalize_path("C:\\foo\\.\\\\\\..\\bar\\..");
-    CHECK_EQ(path, "C:\\");
+    const auto path = file::canonicalize_path(R"(C:\foo\.\\\..\bar\..)");
+    CHECK_EQ(path, R"(C:\)");
   }
 
   SUBCASE("Absolute path 4") {
-    const auto path = file::canonicalize_path("c:\\foo/bar\\");
-    CHECK_EQ(path, "C:\\foo\\bar");
+    const auto path = file::canonicalize_path(R"(c:\foo/bar\)");
+    CHECK_EQ(path, R"(C:\foo\bar)");
   }
 #else
   SUBCASE("Absolute path 1") {

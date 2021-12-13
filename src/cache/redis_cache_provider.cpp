@@ -63,9 +63,6 @@ struct timeval ms_to_timeval(const int time_in_ms) {
 }
 }  // namespace
 
-redis_cache_provider_t::redis_cache_provider_t() {
-}
-
 redis_cache_provider_t::~redis_cache_provider_t() {
   disconnect();
 }

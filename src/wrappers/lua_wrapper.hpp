@@ -47,7 +47,13 @@ private:
     runner_t(const std::string& script_path, const string_list_t& args);
     ~runner_t();
 
+    /// @brief Call a Lua function.
+    /// @param func The name of the function.
+    /// @returns true if the call was successful (i.e. the Lua function is defined).
     bool call(const std::string& func);
+
+    /// @returns the contents of the ARGS Lua variable.
+    string_list_t get_resolved_args();
 
     const std::string& script() const {
       return m_script;

@@ -28,7 +28,7 @@ namespace bcache {
 class direct_mode_manifest_t {
 public:
   /// @brief Construct an empty/invalid manifest.
-  direct_mode_manifest_t();
+  direct_mode_manifest_t() = default;
 
   /// @brief Construct a valid manifest.
   /// @param hash The preprocessor mode cache entry hash.

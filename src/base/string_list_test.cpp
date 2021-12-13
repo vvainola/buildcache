@@ -71,27 +71,27 @@ TEST_CASE("Command line argument parsing works correctly") {
   }
 
   SUBCASE("String argument with spaces and escaped slashes and quotes") {
-    const std::string cmd("hello \"beautiful \\\\ \\\"  world\"");
+    const std::string cmd(R"(hello "beautiful \\ \"  world")");
     string_list_t list = string_list_t::split_args(cmd);
     CHECK_EQ(list.size(), 2);
     CHECK_EQ(list[0], "hello");
 #ifdef _WIN32
-    CHECK_EQ(list[1], "beautiful \\\\ \"  world");
+    CHECK_EQ(list[1], R"(beautiful \\ "  world)");
 #else
-    CHECK_EQ(list[1], "beautiful \\ \"  world");
+    CHECK_EQ(list[1], R"(beautiful \ "  world)");
 #endif
   }
 }
 
 TEST_CASE("Joining elements works correctly") {
   SUBCASE("Un-escaped result") {
-    string_list_t list{"Hello", "\"beautiful world\""};
+    string_list_t list{"Hello", R"("beautiful world")"};
     const auto str = list.join(" ; ", false);
-    CHECK_EQ(str, "Hello ; \"beautiful world\"");
+    CHECK_EQ(str, R"(Hello ; "beautiful world")");
   }
 
   SUBCASE("Escaped result") {
-    string_list_t list{"Hello", "\"beautiful world\""};
+    string_list_t list{"Hello", R"("beautiful world")"};
     const auto str = list.join(" ; ", true);
     CHECK_EQ(str, "Hello ; \"\\\"beautiful world\\\"\"");
   }

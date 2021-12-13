@@ -49,7 +49,7 @@ string_list_t qcc_wrapper_t::get_capabilities() {
 
 std::map<std::string, expected_file_t> qcc_wrapper_t::get_build_files() {
   // Check for arguments that we do not support.
-  for (const auto& arg : m_resolved_args) {
+  for (const auto& arg : m_args) {
     if (arg == "-set-default") {
       throw std::runtime_error("We can't reproduce -set-default from a cached entry.");
     }

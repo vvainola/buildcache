@@ -26,7 +26,7 @@ namespace bcache {
 
 class http_cache_provider_t : public remote_cache_provider_t {
 public:
-  http_cache_provider_t();
+  http_cache_provider_t() = default;
   ~http_cache_provider_t() override;
 
   // Implementation of the remote_cache_provider_t interface.

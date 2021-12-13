@@ -515,6 +515,12 @@ bool lua_wrapper_t::runner_t::call(const std::string& func) {
   return true;
 }
 
+string_list_t lua_wrapper_t::runner_t::get_resolved_args() {
+  init_lua_state();
+  lua_getglobal(m_state, "ARGS");
+  return pop_string_list(m_state);
+}
+
 lua_wrapper_t::lua_wrapper_t(const file::exe_path_t& exe_path,
                              const string_list_t& args,
                              const std::string& lua_script_path)
@@ -542,7 +548,9 @@ bool lua_wrapper_t::can_handle_command() {
 }
 
 void lua_wrapper_t::resolve_args() {
-  if (!m_runner.call("resolve_args")) {
+  if (m_runner.call("resolve_args")) {
+    m_args = m_runner.get_resolved_args();
+  } else {
     program_wrapper_t::resolve_args();
   }
 }

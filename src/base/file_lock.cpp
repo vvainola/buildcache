@@ -41,8 +41,8 @@
 #undef log
 #else
 #include <chrono>
+#include <csignal>
 #include <fcntl.h>
-#include <signal.h>
 #include <unistd.h>
 
 #include <thread>

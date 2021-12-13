@@ -38,9 +38,6 @@ std::string PROGRAM_ID_CACHE_NAME = "prgid";
 time::seconds_t PROGRAM_ID_CACHE_LIFE_TIME = 300;  // Five minutes.
 }  // namespace
 
-program_wrapper_t::capabilities_t::capabilities_t() {
-}
-
 program_wrapper_t::capabilities_t::capabilities_t(const string_list_t& cap_strings) {
   // Capability options are opt-in (false by default). Furthermore, if a capability is disabled in
   // the user provided configuration, the capability will be disabled.
@@ -58,10 +55,7 @@ program_wrapper_t::capabilities_t::capabilities_t(const string_list_t& cap_strin
 }
 
 program_wrapper_t::program_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args)
-    : m_exe_path(exe_path), m_args(args) {
-}
-
-program_wrapper_t::~program_wrapper_t() {
+    : m_exe_path(exe_path), m_unresolved_args(args) {
 }
 
 bool program_wrapper_t::handle_command(int& return_code) {
@@ -120,9 +114,8 @@ bool program_wrapper_t::handle_command(int& return_code) {
           dm_hasher.inject_separator();
 
           // Hash the complete command line, as we need things like defines that are usually
-          // filtered by get_relevant_arguments(). Response files still need to be
-          // expanded so m_args cannot be used directly.
-          dm_hasher.update(get_resolved_args());
+          // filtered by get_relevant_arguments().
+          dm_hasher.update(m_args);
 
           // Hash all the input files.
           PERF_START(HASH_INPUT_FILES);
@@ -248,7 +241,8 @@ bool program_wrapper_t::handle_command(int& return_code) {
 //--------------------------------------------------------------------------------------------------
 
 void program_wrapper_t::resolve_args() {
-  // Default: Do nothing.
+  // Default: Make a copy of the unresolved args.
+  m_args = m_unresolved_args;
 }
 
 string_list_t program_wrapper_t::get_capabilities() {
@@ -300,7 +294,7 @@ string_list_t program_wrapper_t::get_implicit_input_files() {
 
 sys::run_result_t program_wrapper_t::run_for_miss() {
   // Default: Run the program with the configured prefix.
-  return sys::run_with_prefix(m_args, false);
+  return sys::run_with_prefix(m_unresolved_args, false);
 }
 
 std::string program_wrapper_t::get_program_id_cached() {

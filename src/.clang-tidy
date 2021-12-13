@@ -2,7 +2,11 @@
 Checks: "\
 clang-diagnostic-*,\
 clang-analyzer-*,\
+modernize-deprecated-headers,\
+modernize-loop-convert,\
+modernize-raw-string-literal,\
 modernize-use-auto,\
+modernize-use-equals-default,\
 modernize-use-nullptr,\
 performance-*,\
 readability-*,\

@@ -39,9 +39,6 @@ std::vector<std::string> v2_files_to_vector(const std::map<std::string, std::str
 }
 }  // namespace
 
-cache_entry_t::cache_entry_t() {
-}
-
 cache_entry_t::cache_entry_t(const std::vector<std::string>& file_ids,
                              const cache_entry_t::comp_mode_t compression_mode,
                              const std::string& std_out,

@@ -34,7 +34,7 @@ public:
   };
 
   /// @brief Construct an empty/invalid cache entry.
-  cache_entry_t();
+  cache_entry_t() = default;
 
   /// @brief Construct a valid cache entry.
   /// @param file_ids ID:s of the cached files.

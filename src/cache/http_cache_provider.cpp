@@ -50,9 +50,6 @@ std::string remote_key_name(const std::string& hash_str, const std::string& file
 
 }  // namespace
 
-http_cache_provider_t::http_cache_provider_t() {
-}
-
 http_cache_provider_t::~http_cache_provider_t() {
   disconnect();
 }

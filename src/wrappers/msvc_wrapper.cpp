@@ -81,8 +81,7 @@ string_list_t make_preprocessor_cmd(const string_list_t& args, bool use_direct_m
   // info.
   bool has_debug_symbols = false;
   bool has_coverage_output = false;
-  for (auto it = args.begin(); it != args.end(); ++it) {
-    auto arg = *it;
+  for (const auto& arg : args) {
     bool drop_this_arg = false;
     if (arg_equals(arg, "c") || arg_starts_with(arg, "Fo") || arg_equals(arg, "C") ||
         arg_equals(arg, "E") || arg_equals(arg, "EP")) {
@@ -135,9 +134,9 @@ string_list_t get_include_files(const std::string& std_err) {
   constexpr char INCPATH_LINE[] = "Note: including file:";
   constexpr size_t INCPATH_LINE_SIZE = sizeof(INCPATH_LINE);
   for (const auto& line : lines) {
-    size_t it = line.find(INCPATH_LINE);
-    if (it != std::string::npos) {
-      std::string include = strip(line.substr(it + INCPATH_LINE_SIZE));
+    const auto start = line.find(INCPATH_LINE);
+    if (start != std::string::npos) {
+      const auto include = strip(line.substr(start + INCPATH_LINE_SIZE));
       includes.insert(file::resolve_path(include));
     }
   }
@@ -157,8 +156,8 @@ msvc_wrapper_t::msvc_wrapper_t(const file::exe_path_t& exe_path, const string_li
 
 void msvc_wrapper_t::resolve_args() {
   // Iterate over all args and load any response files that we encounter.
-  m_resolved_args.clear();
-  for (const auto& arg : m_args) {
+  m_args.clear();
+  for (const auto& arg : m_unresolved_args) {
     if (arg.substr(0, 1) == "@") {
       std::ifstream file(arg.substr(1));
       if (file.is_open()) {
@@ -173,7 +172,7 @@ void msvc_wrapper_t::resolve_args() {
                                   new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>));
           std::wstring wline;
           while (std::getline(wfile, wline)) {
-            m_resolved_args += string_list_t::split_args(strip(ucs2_to_utf8(wline)));
+            m_args += string_list_t::split_args(strip(ucs2_to_utf8(wline)));
           }
         } else {
           // Assume UTF-8.
@@ -181,12 +180,12 @@ void msvc_wrapper_t::resolve_args() {
           file.seekg(0);
           std::string line;
           while (std::getline(file, line)) {
-            m_resolved_args += string_list_t::split_args(strip(line));
+            m_args += string_list_t::split_args(strip(line));
           }
         }
       }
     } else {
-      m_resolved_args += arg;
+      m_args += arg;
     }
   }
 }
@@ -206,7 +205,7 @@ string_list_t msvc_wrapper_t::get_capabilities() {
 std::map<std::string, expected_file_t> msvc_wrapper_t::get_build_files() {
   std::map<std::string, expected_file_t> files;
   auto found_object_file = false;
-  for (const auto& arg : m_resolved_args) {
+  for (const auto& arg : m_args) {
     if (arg_starts_with(arg, "Fo") && is_object_file(file::get_extension(arg))) {
       if (found_object_file) {
         throw std::runtime_error("Only a single target object file can be specified.");
@@ -244,11 +243,11 @@ string_list_t msvc_wrapper_t::get_relevant_arguments() {
   string_list_t filtered_args;
 
   // The first argument is the compiler binary without the path.
-  filtered_args += file::get_file_part(m_resolved_args[0]);
+  filtered_args += file::get_file_part(m_args[0]);
 
   // Note: We always skip the first arg since we have handled it already.
   bool skip_next_arg = true;
-  for (const auto& arg : m_resolved_args) {
+  for (const auto& arg : m_args) {
     if (!skip_next_arg) {
       // Generally unwanted argument (things that will not change how we go from preprocessed code
       // to binary object files)?
@@ -286,7 +285,7 @@ std::map<std::string, std::string> msvc_wrapper_t::get_relevant_env_vars() {
 
 string_list_t msvc_wrapper_t::get_input_files() {
   string_list_t input_files;
-  for (const auto& arg : m_resolved_args) {
+  for (const auto& arg : m_args) {
     if (is_source_file(arg)) {
       input_files += file::resolve_path(arg);
     }
@@ -298,7 +297,7 @@ std::string msvc_wrapper_t::preprocess_source() {
   // Check if this is a compilation command that we support.
   auto is_object_compilation = false;
   auto has_object_output = false;
-  for (const auto& arg : m_resolved_args) {
+  for (const auto& arg : m_args) {
     if (arg_equals(arg, "c")) {
       is_object_compilation = true;
     } else if (arg_starts_with(arg, "Fo") && (is_object_file(file::get_extension(arg)))) {
@@ -315,8 +314,7 @@ std::string msvc_wrapper_t::preprocess_source() {
   scoped_unset_env_t scoped_off(ENV_VS_OUTPUT_REDIRECTION);
 
   // Run the preprocessor step.
-  const auto preprocessor_args =
-      make_preprocessor_cmd(m_resolved_args, m_active_capabilities.direct_mode());
+  const auto preprocessor_args = make_preprocessor_cmd(m_args, m_active_capabilities.direct_mode());
   auto result = sys::run(preprocessor_args);
   if (result.return_code != 0) {
     throw std::runtime_error("Preprocessing command was unsuccessful.");
