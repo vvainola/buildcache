@@ -135,9 +135,9 @@ string_list_t get_include_files(const std::string& std_err) {
   constexpr char INCPATH_LINE[] = "Note: including file:";
   constexpr size_t INCPATH_LINE_SIZE = sizeof(INCPATH_LINE);
   for (const auto& line : lines) {
-    size_t it = line.find(INCPATH_LINE);
-    if (it != std::string::npos) {
-      std::string include = strip(line.substr(it + INCPATH_LINE_SIZE));
+    const auto start = line.find(INCPATH_LINE);
+    if (start != std::string::npos) {
+      const auto include = strip(line.substr(start + INCPATH_LINE_SIZE));
       includes.insert(file::resolve_path(include));
     }
   }
