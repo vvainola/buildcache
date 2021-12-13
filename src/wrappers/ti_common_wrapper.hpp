@@ -28,6 +28,10 @@ class ti_common_wrapper_t : public program_wrapper_t {
 public:
   ti_common_wrapper_t(const file::exe_path_t& exe_path, const string_list_t& args);
 
+  const string_list_t& get_resolved_args() override {
+    return m_resolved_args;
+  }
+
 protected:
   void resolve_args() override;
   std::map<std::string, expected_file_t> get_build_files() override;
