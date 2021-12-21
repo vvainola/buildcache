@@ -296,14 +296,15 @@ void local_cache_t::show_stats() {
   int num_entries = 0;
   int64_t total_size = 0;
   cache_stats_t overall_stats;
-  std::set<std::string> visitedDirs;
-  auto process_stats = [&visitedDirs, &overall_stats](const std::string& dir) {
-    const auto firstLevelDirPath = file::get_dir_part(dir);
-    if (visitedDirs.find(firstLevelDirPath) != visitedDirs.end()) {
+  std::set<std::string> visited_dirs;
+
+  auto process_stats = [&visited_dirs, &overall_stats](const std::string& dir) {
+    const auto first_level_dir_path = file::get_dir_part(dir);
+    if (visited_dirs.find(first_level_dir_path) != visited_dirs.end()) {
       return;
     }
-    visitedDirs.insert(firstLevelDirPath);
-    const auto stats_path = file::append_path(firstLevelDirPath, STATS_FILE_NAME);
+    visited_dirs.insert(first_level_dir_path);
+    const auto stats_path = file::append_path(first_level_dir_path, STATS_FILE_NAME);
     cache_stats_t stats;
     file::file_lock_t lock{stats_path + FILE_LOCK_SUFFIX, config::remote_locks()};
     if (!lock.has_lock()) {
@@ -313,7 +314,7 @@ void local_cache_t::show_stats() {
     if (stats.from_file(stats_path)) {
       overall_stats += stats;
     } else {
-      debug::log(debug::DEBUG) << "Failed to load stats for dir " << firstLevelDirPath;
+      debug::log(debug::DEBUG) << "Failed to load stats for dir " << first_level_dir_path;
     }
   };
 
