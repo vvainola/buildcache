@@ -128,6 +128,63 @@ private:
   bool m_is_dir;
 };
 
+/// @brief File name filter function for directory traversal.
+class filter_t {
+public:
+  /// @brief Create an all-filter (keep all files).
+  filter_t() : filter_t(std::string(), include_t::ALL, match_t::SUBSTRING) {
+  }
+
+  /// @brief Create an inclusion filter for substrings.
+  /// @param str A string that represents a substring.
+  static filter_t include_substring(const std::string& str) {
+    return filter_t(str, include_t::INCLUDE, match_t::SUBSTRING);
+  }
+
+  /// @brief Create an inclusion filter for file extensions.
+  /// @param str A string that represents a file extension.
+  static filter_t include_extension(const std::string& str) {
+    return filter_t(str, include_t::INCLUDE, match_t::EXTENSION);
+  }
+
+  /// @brief Create an exclusion filter for substrings.
+  /// @param str A string that represents a substring.
+  static filter_t exclude_substring(const std::string& str) {
+    return filter_t(str, include_t::EXCLUDE, match_t::SUBSTRING);
+  }
+
+  /// @brief Create an exclusion filter for file extensions.
+  /// @param str A string that represents a file extension.
+  static filter_t exclude_extension(const std::string& str) {
+    return filter_t(str, include_t::EXCLUDE, match_t::EXTENSION);
+  }
+
+  /// @brief Check if a file should be kept.
+  /// @param file_name The file name.
+  /// @returns true if the given file should be kept.
+  bool keep(const std::string& file_name) const;
+
+private:
+  enum class include_t {
+    ALL,
+    INCLUDE,
+    EXCLUDE,
+  };
+
+  enum class match_t {
+    EXTENSION,
+    SUBSTRING,
+  };
+
+  filter_t(const std::string& str, include_t include, match_t match)
+      : m_string(str), m_include(include), m_match(match) {
+  }
+
+  const std::string m_string;
+  const include_t m_include;
+  const match_t m_match;
+};
+
 /// @brief Path to an executable file.
 ///
 /// This object contains:
@@ -252,9 +309,11 @@ std::string human_readable_size(const int64_t byte_size);
 
 /// @brief Walk a directory and its subdirectories.
 /// @param path The path to the directory.
+/// @param filter File name filter.
 /// @returns a vector of file information objects.
 /// @note Directories are listed after any files that are contained within the directories.
-std::vector<file_info_t> walk_directory(const std::string& path);
+std::vector<file_info_t> walk_directory(const std::string& path,
+                                        const filter_t& filter = filter_t());
 
 /// @brief Create a directory.
 /// @param path The path to the directory.

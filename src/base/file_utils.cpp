@@ -244,6 +244,32 @@ scoped_work_dir_t::~scoped_work_dir_t() {
   }
 }
 
+bool filter_t::keep(const std::string& file_name) const {
+  // Shall we keep all files?
+  if (m_include == include_t::ALL) {
+    return true;
+  }
+
+  // Perform string matching.
+  bool match = false;
+  switch (m_match) {
+    case match_t::SUBSTRING:
+      match = (file_name.find(m_string) != std::string::npos);
+      break;
+    case match_t::EXTENSION:
+      if (file_name.size() >= m_string.size()) {
+        match = std::equal(m_string.cbegin(), m_string.cend(), file_name.cend() - m_string.size());
+      }
+      break;
+    default:
+      throw std::runtime_error("Invalid filter_t match method.");
+  }
+
+  // Final include/exclude logic.
+  return ((m_include == include_t::INCLUDE) && match) ||
+         ((m_include == include_t::EXCLUDE) && !match);
+}
+
 std::string append_path(const std::string& path, const std::string& append) {
   if (path.empty() || append.empty() || path.back() == PATH_SEPARATOR_CHR) {
     return path + append;
@@ -988,7 +1014,7 @@ std::string human_readable_size(const int64_t byte_size) {
   return std::string(buf);
 }
 
-std::vector<file_info_t> walk_directory(const std::string& path) {
+std::vector<file_info_t> walk_directory(const std::string& path, const filter_t& filter) {
   std::vector<file_info_t> files;
 
 #ifdef _WIN32
@@ -1000,14 +1026,14 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
   }
   do {
     const auto name = ucs2_to_utf8(std::wstring(&find_data.cFileName[0]));
-    if ((name != ".") && (name != "..")) {
+    if ((name != ".") && (name != "..") && filter.keep(name)) {
       const auto file_path = append_path(path, name);
       time::seconds_t modify_time = 0;
       time::seconds_t access_time = 0;
       int64_t size = 0;
       bool is_dir = false;
       if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-        auto subdir_files = walk_directory(file_path);
+        auto subdir_files = walk_directory(file_path, filter);
         for (const auto& entry : subdir_files) {
           files.emplace_back(entry);
           size += entry.size();
@@ -1044,7 +1070,7 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
   auto* entity = readdir(dir);
   while (entity != nullptr) {
     const auto name = std::string(entity->d_name);
-    if ((name != ".") && (name != "..")) {
+    if ((name != ".") && (name != "..") && filter.keep(name)) {
       const auto file_path = append_path(path, name);
       struct stat file_stat;
       if (stat(file_path.c_str(), &file_stat) == 0) {
@@ -1053,7 +1079,7 @@ std::vector<file_info_t> walk_directory(const std::string& path) {
         int64_t size = 0;
         bool is_dir = false;
         if (S_ISDIR(file_stat.st_mode)) {
-          auto subdir_files = walk_directory(file_path);
+          auto subdir_files = walk_directory(file_path, filter);
           for (const auto& entry : subdir_files) {
             files.emplace_back(entry);
             size += entry.size();
