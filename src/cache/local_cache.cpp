@@ -238,6 +238,56 @@ void local_cache_t::clear() {
   std::cout << "Cleared the cache in " << dt << " ms\n";
 }
 
+void local_cache_t::perform_housekeeping() {
+  const auto start_t = std::chrono::high_resolution_clock::now();
+
+  debug::log(debug::INFO) << "Performing housekeeping.";
+
+  // Get all the cache entry directories.
+  auto dirs = get_cache_entry_dirs(config::dir());
+
+  // Sort the entries according to their access time (newest first).
+  std::sort(
+      dirs.begin(), dirs.end(), [](const file::file_info_t& a, const file::file_info_t& b) -> bool {
+        return a.access_time() > b.access_time();
+      });
+
+  // Remove old cache files and directories in order to keep the cache size under the configured
+  // limit.
+  int num_entries = 0;
+  int64_t total_size = 0;
+  for (const auto& dir : dirs) {
+    num_entries++;
+    total_size += dir.size();
+    if (total_size > config::max_cache_size()) {
+      try {
+        debug::log(debug::DEBUG) << "Purging " << dir.path() << " (last accessed "
+                                 << dir.access_time() << ", " << dir.size() << " bytes)";
+
+        // We acquire a scoped lock for the cache entry before deleting it.
+        const auto file_lock_path = cache_entry_file_lock_path(dir.path());
+        {
+          file::file_lock_t lock(file_lock_path, config::remote_locks());
+          if (lock.has_lock()) {
+            file::remove_dir(dir.path());
+            total_size -= dir.size();
+            num_entries--;
+          }
+        }
+
+        // ...and remove the lock file too, if any.
+        file::remove_file(file_lock_path, true);
+      } catch (const std::exception& e) {
+        debug::log(debug::DEBUG) << "Failed: " << e.what();
+      }
+    }
+  }
+
+  const auto stop_t = std::chrono::high_resolution_clock::now();
+  const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
+  debug::log(debug::INFO) << "Finished housekeeping in " << dt << " ms";
+}
+
 void local_cache_t::show_stats() {
   // Calculate the total cache size.
   const auto dirs = get_cache_entry_dirs(config::dir());
@@ -502,56 +552,6 @@ void local_cache_t::get_file(const std::string& hash,
   // Touch retrieved file to ensure that the file timestamp is up to date,
   // and that it is picked up by build system file trackers such as MSBuild.
   file::touch(target_path);
-}
-
-void local_cache_t::perform_housekeeping() {
-  const auto start_t = std::chrono::high_resolution_clock::now();
-
-  debug::log(debug::INFO) << "Performing housekeeping.";
-
-  // Get all the cache entry directories.
-  auto dirs = get_cache_entry_dirs(config::dir());
-
-  // Sort the entries according to their access time (newest first).
-  std::sort(
-      dirs.begin(), dirs.end(), [](const file::file_info_t& a, const file::file_info_t& b) -> bool {
-        return a.access_time() > b.access_time();
-      });
-
-  // Remove old cache files and directories in order to keep the cache size under the configured
-  // limit.
-  int num_entries = 0;
-  int64_t total_size = 0;
-  for (const auto& dir : dirs) {
-    num_entries++;
-    total_size += dir.size();
-    if (total_size > config::max_cache_size()) {
-      try {
-        debug::log(debug::DEBUG) << "Purging " << dir.path() << " (last accessed "
-                                 << dir.access_time() << ", " << dir.size() << " bytes)";
-
-        // We acquire a scoped lock for the cache entry before deleting it.
-        const auto file_lock_path = cache_entry_file_lock_path(dir.path());
-        {
-          file::file_lock_t lock(file_lock_path, config::remote_locks());
-          if (lock.has_lock()) {
-            file::remove_dir(dir.path());
-            total_size -= dir.size();
-            num_entries--;
-          }
-        }
-
-        // ...and remove the lock file too, if any.
-        file::remove_file(file_lock_path, true);
-      } catch (const std::exception& e) {
-        debug::log(debug::DEBUG) << "Failed: " << e.what();
-      }
-    }
-  }
-
-  const auto stop_t = std::chrono::high_resolution_clock::now();
-  const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
-  debug::log(debug::INFO) << "Finished housekeeping in " << dt << " ms";
 }
 
 }  // namespace bcache

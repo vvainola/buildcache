@@ -45,6 +45,9 @@ public:
   /// @brief Clear all entries in the cache.
   void clear();
 
+  /// @brief Perform housekeeping (prune old entries etc).
+  void perform_housekeeping();
+
   /// @brief Show cache statistics (print to standard out).
   void show_stats();
 
@@ -101,8 +104,6 @@ public:
 private:
   std::string hash_to_cache_entry_path(const std::string& hash) const;
   std::string get_cache_files_folder() const;
-
-  void perform_housekeeping();
 };
 
 }  // namespace bcache
