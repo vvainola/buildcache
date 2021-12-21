@@ -144,6 +144,21 @@ std::unique_ptr<bcache::program_wrapper_t> find_suitable_wrapper(
   std::exit(return_code);
 }
 
+[[noreturn]] void perform_housekeeping_and_exit() {
+  int return_code = 0;
+  try {
+    bcache::local_cache_t cache;
+    cache.perform_housekeeping();
+  } catch (const std::exception& e) {
+    std::cerr << "*** Unexpected error: " << e.what() << "\n";
+    return_code = 1;
+  } catch (...) {
+    std::cerr << "*** Unexpected error.\n";
+    return_code = 1;
+  }
+  std::exit(return_code);
+}
+
 [[noreturn]] void show_stats_and_exit() {
   int return_code = 0;
   try {
@@ -413,6 +428,7 @@ void print_help(const char* program_name) {
   std::cout << "    -s, --show-stats      show statistics summary\n";
   std::cout << "    -c, --show-config     show current configuration\n";
   std::cout << "    -z, --zero-stats      zero statistics counters\n";
+  std::cout << "    -H, --housekeeping    perform housekeeping duties\n";
   std::cout << "    -e, --edit-config     edit the configuration file\n";
   std::cout << "\n";
   std::cout << "    -h, --help            print this help text\n";
@@ -466,6 +482,8 @@ int main(int argc, const char** argv) {
     show_config_and_exit();
   } else if (compare_arg(arg_str, "-z", "--zero-stats")) {
     zero_stats_and_exit();
+  } else if (compare_arg(arg_str, "-H", "--housekeeping")) {
+    perform_housekeeping_and_exit();
   } else if (compare_arg(arg_str, "-V", "--version")) {
     print_version_and_exit();
   } else if (compare_arg(arg_str, "-e", "--edit-config")) {

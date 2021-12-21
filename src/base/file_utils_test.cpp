@@ -103,6 +103,57 @@ TEST_CASE("tmp_file_t produces expected results") {
   }
 }
 
+TEST_CASE("filter_t: ALL filter produces expected results") {
+  SUBCASE("ALL filter works") {
+    const file::filter_t filter = file::filter_t();
+
+    CHECK_EQ(filter.keep("Hello!"), true);
+    CHECK_EQ(filter.keep(""), true);
+    CHECK_EQ(filter.keep("/foo/bar.lock"), true);
+    CHECK_EQ(filter.keep("/foo/bar.locker"), true);
+  }
+}
+
+TEST_CASE("filter_t: Inclusion filters produces expected results") {
+  SUBCASE("INCLUDE EXTENSION filter works") {
+    const file::filter_t filter = file::filter_t::include_extension(".lock");
+
+    CHECK_EQ(filter.keep("Hello!"), false);
+    CHECK_EQ(filter.keep(""), false);
+    CHECK_EQ(filter.keep("/foo/bar.lock"), true);
+    CHECK_EQ(filter.keep("/foo/bar.locker"), false);
+  }
+
+  SUBCASE("INCLUDE SUBSTRING filter works") {
+    const file::filter_t filter = file::filter_t::include_substring(".lock");
+
+    CHECK_EQ(filter.keep("Hello!"), false);
+    CHECK_EQ(filter.keep(""), false);
+    CHECK_EQ(filter.keep("/foo/bar.lock"), true);
+    CHECK_EQ(filter.keep("/foo/bar.locker"), true);
+  }
+}
+
+TEST_CASE("filter_t: Exclusion filters produces expected results") {
+  SUBCASE("EXCLUDE EXTENSION filter works") {
+    const file::filter_t filter = file::filter_t::exclude_extension(".lock");
+
+    CHECK_EQ(filter.keep("Hello!"), true);
+    CHECK_EQ(filter.keep(""), true);
+    CHECK_EQ(filter.keep("/foo/bar.lock"), false);
+    CHECK_EQ(filter.keep("/foo/bar.locker"), true);
+  }
+
+  SUBCASE("EXCLUDE SUBSTRING filter works") {
+    const file::filter_t filter = file::filter_t::exclude_substring(".lock");
+
+    CHECK_EQ(filter.keep("Hello!"), true);
+    CHECK_EQ(filter.keep(""), true);
+    CHECK_EQ(filter.keep("/foo/bar.lock"), false);
+    CHECK_EQ(filter.keep("/foo/bar.locker"), false);
+  }
+}
+
 TEST_CASE("append_path produces expected results") {
   SUBCASE("A full path is constructed properly") {
     const std::string part_1 = "hello";
