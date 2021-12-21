@@ -138,7 +138,8 @@ std::vector<file::file_info_t> get_cache_entry_dirs(const std::string& root_fold
     const auto cache_files_dir = file::append_path(root_folder, CACHE_FILES_FOLDER_NAME);
     if (file::dir_exists(cache_files_dir)) {
       // Get all the files in the cache dir.
-      const auto files = file::walk_directory(cache_files_dir);
+      const auto files =
+          file::walk_directory(cache_files_dir, file::filter_t::exclude_extension(".lock"));
 
       // Return only the directories that are valid cache entries.
       for (const auto& file : files) {
@@ -161,7 +162,8 @@ std::vector<file::file_info_t> get_cache_prefix_dirs(const std::string& root_fol
     const auto cache_files_dir = file::append_path(root_folder, CACHE_FILES_FOLDER_NAME);
     if (file::dir_exists(cache_files_dir)) {
       // Get all the files in the cache dir.
-      const auto files = file::walk_directory(cache_files_dir);
+      const auto files =
+          file::walk_directory(cache_files_dir, file::filter_t::exclude_extension(".lock"));
 
       // Return only the directories that are valid cache entries.
       for (const auto& file : files) {
