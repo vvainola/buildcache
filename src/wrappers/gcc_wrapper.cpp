@@ -134,8 +134,8 @@ string_list_t make_preprocessor_cmd(const string_list_t& args,
 
 // Check a few different known alternative names of a file, in the same directory as the invoked
 // program, and see if any of them is an identical copy of the invoked program.
-template <int COUNT>
-bool is_file_identical_to(const std::string& path, const std::string (&alternative_names)[COUNT]) {
+bool is_file_identical_to(const std::string& path,
+                          const std::initializer_list<std::string>& alternative_names) {
   // Get the file info of the invoked program.
   const auto reference_info = file::get_file_info(path);
 
