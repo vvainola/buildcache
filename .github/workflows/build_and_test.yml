@@ -27,6 +27,7 @@ jobs:
             shell: bash,
             cc: "gcc",
             cxx: "g++",
+            static_checks: true,
             artifact: "buildcache-linux.tar.gz",
             artifact_format: "gnutar",
             artifact_tar_flags: "z",
@@ -59,6 +60,7 @@ jobs:
             cxx: "x86_64-w64-mingw32-g++",
             extra_cmake_flags: "-DCMAKE_BUILD_WITH_INSTALL_RPATH=on",
             cross_compile: true,
+            static_checks: true,
           }
         - {
             name: "Ubuntu 18.04 GCC",
@@ -125,7 +127,7 @@ jobs:
         ../test_scripts/build_with_buildcache.sh
 
     - name: Run static checks
-      if: ${{ runner.os == 'Linux' }}
+      if: ${{ matrix.config.static_checks }}
       run: test_scripts/run_linters.py -p build
 
     - name: Install Strip
