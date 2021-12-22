@@ -138,8 +138,8 @@ std::vector<file::file_info_t> get_cache_entry_dirs(const std::string& root_fold
     const auto cache_files_dir = file::append_path(root_folder, CACHE_FILES_FOLDER_NAME);
     if (file::dir_exists(cache_files_dir)) {
       // Get all the files in the cache dir.
-      const auto files =
-          file::walk_directory(cache_files_dir, file::filter_t::exclude_extension(".lock"));
+      const auto files = file::walk_directory(cache_files_dir,
+                                              file::filter_t::exclude_extension(FILE_LOCK_SUFFIX));
 
       // Return only the directories that are valid cache entries.
       for (const auto& file : files) {
@@ -162,8 +162,8 @@ std::vector<file::file_info_t> get_cache_prefix_dirs(const std::string& root_fol
     const auto cache_files_dir = file::append_path(root_folder, CACHE_FILES_FOLDER_NAME);
     if (file::dir_exists(cache_files_dir)) {
       // Get all the files in the cache dir.
-      const auto files =
-          file::walk_directory(cache_files_dir, file::filter_t::exclude_extension(".lock"));
+      const auto files = file::walk_directory(cache_files_dir,
+                                              file::filter_t::exclude_extension(FILE_LOCK_SUFFIX));
 
       // Return only the directories that are valid cache entries.
       for (const auto& file : files) {
@@ -177,6 +177,93 @@ std::vector<file::file_info_t> get_cache_prefix_dirs(const std::string& root_fol
   }
 
   return prefix_dirs;
+}
+
+void purge_old_cache_entries(const std::string& root_folder) {
+  // Get all the cache entry directories.
+  auto dirs = get_cache_entry_dirs(root_folder);
+
+  // Sort the entries according to their access time (newest first).
+  std::sort(
+      dirs.begin(), dirs.end(), [](const file::file_info_t& a, const file::file_info_t& b) -> bool {
+        return a.access_time() > b.access_time();
+      });
+
+  // Remove old cache files and directories in order to keep the cache size under the configured
+  // limit.
+  int64_t num_purged_entries = 0;
+  int64_t num_entries = 0;
+  int64_t total_size = 0;
+  for (const auto& dir : dirs) {
+    ++num_entries;
+    total_size += dir.size();
+    if (total_size > config::max_cache_size()) {
+      try {
+        debug::log(debug::DEBUG) << "Purging " << dir.path() << " (last accessed "
+                                 << dir.access_time() << ", " << dir.size() << " bytes)";
+
+        // We acquire a scoped lock for the cache entry before deleting it.
+        const auto file_lock_path = cache_entry_file_lock_path(dir.path());
+        {
+          file::file_lock_t lock(file_lock_path, config::remote_locks());
+          if (lock.has_lock()) {
+            file::remove_dir(dir.path());
+            total_size -= dir.size();
+            --num_entries;
+            ++num_purged_entries;
+          }
+        }
+
+        // ...and remove the lock file too, if any.
+        file::remove_file(file_lock_path, true);
+      } catch (const std::exception& e) {
+        debug::log(debug::DEBUG) << "Failed: " << e.what();
+      }
+    }
+  }
+  debug::log(debug::INFO) << "Purged " << num_purged_entries << " local cache entries.";
+}
+
+bool is_potentially_stale_lock_file(const file::file_info_t& info, const time::seconds_t now) {
+  // Is this a lock file?
+  if (info.is_dir() || (file::get_extension(info.path()) != FILE_LOCK_SUFFIX)) {
+    return false;
+  }
+
+  // Is it old?
+  const time::seconds_t AGE_THRESHOLD_SECONDS{3600 * 24};
+  const auto seconds_since_accessed = now - info.access_time();
+  return (seconds_since_accessed > AGE_THRESHOLD_SECONDS);
+}
+
+void delete_stale_lock_files(const std::string& root_folder) {
+  int64_t num_deleted_lock_files = 0;
+
+  try {
+    const auto cache_files_dir = file::append_path(root_folder, CACHE_FILES_FOLDER_NAME);
+    if (file::dir_exists(cache_files_dir)) {
+      // Get all the files in the cache dir. Some of these may be stale locks.
+      const auto files = file::walk_directory(cache_files_dir);
+
+      const auto now = time::seconds_since_epoch();
+      for (const auto& info : files) {
+        if (is_potentially_stale_lock_file(info, now)) {
+          // We consider the lock to be stale if we can get the lock.
+          file::file_lock_t lock(info.path(), false);
+          if (lock.has_lock()) {
+            // Delete the file if it is stale.
+            debug::log(debug::DEBUG) << "Deleting stale " << info.path();
+            file::remove_file(info.path(), true);
+            ++num_deleted_lock_files;
+          }
+        }
+      }
+    }
+  } catch (const std::exception& e) {
+    debug::log(debug::ERROR) << e.what();
+  }
+
+  debug::log(debug::INFO) << "Deleted " << num_deleted_lock_files << " stale lock files.";
 }
 
 bool is_time_for_housekeeping() {
@@ -245,45 +332,11 @@ void local_cache_t::perform_housekeeping() {
 
   debug::log(debug::INFO) << "Performing housekeeping.";
 
-  // Get all the cache entry directories.
-  auto dirs = get_cache_entry_dirs(config::dir());
+  // Purge old cache entries.
+  purge_old_cache_entries(config::dir());
 
-  // Sort the entries according to their access time (newest first).
-  std::sort(
-      dirs.begin(), dirs.end(), [](const file::file_info_t& a, const file::file_info_t& b) -> bool {
-        return a.access_time() > b.access_time();
-      });
-
-  // Remove old cache files and directories in order to keep the cache size under the configured
-  // limit.
-  int num_entries = 0;
-  int64_t total_size = 0;
-  for (const auto& dir : dirs) {
-    num_entries++;
-    total_size += dir.size();
-    if (total_size > config::max_cache_size()) {
-      try {
-        debug::log(debug::DEBUG) << "Purging " << dir.path() << " (last accessed "
-                                 << dir.access_time() << ", " << dir.size() << " bytes)";
-
-        // We acquire a scoped lock for the cache entry before deleting it.
-        const auto file_lock_path = cache_entry_file_lock_path(dir.path());
-        {
-          file::file_lock_t lock(file_lock_path, config::remote_locks());
-          if (lock.has_lock()) {
-            file::remove_dir(dir.path());
-            total_size -= dir.size();
-            num_entries--;
-          }
-        }
-
-        // ...and remove the lock file too, if any.
-        file::remove_file(file_lock_path, true);
-      } catch (const std::exception& e) {
-        debug::log(debug::DEBUG) << "Failed: " << e.what();
-      }
-    }
-  }
+  // Delete old stale lock files.
+  delete_stale_lock_files(config::dir());
 
   const auto stop_t = std::chrono::high_resolution_clock::now();
   const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
