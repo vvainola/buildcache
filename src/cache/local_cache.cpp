@@ -69,6 +69,7 @@ const std::string DIRECT_CACHE_MANIFEST_FILE_NAME = ".manifest";
 const std::string CACHE_ENTRY_FILE_NAME = ".entry";
 const std::string FILE_LOCK_SUFFIX = ".lock";
 const std::string STATS_FILE_NAME = "stats.json";
+const std::string HOUSEKEEPING_FILE_LOCK = ".housekeeping" + FILE_LOCK_SUFFIX;
 
 // Maximum number of manifests per direct mode cache entry (must be at least 1). Set this too low,
 // and there will be cache thrashing (e.g. when switching branches). Set this too high and cache
@@ -328,19 +329,26 @@ void local_cache_t::clear() {
 }
 
 void local_cache_t::perform_housekeeping() {
-  const auto start_t = std::chrono::high_resolution_clock::now();
+  // Use a file lock to prevent multiple concurrent housekeeping processes.
+  const auto file_lock_path = file::append_path(config::dir(), HOUSEKEEPING_FILE_LOCK);
+  file::file_lock_t lock(file_lock_path, true, file::file_lock_t::blocking_t::NO);
+  if (lock.has_lock()) {
+    debug::log(debug::INFO) << "Performing housekeeping.";
 
-  debug::log(debug::INFO) << "Performing housekeeping.";
+    const auto start_t = std::chrono::high_resolution_clock::now();
 
-  // Purge old cache entries.
-  purge_old_cache_entries(config::dir());
+    // Purge old cache entries.
+    purge_old_cache_entries(config::dir());
 
-  // Delete old stale lock files.
-  delete_stale_lock_files(config::dir());
+    // Delete old stale lock files.
+    delete_stale_lock_files(config::dir());
 
-  const auto stop_t = std::chrono::high_resolution_clock::now();
-  const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
-  debug::log(debug::INFO) << "Finished housekeeping in " << dt << " ms";
+    const auto stop_t = std::chrono::high_resolution_clock::now();
+    const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
+    debug::log(debug::INFO) << "Finished housekeeping in " << dt << " ms";
+  } else {
+    debug::log(debug::INFO) << "Skipping housekeeping (it is already in progress).";
+  }
 }
 
 void local_cache_t::show_stats() {
