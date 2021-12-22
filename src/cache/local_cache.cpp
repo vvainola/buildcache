@@ -224,6 +224,48 @@ void purge_old_cache_entries(const std::string& root_folder) {
   debug::log(debug::INFO) << "Purged " << num_purged_entries << " local cache entries.";
 }
 
+bool is_potentially_stale_lock_file(const file::file_info_t& info, const time::seconds_t now) {
+  // Is this a lock file?
+  if (info.is_dir() || (file::get_extension(info.path()) != FILE_LOCK_SUFFIX)) {
+    return false;
+  }
+
+  // Is it old?
+  const time::seconds_t AGE_THRESHOLD_SECONDS{3600 * 24};
+  const auto seconds_since_accessed = now - info.access_time();
+  return (seconds_since_accessed > AGE_THRESHOLD_SECONDS);
+}
+
+void delete_stale_lock_files(const std::string& root_folder) {
+  int64_t num_deleted_lock_files = 0;
+
+  try {
+    const auto cache_files_dir = file::append_path(root_folder, CACHE_FILES_FOLDER_NAME);
+    if (file::dir_exists(cache_files_dir)) {
+      // Get all the files in the cache dir. Some of these may be stale locks.
+      const auto files = file::walk_directory(cache_files_dir);
+
+      const auto now = time::seconds_since_epoch();
+      for (const auto& info : files) {
+        if (is_potentially_stale_lock_file(info, now)) {
+          // We consider the lock to be stale if we can get the lock.
+          file::file_lock_t lock(info.path(), false);
+          if (lock.has_lock()) {
+            // Delete the file if it is stale.
+            debug::log(debug::DEBUG) << "Deleting stale " << info.path();
+            file::remove_file(info.path(), true);
+            ++num_deleted_lock_files;
+          }
+        }
+      }
+    }
+  } catch (const std::exception& e) {
+    debug::log(debug::ERROR) << e.what();
+  }
+
+  debug::log(debug::INFO) << "Deleted " << num_deleted_lock_files << " stale lock files.";
+}
+
 bool is_time_for_housekeeping() {
   // Get the time since the epoch, in microseconds.
   const auto t =
@@ -292,6 +334,9 @@ void local_cache_t::perform_housekeeping() {
 
   // Purge old cache entries.
   purge_old_cache_entries(config::dir());
+
+  // Delete old stale lock files.
+  delete_stale_lock_files(config::dir());
 
   const auto stop_t = std::chrono::high_resolution_clock::now();
   const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
