@@ -129,3 +129,17 @@ TEST_CASE("Local locks") {
     }
   }
 }
+
+TEST_CASE("Non-blocking lock") {
+  SUBCASE("Acquiring a lock works as expected") {
+    // Get a temporary file name.
+    file::tmp_file_t tmp_file(file::get_temp_dir(), ".lock");
+    REQUIRE_GT(tmp_file.path().size(), 0);
+
+    // Aquire a lock.
+    file::file_lock_t lock(tmp_file.path(), true, file::file_lock_t::blocking_t::NO);
+
+    // We should now have the lock.
+    CHECK_EQ(lock.has_lock(), true);
+  }
+}
