@@ -179,6 +179,51 @@ std::vector<file::file_info_t> get_cache_prefix_dirs(const std::string& root_fol
   return prefix_dirs;
 }
 
+void purge_old_cache_entries(const std::string& root_folder) {
+  // Get all the cache entry directories.
+  auto dirs = get_cache_entry_dirs(root_folder);
+
+  // Sort the entries according to their access time (newest first).
+  std::sort(
+      dirs.begin(), dirs.end(), [](const file::file_info_t& a, const file::file_info_t& b) -> bool {
+        return a.access_time() > b.access_time();
+      });
+
+  // Remove old cache files and directories in order to keep the cache size under the configured
+  // limit.
+  int64_t num_purged_entries = 0;
+  int64_t num_entries = 0;
+  int64_t total_size = 0;
+  for (const auto& dir : dirs) {
+    ++num_entries;
+    total_size += dir.size();
+    if (total_size > config::max_cache_size()) {
+      try {
+        debug::log(debug::DEBUG) << "Purging " << dir.path() << " (last accessed "
+                                 << dir.access_time() << ", " << dir.size() << " bytes)";
+
+        // We acquire a scoped lock for the cache entry before deleting it.
+        const auto file_lock_path = cache_entry_file_lock_path(dir.path());
+        {
+          file::file_lock_t lock(file_lock_path, config::remote_locks());
+          if (lock.has_lock()) {
+            file::remove_dir(dir.path());
+            total_size -= dir.size();
+            --num_entries;
+            ++num_purged_entries;
+          }
+        }
+
+        // ...and remove the lock file too, if any.
+        file::remove_file(file_lock_path, true);
+      } catch (const std::exception& e) {
+        debug::log(debug::DEBUG) << "Failed: " << e.what();
+      }
+    }
+  }
+  debug::log(debug::INFO) << "Purged " << num_purged_entries << " local cache entries.";
+}
+
 bool is_time_for_housekeeping() {
   // Get the time since the epoch, in microseconds.
   const auto t =
@@ -245,45 +290,8 @@ void local_cache_t::perform_housekeeping() {
 
   debug::log(debug::INFO) << "Performing housekeeping.";
 
-  // Get all the cache entry directories.
-  auto dirs = get_cache_entry_dirs(config::dir());
-
-  // Sort the entries according to their access time (newest first).
-  std::sort(
-      dirs.begin(), dirs.end(), [](const file::file_info_t& a, const file::file_info_t& b) -> bool {
-        return a.access_time() > b.access_time();
-      });
-
-  // Remove old cache files and directories in order to keep the cache size under the configured
-  // limit.
-  int num_entries = 0;
-  int64_t total_size = 0;
-  for (const auto& dir : dirs) {
-    num_entries++;
-    total_size += dir.size();
-    if (total_size > config::max_cache_size()) {
-      try {
-        debug::log(debug::DEBUG) << "Purging " << dir.path() << " (last accessed "
-                                 << dir.access_time() << ", " << dir.size() << " bytes)";
-
-        // We acquire a scoped lock for the cache entry before deleting it.
-        const auto file_lock_path = cache_entry_file_lock_path(dir.path());
-        {
-          file::file_lock_t lock(file_lock_path, config::remote_locks());
-          if (lock.has_lock()) {
-            file::remove_dir(dir.path());
-            total_size -= dir.size();
-            num_entries--;
-          }
-        }
-
-        // ...and remove the lock file too, if any.
-        file::remove_file(file_lock_path, true);
-      } catch (const std::exception& e) {
-        debug::log(debug::DEBUG) << "Failed: " << e.what();
-      }
-    }
-  }
+  // Purge old cache entries.
+  purge_old_cache_entries(config::dir());
 
   const auto stop_t = std::chrono::high_resolution_clock::now();
   const auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(stop_t - start_t).count();
