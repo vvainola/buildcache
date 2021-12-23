@@ -49,7 +49,6 @@
 #endif
 
 namespace bcache {
-namespace file {
 namespace {
 #if defined(_WIN32)
 std::wstring construct_mutex_name(const std::string& path) {
@@ -220,5 +219,4 @@ file_lock_t::~file_lock_t() {
   }
 #endif
 }
-}  // namespace file
 }  // namespace bcache

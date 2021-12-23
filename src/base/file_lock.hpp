@@ -23,7 +23,6 @@
 #include <string>
 
 namespace bcache {
-namespace file {
 /// @brief A scoped exclusive global lock class.
 ///
 /// This lock class is intended to be used for granular synchronization of multiple processes that
@@ -129,7 +128,6 @@ private:
   bool m_has_lock = false;
 };
 
-}  // namespace file
 }  // namespace bcache
 
 #endif  // BUILDCACHE_FILE_LOCK_HPP_

@@ -91,7 +91,7 @@ int main(int argc, const char** argv) {
   for (int i = 0; i < NUM_LOOPS; ++i) {
     {
       // Acquire a lock, which should guarantee us exclusive access to the data file.
-      file::file_lock_t lock(file_lockname, local_locks);
+      file_lock_t lock(file_lockname, local_locks);
       if (!lock.has_lock()) {
         std::cerr << "*** Error: Unable to acquire lock: " << file_lockname << std::endl;
         exit(1);
