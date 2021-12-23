@@ -27,7 +27,7 @@ using namespace bcache;
 
 TEST_CASE("file_lock_t constructors are behaving as expected") {
   SUBCASE("Default constructor holds no lock") {
-    file::file_lock_t lock;
+    file_lock_t lock;
     CHECK_EQ(lock.has_lock(), false);
   }
 }
@@ -43,7 +43,7 @@ TEST_CASE("Remote locks") {
 
     // Aquire a lock in a scope.
     {
-      file::file_lock_t lock(tmp_file.path(), true);
+      file_lock_t lock(tmp_file.path(), file_lock_t::remote_t::YES);
 
       // We should now have the lock, and the file should exist.
       CHECK_EQ(lock.has_lock(), true);
@@ -60,11 +60,11 @@ TEST_CASE("Remote locks") {
     CHECK_EQ(file::file_exists(tmp_file.path()), false);
 
     {
-      file::file_lock_t lock;
+      file_lock_t lock;
 
       // Aquire a lock in a scope.
       {
-        file::file_lock_t child_lock(tmp_file.path(), true);
+        file_lock_t child_lock(tmp_file.path(), file_lock_t::remote_t::YES);
 
         // We should now have the lock, and the file should exist.
         CHECK_EQ(child_lock.has_lock(), true);
@@ -94,7 +94,7 @@ TEST_CASE("Local locks") {
 
     // Repeatedly aquire and release a lock in a loop scope.
     for (int i = 0; i < 10; ++i) {
-      file::file_lock_t lock(tmp_file.path(), false);
+      file_lock_t lock(tmp_file.path(), file_lock_t::remote_t::NO);
 
       // We should now have the lock.
       CHECK_EQ(lock.has_lock(), true);
@@ -107,11 +107,11 @@ TEST_CASE("Local locks") {
     REQUIRE_GT(tmp_file.path().size(), 0);
 
     {
-      file::file_lock_t lock;
+      file_lock_t lock;
 
       // Aquire a lock in a scope.
       {
-        file::file_lock_t child_lock(tmp_file.path(), false);
+        file_lock_t child_lock(tmp_file.path(), file_lock_t::remote_t::NO);
 
         // We should now have the lock.
         CHECK_EQ(child_lock.has_lock(), true);
@@ -127,5 +127,19 @@ TEST_CASE("Local locks") {
       // The lock in the parent scope should now have the lock.
       CHECK_EQ(lock.has_lock(), true);
     }
+  }
+}
+
+TEST_CASE("Non-blocking lock") {
+  SUBCASE("Acquiring a lock works as expected") {
+    // Get a temporary file name.
+    file::tmp_file_t tmp_file(file::get_temp_dir(), ".lock");
+    REQUIRE_GT(tmp_file.path().size(), 0);
+
+    // Aquire a lock.
+    file_lock_t lock(tmp_file.path(), file_lock_t::remote_t::YES, file_lock_t::blocking_t::NO);
+
+    // We should now have the lock.
+    CHECK_EQ(lock.has_lock(), true);
   }
 }

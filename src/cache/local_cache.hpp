@@ -79,7 +79,7 @@ public:
   /// @param hash The cache entry identifier.
   /// @returns A pair of a cache entry struct and a file lock object. If there was no cache hit,
   /// the entry will be empty, and the file lock object will not hold any lock.
-  std::pair<cache_entry_t, file::file_lock_t> lookup(const std::string& hash);
+  std::pair<cache_entry_t, file_lock_t> lookup(const std::string& hash);
 
   /// @brief Copy a cached file to the local file system.
   /// @param hash The cache entry identifier.

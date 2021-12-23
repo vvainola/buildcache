@@ -49,7 +49,6 @@
 #endif
 
 namespace bcache {
-namespace file {
 namespace {
 #if defined(_WIN32)
 std::wstring construct_mutex_name(const std::string& path) {
@@ -70,29 +69,32 @@ std::wstring construct_mutex_name(const std::string& path) {
 #endif
 }  // namespace
 
-file_lock_t::file_lock_t(const std::string& path, const bool remote_lock) : m_path(path) {
+file_lock_t::file_lock_t(const std::string& path, remote_t remote, blocking_t blocking)
+    : m_path(path) {
 #if defined(_WIN32)
   // Time values are in milliseconds.
   const DWORD MAX_WAIT_TIME = 10000;  // We'll fail if the lock can't be acquired in 10s.
 
   // For Windows, we can use local, named mutexes instead of file locks, if we're allowed to.
-  if (!remote_lock) {
+  if (remote == remote_t::NO) {
     // Construct a unique mutex name that identifies the given path.
     const auto name = construct_mutex_name(path);
 
     // Open the named mutex (create it if it does not already exist).
     m_mutex_handle = CreateMutexW(nullptr, FALSE, name.c_str());
-    if (m_mutex_handle == invalid_mutex_handle()) {
-      return;
-    }
+    if (m_mutex_handle != invalid_mutex_handle()) {
+      // Select timeout, depending on the blocking mode.
+      const DWORD timeout = (blocking == blocking_t::YES ? MAX_WAIT_TIME : 0);
 
-    // Acquire the mutex.
-    // WAIT_OBJECT_0 and WAIT_ABANDONED both indicate the lock has been acquired. WAIT_ABANDONED
-    // additionally indicates that the previous thread owning the lock terminated without properly
-    // releasing it.
-    const auto status = WaitForSingleObject(m_mutex_handle, MAX_WAIT_TIME);
-    if (!(status == WAIT_OBJECT_0 || status == WAIT_ABANDONED)) {
-      return;
+      // Acquire the mutex.
+      // WAIT_OBJECT_0 and WAIT_ABANDONED both indicate the lock has been acquired. WAIT_ABANDONED
+      // additionally indicates that the previous thread owning the lock terminated without properly
+      // releasing it.
+      const auto status = WaitForSingleObject(m_mutex_handle, timeout);
+      if (!(status == WAIT_OBJECT_0 || status == WAIT_ABANDONED)) {
+        CloseHandle(m_mutex_handle);
+        m_mutex_handle = invalid_file_handle();
+      }
     }
   } else {
     // Time values are in milliseconds.
@@ -128,6 +130,11 @@ file_lock_t::file_lock_t(const std::string& path, const bool remote_lock) : m_pa
         break;
       }
 
+      // In non-blocking mode: Wait no more.
+      if (blocking == blocking_t::NO) {
+        break;
+      }
+
       // Wait for a small period of time to give other processes a chance to release the lock.
       // Note: Handle both short and long blocks by increasing the sleep time for every new try.
       Sleep(sleep_time);
@@ -138,18 +145,23 @@ file_lock_t::file_lock_t(const std::string& path, const bool remote_lock) : m_pa
 #else
   // For POSIX, there's no need to use local locks (e.g. named semaphores), since the performance
   // benefit is negligable, and there are many inherent problems with that solution.
-  (void)remote_lock;
+  (void)remote;
 
   // Open the lock file (create if necessary).
   m_file_handle = ::open(path.c_str(), O_WRONLY | O_CREAT, 0666);
   if (m_file_handle != invalid_file_handle()) {
-    // Use POSIX record locks to lock the entire file in exclusive mode. We acquire the lock in
-    // blocking mode (i.e. wait for the lock to be available).
+    // Select fcntl command based on the blocking mode (i.e. wait or don't wait for the lock to be
+    // available).
+    const int cmd = (blocking == blocking_t::YES ? F_SETLKW : F_SETLK);
+
+    // Use POSIX record locks to lock the entire file in exclusive mode.
     struct flock fl = {};
     fl.l_type = F_WRLCK;     // Exclusive mode.
     fl.l_whence = SEEK_SET;  // Lock entire file (l_start = 0, l_len = 0).
-    if (::fcntl(m_file_handle, F_SETLKW, &fl) == -1) {
-      debug::log(debug::ERROR) << "Failed to acquire a lock on the lock file " << m_path;
+    if (::fcntl(m_file_handle, cmd, &fl) == -1) {
+      if (blocking == blocking_t::YES) {
+        debug::log(debug::ERROR) << "Failed to acquire a lock on the lock file " << m_path;
+      }
       ::close(m_file_handle);
       m_file_handle = invalid_file_handle();
     }
@@ -207,5 +219,4 @@ file_lock_t::~file_lock_t() {
   }
 #endif
 }
-}  // namespace file
 }  // namespace bcache

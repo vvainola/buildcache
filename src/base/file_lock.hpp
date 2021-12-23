@@ -23,16 +23,17 @@
 #include <string>
 
 namespace bcache {
-namespace file {
 /// @brief A scoped exclusive global lock class.
 ///
 /// This lock class is intended to be used for granular synchronization of multiple processes that
-/// need to access a specific part of a file system, such as a single file or a folder. Locks are
-/// expected to be held for a very short time period (typically only for a fraction of a second),
-/// during operations such as file renames or writes.
+/// need to access a specific part of a file system, such as a single file or a folder.
 ///
-/// When the lock is created, a global named system object is created (if necessary) and acquired.
-/// Once the lock goes out of scope, the system object is released.
+/// Both blocking and non-blocking locks are supported. Blocking locks (the default) are expected to
+/// be held for a very short time period (typically only for a fraction of a second), during
+/// operations such as file renames or writes. Non-blocking locks may be held for a longer time.
+///
+/// When the lock is created, a global named system object is created (if it does not already exist)
+/// and acquired. Once the lock goes out of scope, the system object is released.
 ///
 /// After a lock is no longer used by any process, the named system object may or may not be left
 /// on the system (depending on the underlying implementation). It is thus up to the user of the
@@ -60,6 +61,23 @@ namespace file {
 /// On some systems, local locks are implemented as remote locks.
 class file_lock_t {
 public:
+  /// @brief An enum defining the lock type.
+  enum class remote_t {
+    YES,  ///< Remote lock.
+    NO,   ///< Local lock.
+  };
+
+  /// @brief Convert a boolean value to a remote_t value.
+  static remote_t to_remote_t(bool x) {
+    return x ? remote_t::YES : remote_t::NO;
+  }
+
+  /// @brief An enum defining the blocking mode of a file lock.
+  enum class blocking_t {
+    YES,  ///< Blocking lock (block until aquired).
+    NO,   ///< Non-blocking lock (try acquire).
+  };
+
   /// @brief Create an empty (unlocked) lock object.
   file_lock_t() {
   }
@@ -68,8 +86,9 @@ public:
   /// @param path The full path to the lock file (will be created). The path should be a location on
   /// the file system to which the process requires access synchronization.
   /// @param remote_lock Require the implementation to use a locking mechanism that can synchronize
+  /// @param blocking Use blocking mode or not.
   /// file system access across several OS instances (e.g. use this for network shares).
-  explicit file_lock_t(const std::string& path, const bool remote_lock);
+  file_lock_t(const std::string& path, remote_t remote, blocking_t blocking = blocking_t::YES);
 
   // Support move semantics.
   file_lock_t(file_lock_t&& other) noexcept;
@@ -120,7 +139,6 @@ private:
   bool m_has_lock = false;
 };
 
-}  // namespace file
 }  // namespace bcache
 
 #endif  // BUILDCACHE_FILE_LOCK_HPP_
