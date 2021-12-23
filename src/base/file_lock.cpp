@@ -69,14 +69,14 @@ std::wstring construct_mutex_name(const std::string& path) {
 #endif
 }  // namespace
 
-file_lock_t::file_lock_t(const std::string& path, bool remote_lock, blocking_t blocking)
+file_lock_t::file_lock_t(const std::string& path, remote_t remote, blocking_t blocking)
     : m_path(path) {
 #if defined(_WIN32)
   // Time values are in milliseconds.
   const DWORD MAX_WAIT_TIME = 10000;  // We'll fail if the lock can't be acquired in 10s.
 
   // For Windows, we can use local, named mutexes instead of file locks, if we're allowed to.
-  if (!remote_lock) {
+  if (remote == remote_t::NO) {
     // Construct a unique mutex name that identifies the given path.
     const auto name = construct_mutex_name(path);
 
@@ -145,7 +145,7 @@ file_lock_t::file_lock_t(const std::string& path, bool remote_lock, blocking_t b
 #else
   // For POSIX, there's no need to use local locks (e.g. named semaphores), since the performance
   // benefit is negligable, and there are many inherent problems with that solution.
-  (void)remote_lock;
+  (void)remote;
 
   // Open the lock file (create if necessary).
   m_file_handle = ::open(path.c_str(), O_WRONLY | O_CREAT, 0666);

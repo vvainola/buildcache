@@ -10,7 +10,7 @@ function run_test {
   rm -f "$TESTFILE"
 
   test_type="network share safe locks"
-  if [[ "$1" = "true" ]] ; then
+  if [[ "$1" = "false" ]] ; then
     test_type="allow local locks"
   fi
 
@@ -53,11 +53,11 @@ function run_test {
   fi
 }
 
-# Without local locks.
-run_test false
+# With remote locks.
+run_test true
 
 # With local locks.
-run_test true
+run_test false
 
 # Check the test result.
 if $total_success ; then

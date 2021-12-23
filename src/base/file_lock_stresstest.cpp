@@ -76,13 +76,13 @@ long read_number_from_file(const std::string& path) {
 int main(int argc, const char** argv) {
   if (argc != 3) {
     std::cout << "Usage: " << argv[0] << " <filename> <local_locks>\n";
-    std::cout << "  filename    The name of the file to be updated in a locked fashion\n";
-    std::cout << "  local_locks Set this to \"true\" to allow local locks\n";
+    std::cout << "  filename     The name of the file to be updated in a locked fashion\n";
+    std::cout << "  remote_locks Set this to \"true\" to use remote locks\n";
     exit(0);
   }
-  const std::string filename(argv[1]);
+  const std::string filename{argv[1]};
   const auto file_lockname = filename + ".lock";
-  const bool local_locks = (std::string(argv[2]) == "true");
+  const auto remote_locks = file_lock_t::to_remote_t(std::string(argv[2]) == "true");
 
   // Enable error logging.
   debug::set_log_level(debug::ERROR);
@@ -91,7 +91,7 @@ int main(int argc, const char** argv) {
   for (int i = 0; i < NUM_LOOPS; ++i) {
     {
       // Acquire a lock, which should guarantee us exclusive access to the data file.
-      file_lock_t lock(file_lockname, local_locks);
+      file_lock_t lock{file_lockname, remote_locks};
       if (!lock.has_lock()) {
         std::cerr << "*** Error: Unable to acquire lock: " << file_lockname << std::endl;
         exit(1);

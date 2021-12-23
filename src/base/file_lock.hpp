@@ -61,6 +61,17 @@ namespace bcache {
 /// On some systems, local locks are implemented as remote locks.
 class file_lock_t {
 public:
+  /// @brief An enum defining the lock type.
+  enum class remote_t {
+    YES,  ///< Remote lock.
+    NO,   ///< Local lock.
+  };
+
+  /// @brief Convert a boolean value to a remote_t value.
+  static remote_t to_remote_t(bool x) {
+    return x ? remote_t::YES : remote_t::NO;
+  }
+
   /// @brief An enum defining the blocking mode of a file lock.
   enum class blocking_t {
     YES,  ///< Blocking lock (block until aquired).
@@ -77,7 +88,7 @@ public:
   /// @param remote_lock Require the implementation to use a locking mechanism that can synchronize
   /// @param blocking Use blocking mode or not.
   /// file system access across several OS instances (e.g. use this for network shares).
-  file_lock_t(const std::string& path, bool remote_lock, blocking_t blocking = blocking_t::YES);
+  file_lock_t(const std::string& path, remote_t remote, blocking_t blocking = blocking_t::YES);
 
   // Support move semantics.
   file_lock_t(file_lock_t&& other) noexcept;
