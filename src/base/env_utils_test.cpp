@@ -51,8 +51,8 @@ TEST_CASE("Environment variable manipulation") {
 
   SUBCASE("Unicode names and values work") {
     // Define the variable.
-    const std::string name(u8"БуилдЦаче");
-    const std::string value(u8"είναι υπέροχο");
+    const std::string name(reinterpret_cast<const char*>(u8"БуилдЦаче"));
+    const std::string value(reinterpret_cast<const char*>(u8"είναι υπέροχο"));
     set_env(name, value);
 
     // The variable is defined.
