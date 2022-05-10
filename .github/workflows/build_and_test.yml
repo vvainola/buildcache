@@ -43,10 +43,10 @@ jobs:
             artifact_format: "zip",
           }
         - {
-            name: "Windows Latest MSVC",
-            os: windows-latest,
+            name: "Windows Server 2022 MSVC",
+            os: windows-2022,
             shell: cmd,
-            environment_script: "call \"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build\\vcvarsall.bat\" amd64",
+            environment_script: "call \"C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build\\vcvarsall.bat\" amd64",
             cc: "cl",
             cxx: "cl",
             artifact: "buildcache-windows.zip",
@@ -78,8 +78,11 @@ jobs:
       with:
         python-version: 3.8.x
 
+    # TODO(m): MinGW cross compilation fails with CMake v3.22.x+. For some
+    # reason "-isystem /usr/include" is added to the GCC command line, which
+    # breaks MinGW system includes.
     - name: Setup CMake and Ninja
-      uses: lukka/get-cmake@latest
+      uses: lukka/get-cmake@v3.21.1
 
     - name: Setup Clang tools
       if: ${{ runner.os == 'Linux' }}
@@ -192,7 +195,7 @@ jobs:
             os: ubuntu-latest
           }
         - {
-            name: "Windows Latest MSVC",
+            name: "Windows Server 2022 MSVC",
             artifact: "buildcache-windows.zip",
             artifact_content_type: "application/zip",
             os: ubuntu-latest
