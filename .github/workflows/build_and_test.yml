@@ -78,8 +78,11 @@ jobs:
       with:
         python-version: 3.8.x
 
+    # TODO(m): MinGW cross compilation fails with CMake v3.22.x+. For some
+    # reason "-isystem /usr/include" is added to the GCC command line, which
+    # breaks MinGW system includes.
     - name: Setup CMake and Ninja
-      uses: lukka/get-cmake@latest
+      uses: lukka/get-cmake@v3.21.1
 
     - name: Setup Clang tools
       if: ${{ runner.os == 'Linux' }}
