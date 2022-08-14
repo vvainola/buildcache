@@ -30,6 +30,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#include <filesystem>
+#include <algorithm>
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -130,6 +132,34 @@ bool read_from_pipe(HANDLE pipe_handle, std::string& data, const bool quiet, HAN
     }
   }
   return success;
+}
+
+bool BothAreSpaces(char lhs, char rhs) {
+    return (lhs == rhs) && (lhs == ' ');
+}
+std::string rewrite_compiler_stderr(std::string data) {
+    // Remove duplicate spaces for easier parsing
+    std::string::iterator new_end = std::unique(data.begin(), data.end(), BothAreSpaces);
+    data.erase(new_end, data.end());
+
+    std::string out;
+    out.reserve(data.size());
+
+    std::filesystem::path cwd = std::filesystem::current_path();
+    constexpr char INCPATH_LINE[] = "Note: including file:";
+    constexpr size_t INCPATH_LINE_SIZE = sizeof(INCPATH_LINE);
+    for (const auto& line : string_list_t(data, "\n")) {
+        const auto start = line.find(INCPATH_LINE);
+        if (start != std::string::npos) {
+            const auto include = strip(line.substr(start + INCPATH_LINE_SIZE));
+            auto include_path = std::filesystem::path(include);
+            auto rel_include = std::filesystem::relative(include_path, cwd);
+            out += "Note: including file: " + rel_include.string() + "\n";
+        } else {
+            out += line + "\n";
+        }
+    }
+    return data;
 }
 #else
 bool read_from_pipe(const int pipe_fd,
@@ -271,7 +301,7 @@ run_result_t run(const string_list_t& args, const bool quiet, const std::string&
 
     // Read stderr in the current thread (concurrently with reading stdout).
     const auto stderr_read_success =
-        read_from_pipe(std_err_read_handle, result.std_err, quiet, stderr_handle);
+        read_from_pipe(std_err_read_handle, result.std_err, true, stderr_handle);
 
     // Wait for stdout reading to be finished.
     stdout_reader_thread.join();
@@ -302,6 +332,9 @@ run_result_t run(const string_list_t& args, const bool quiet, const std::string&
   } catch (...) {
     successfully_launched_program = false;
   }
+
+  result.std_err = rewrite_compiler_stderr(result.std_err);
+  print_raw_stderr(result.std_err);
 
   if (std_out_read_handle != nullptr) {
     CloseHandle(std_out_read_handle);
